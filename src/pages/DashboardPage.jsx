@@ -1,0 +1,672 @@
+﻿import { useMemo, useState } from "react";
+import {
+  Cloud,
+  Download,
+  LoaderCircle,
+  LogOut,
+  Plane,
+  RefreshCw,
+  Save,
+} from "lucide-react";
+
+import ChecklistActivity from "../components/checklist/ChecklistActivity";
+import ChecklistMetrics from "../components/checklist/ChecklistMetrics";
+import FlightInformation from "../components/checklist/FlightInformation";
+import { useAuth } from "../contexts/useAuth";
+import {
+  CHECKLIST_ITEMS,
+  CHECKLIST_PHASES,
+  createEmptyChecklistRows,
+} from "../data/checklistItems";
+import { supabase } from "../lib/supabase";
+import {
+  calculateDelaySeconds,
+  classifyDelay,
+  currentTime,
+  normalizeDatabaseTime,
+  secondsToTime,
+  timeToSeconds,
+} from "../utils/checklistTime";
+
+const EMPTY_FLIGHT = {
+  flightIn: "",
+  flightOut: "",
+  flightDate: new Date().toISOString().slice(0, 10),
+  bay: "",
+  aircraftType: "",
+  registration: "",
+  sta: "",
+  eta: "",
+  ata: "",
+  chocksOn: "",
+  std: "",
+  trcCoordinator: "",
+};
+
+const DATABASE_STATUS = {
+  pending: "pending",
+  ontime: "on_time",
+  light: "light_delay",
+  delay: "delay",
+};
+
+const APPLICATION_STATUS = {
+  pending: "pending",
+  on_time: "ontime",
+  light_delay: "light",
+  delay: "delay",
+};
+
+export default function DashboardPage() {
+  const { user, profile, signOut } = useAuth();
+
+  const [flight, setFlight] = useState({
+    ...EMPTY_FLIGHT,
+    trcCoordinator: profile?.full_name || "",
+  });
+
+  const [rows, setRows] = useState(createEmptyChecklistRows);
+  const [activePhase, setActivePhase] = useState("All");
+  const [checklistId, setChecklistId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [loadingRecord, setLoadingRecord] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("Not saved");
+
+  function plannedTimeFor(index) {
+    const item = CHECKLIST_ITEMS[index];
+
+    const baseSeconds =
+      item.base === "std"
+        ? timeToSeconds(flight.std)
+        : timeToSeconds(flight.chocksOn);
+
+    if (baseSeconds === null) {
+      return "";
+    }
+
+    return secondsToTime(baseSeconds + item.offsetSec);
+  }
+
+  const metrics = useMemo(() => {
+    return rows.reduce(
+      (totals, row) => {
+        if (row.status !== "pending") {
+          totals.done += 1;
+        }
+
+        if (row.status === "ontime") {
+          totals.ontime += 1;
+        }
+
+        if (row.status === "light") {
+          totals.light += 1;
+        }
+
+        if (row.status === "delay") {
+          totals.delay += 1;
+        }
+
+        return totals;
+      },
+      {
+        done: 0,
+        ontime: 0,
+        light: 0,
+        delay: 0,
+      }
+    );
+  }, [rows]);
+
+  const visibleItems = useMemo(() => {
+    if (activePhase === "All") {
+      return CHECKLIST_ITEMS;
+    }
+
+    return CHECKLIST_ITEMS.filter(
+      (item) => item.phase === activePhase
+    );
+  }, [activePhase]);
+
+  function updateFlight(field, value) {
+  setFlight((currentFlight) => {
+    const updatedFlight = {
+      ...currentFlight,
+    };
+
+    Reflect.set(updatedFlight, field, value);
+
+    return updatedFlight;
+  });
+
+  setStatusMessage("Not saved");
+}
+
+
+  function updateRow(itemNumber, changes) {
+    const index = itemNumber - 1;
+
+    setRows((currentRows) =>
+      currentRows.map((row, rowIndex) =>
+        rowIndex === index
+          ? {
+              ...row,
+              ...changes,
+            }
+          : row
+      )
+    );
+
+    setStatusMessage("Not saved");
+  }
+
+  function handleActualChange(itemNumber, actualTime) {
+    const index = itemNumber - 1;
+    const plannedTime = plannedTimeFor(index);
+
+    const delaySeconds = calculateDelaySeconds(
+      actualTime,
+      plannedTime
+    );
+
+    updateRow(itemNumber, {
+      actualTime,
+      delaySeconds,
+      status:
+        plannedTime && delaySeconds !== null
+          ? classifyDelay(delaySeconds)
+          : rows[index].status,
+    });
+  }
+
+  function markActivity(itemNumber) {
+    const index = itemNumber - 1;
+    const row = rows[index];
+
+    if (row.status !== "pending") {
+      updateRow(itemNumber, {
+        status: "pending",
+        delaySeconds: null,
+      });
+
+      return;
+    }
+
+    const actualTime = row.actualTime || currentTime();
+    const plannedTime = plannedTimeFor(index);
+
+    const delaySeconds = calculateDelaySeconds(
+      actualTime,
+      plannedTime
+    );
+
+    updateRow(itemNumber, {
+      actualTime,
+      delaySeconds,
+      status:
+        plannedTime && delaySeconds !== null
+          ? classifyDelay(delaySeconds)
+          : "ontime",
+    });
+  }
+
+  function markChocksOnNow() {
+    updateFlight("chocksOn", currentTime());
+  }
+
+  async function handleSignOut() {
+    const { error } = await signOut();
+
+    if (error) {
+      window.alert(`Sign out failed: ${error.message}`);
+    }
+  }
+
+  function resetChecklist() {
+    const confirmed = window.confirm(
+      "Reset the current checklist and clear all entered data?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setFlight({
+      ...EMPTY_FLIGHT,
+      flightDate: new Date().toISOString().slice(0, 10),
+      trcCoordinator: profile?.full_name || "",
+    });
+
+    setRows(createEmptyChecklistRows());
+    setActivePhase("All");
+    setChecklistId(null);
+    setStatusMessage("Not saved");
+
+    localStorage.removeItem("saa_ramp_checklist_draft");
+  }
+
+  async function saveChecklist() {
+    try {
+      if (!user?.id) {
+        throw new Error(
+          "Your authenticated user could not be found. Sign in again."
+        );
+      }
+
+      if (!flight.flightOut.trim()) {
+        throw new Error("Flight Out is required.");
+      }
+
+      if (!flight.flightDate) {
+        throw new Error("Flight Date is required.");
+      }
+
+      setSaving(true);
+      setStatusMessage("Saving checklist...");
+
+      const checklistRecord = {
+        flight_in: flight.flightIn.trim() || null,
+        flight_out: flight.flightOut.trim(),
+        flight_date: flight.flightDate,
+        bay: flight.bay.trim() || null,
+        aircraft_type: flight.aircraftType || null,
+        registration: flight.registration.trim() || null,
+        sta: flight.sta || null,
+        eta: flight.eta || null,
+        ata: flight.ata || null,
+        chocks_on: flight.chocksOn || null,
+        std: flight.std || null,
+        trc_coordinator:
+          flight.trcCoordinator.trim() || null,
+        checklist_status:
+          metrics.done === CHECKLIST_ITEMS.length
+            ? "completed"
+            : "in_progress",
+        owner_id: user.id,
+      };
+
+      let activeChecklistId = checklistId;
+
+      if (!activeChecklistId) {
+        const { data, error } = await supabase
+          .from("ramp_checklists")
+          .insert(checklistRecord)
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        activeChecklistId = data.id;
+        setChecklistId(data.id);
+      } else {
+        const updateRecord = {
+          ...checklistRecord,
+        };
+
+        delete updateRecord.owner_id;
+
+        const { error } = await supabase
+          .from("ramp_checklists")
+          .update(updateRecord)
+          .eq("id", activeChecklistId)
+          .eq("owner_id", user.id);
+
+        if (error) {
+          throw error;
+        }
+      }
+
+      const itemRecords = CHECKLIST_ITEMS.map(
+        (item, index) => {
+          const row = rows[index];
+
+          return {
+            checklist_id: activeChecklistId,
+            item_number: item.itemNumber,
+            phase: item.phase,
+            activity: item.activity,
+            base_time: item.base,
+            planned_offset_seconds: item.offsetSec,
+            planned_time: plannedTimeFor(index) || null,
+            actual_time: row.actualTime || null,
+            delay_seconds: row.delaySeconds,
+            operational_status:
+              DATABASE_STATUS[row.status] || "pending",
+            observation: row.observation.trim() || null,
+            completed_by:
+              row.status === "pending" ? null : user.id,
+            completed_at:
+              row.status === "pending"
+                ? null
+                : new Date().toISOString(),
+          };
+        }
+      );
+
+      const { error: itemError } = await supabase
+        .from("ramp_checklist_items")
+        .upsert(itemRecords, {
+          onConflict: "checklist_id,item_number",
+        });
+
+      if (itemError) {
+        throw itemError;
+      }
+
+      localStorage.setItem(
+        "saa_ramp_checklist_draft",
+        JSON.stringify({
+          checklistId: activeChecklistId,
+          flight,
+          rows,
+        })
+      );
+
+      const savedTime = new Date().toLocaleTimeString();
+
+      setStatusMessage(`Saved to Supabase at ${savedTime}`);
+
+      window.alert(
+        "Ramp checklist saved successfully.\n\n" +
+          `Flight: ${flight.flightOut}\n` +
+          `Completed: ${metrics.done}/${CHECKLIST_ITEMS.length}`
+      );
+    } catch (error) {
+      console.error("Checklist save failed:", error);
+
+      setStatusMessage("Save failed");
+
+      window.alert(
+        "The checklist could not be saved.\n\n" +
+          (error?.message || "Unknown error")
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function loadLatestChecklist() {
+    try {
+      if (!user?.id) {
+        throw new Error("Please sign in again.");
+      }
+
+      setLoadingRecord(true);
+      setStatusMessage("Loading latest checklist...");
+
+      const { data: checklist, error: checklistError } =
+        await supabase
+          .from("ramp_checklists")
+          .select("*")
+          .eq("owner_id", user.id)
+          .order("updated_at", {
+            ascending: false,
+          })
+          .limit(1)
+          .maybeSingle();
+
+      if (checklistError) {
+        throw checklistError;
+      }
+
+      if (!checklist) {
+        setStatusMessage("No saved checklist found");
+        window.alert("No saved checklist was found.");
+        return;
+      }
+
+      const { data: savedItems, error: itemsError } =
+        await supabase
+          .from("ramp_checklist_items")
+          .select("*")
+          .eq("checklist_id", checklist.id)
+          .order("item_number", {
+            ascending: true,
+          });
+
+      if (itemsError) {
+        throw itemsError;
+      }
+
+      setChecklistId(checklist.id);
+
+      setFlight({
+        flightIn: checklist.flight_in || "",
+        flightOut: checklist.flight_out || "",
+        flightDate: checklist.flight_date || "",
+        bay: checklist.bay || "",
+        aircraftType: checklist.aircraft_type || "",
+        registration: checklist.registration || "",
+        sta: normalizeDatabaseTime(checklist.sta),
+        eta: normalizeDatabaseTime(checklist.eta),
+        ata: normalizeDatabaseTime(checklist.ata),
+        chocksOn: normalizeDatabaseTime(
+          checklist.chocks_on
+        ),
+        std: normalizeDatabaseTime(checklist.std),
+        trcCoordinator:
+          checklist.trc_coordinator || "",
+      });
+
+      const itemMap = new Map(
+        (savedItems || []).map((item) => [
+          item.item_number,
+          item,
+        ])
+      );
+
+      setRows(
+        CHECKLIST_ITEMS.map((item) => {
+          const savedItem = itemMap.get(item.itemNumber);
+
+          if (!savedItem) {
+            return {
+              actualTime: "",
+              observation: "",
+              status: "pending",
+              delaySeconds: null,
+            };
+          }
+
+          return {
+            actualTime: normalizeDatabaseTime(
+              savedItem.actual_time
+            ),
+            observation: savedItem.observation || "",
+            status:
+              APPLICATION_STATUS[
+                savedItem.operational_status
+              ] || "pending",
+            delaySeconds: savedItem.delay_seconds,
+          };
+        })
+      );
+
+      setStatusMessage(
+        `Loaded ${checklist.flight_out}`
+      );
+    } catch (error) {
+      console.error("Checklist load failed:", error);
+
+      setStatusMessage("Load failed");
+
+      window.alert(
+        "The checklist could not be loaded.\n\n" +
+          (error?.message || "Unknown error")
+      );
+    } finally {
+      setLoadingRecord(false);
+    }
+  }
+
+  return (
+    <main className="ramp-page">
+      <header className="ramp-header">
+        <div className="ramp-brand">
+          <div className="ramp-brand-icon">
+            <Plane size={27} />
+          </div>
+
+          <div>
+            <h1>SAA Ramp Checklist</h1>
+            <p>Turnaround Operations</p>
+          </div>
+        </div>
+
+        <div className="ramp-header-actions">
+          <div className="ramp-user">
+            <strong>
+              {profile?.full_name ||
+                user?.email ||
+                "Ramp Controller"}
+            </strong>
+
+            <span>{profile?.role || "controller"}</span>
+          </div>
+
+          <button
+            type="button"
+            className="ramp-button ramp-button-light"
+            onClick={loadLatestChecklist}
+            disabled={loadingRecord}
+          >
+            {loadingRecord ? (
+              <LoaderCircle size={17} className="spin" />
+            ) : (
+              <Cloud size={17} />
+            )}
+
+            Load Latest
+          </button>
+
+          <button
+            type="button"
+            className="ramp-button ramp-button-gold"
+            onClick={saveChecklist}
+            disabled={saving}
+          >
+            {saving ? (
+              <LoaderCircle size={17} className="spin" />
+            ) : (
+              <Save size={17} />
+            )}
+
+            {saving ? "Saving..." : "Save"}
+          </button>
+
+          <button
+            type="button"
+            className="ramp-button ramp-button-light"
+            onClick={handleSignOut}
+          >
+            <LogOut size={17} />
+            Sign out
+          </button>
+        </div>
+      </header>
+
+      <section className="ramp-content">
+        <div className="ramp-status-bar">
+          <span className="status-online" />
+          {statusMessage}
+        </div>
+
+        <FlightInformation
+          flight={flight}
+          onChange={updateFlight}
+          onChocksNow={markChocksOnNow}
+        />
+
+        <ChecklistMetrics
+          metrics={metrics}
+          totalItems={CHECKLIST_ITEMS.length}
+        />
+
+        <section className="phase-tabs">
+          {CHECKLIST_PHASES.map((phase) => (
+            <button
+              key={phase}
+              type="button"
+              className={
+                activePhase === phase
+                  ? "phase-tab active"
+                  : "phase-tab"
+              }
+              onClick={() => setActivePhase(phase)}
+            >
+              {phase}
+            </button>
+          ))}
+        </section>
+
+        <section className="checklist-list">
+          {visibleItems.map((item) => {
+            const index = item.itemNumber - 1;
+            const row = rows[index];
+
+            return (
+              <ChecklistActivity
+                key={item.itemNumber}
+                item={item}
+                row={row}
+                plannedTime={plannedTimeFor(index)}
+                onActualChange={(value) =>
+                  handleActualChange(
+                    item.itemNumber,
+                    value
+                  )
+                }
+                onObservationChange={(value) =>
+                  updateRow(item.itemNumber, {
+                    observation: value,
+                  })
+                }
+                onMark={() =>
+                  markActivity(item.itemNumber)
+                }
+              />
+            );
+          })}
+        </section>
+
+        <section className="bottom-actions">
+          <button
+            type="button"
+            className="ramp-button ramp-button-light"
+            onClick={resetChecklist}
+          >
+            <RefreshCw size={17} />
+            Reset
+          </button>
+
+          <button
+            type="button"
+            className="ramp-button ramp-button-light"
+            onClick={() => window.print()}
+          >
+            <Download size={17} />
+            PDF
+          </button>
+
+          <button
+            type="button"
+            className="ramp-button ramp-button-gold"
+            onClick={saveChecklist}
+            disabled={saving}
+          >
+            {saving ? (
+              <LoaderCircle size={17} className="spin" />
+            ) : (
+              <Save size={17} />
+            )}
+
+            {saving ? "Saving..." : "Save Checklist"}
+          </button>
+        </section>
+      </section>
+    </main>
+  );
+}
+
+
