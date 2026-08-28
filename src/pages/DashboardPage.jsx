@@ -4,11 +4,12 @@ import {
   History,
   LoaderCircle,
   LogOut,
-  Plane,
   RefreshCw,
   Save,
+  
 } from "lucide-react";
 
+import AppLogo from "../components/AppLogo";
 import ChecklistActivity from "../components/checklist/ChecklistActivity";
 import ChecklistHistory from "../components/checklist/ChecklistHistory";
 import ChecklistMetrics from "../components/checklist/ChecklistMetrics";
@@ -876,8 +877,11 @@ export default function DashboardPage() {
     <main className="ramp-page">
       <header className="ramp-header">
         <div className="ramp-brand">
-          <div className="ramp-brand-icon">
-            <Plane size={27} />
+          <div className="ramp-brand-logo">
+            <AppLogo
+              className="saa-app-logo"
+              alt="South African Airways"
+             />
           </div>
 
           <div>

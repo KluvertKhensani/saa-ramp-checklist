@@ -1344,3 +1344,32 @@
     flex-wrap: wrap;
   }
 }
+
+.ramp-brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 118px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border-radius: 10px;
+}
+
+.saa-app-logo {
+  display: block;
+  width: 108px;
+  height: 42px;
+  object-fit: contain;
+}
+
+@media (max-width: 760px) {
+  .ramp-brand-logo {
+    width: fit-content;
+    min-width: 104px;
+  }
+
+  .saa-app-logo {
+    width: 96px;
+    height: 38px;
+  }
+}
