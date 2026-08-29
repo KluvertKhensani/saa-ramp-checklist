@@ -1479,3 +1479,37 @@
     display: none !important;
   }
 }
+
+.history-view {
+  display: grid;
+  gap: 16px;
+}
+
+.export-panel {
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e3e7ee;
+  border-radius: 14px;
+  box-shadow: 0 4px 18px rgba(11, 37, 69, 0.06);
+}
+
+.export-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  color: #0b2545;
+}
+
+.export-heading h3 {
+  margin: 0;
+}
+
+.export-heading p:last-child {
+  margin: 6px 0 0;
+  color: #6b7a99;
+}
+
+.export-controls {
+  display: grid;
+  grid-template

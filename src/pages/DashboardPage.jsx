@@ -12,6 +12,7 @@ import {
 import AppLogo from "../components/AppLogo";
 import LiveClock from "../components/LiveClock";
 import ChecklistActivity from "../components/checklist/ChecklistActivity";
+import ChecklistExport from "../components/checklist/ChecklistExport";
 import ChecklistHistory from "../components/checklist/ChecklistHistory";
 import ChecklistMetrics from "../components/checklist/ChecklistMetrics";
 import FlightInformation from "../components/checklist/FlightInformation";
@@ -909,7 +910,7 @@ export default function DashboardPage() {
               {getRoleLabel(profile?.role)}
             </span>
           </div>
-          
+
           <LiveClock />
 
           <button
@@ -976,38 +977,23 @@ export default function DashboardPage() {
             : statusMessage}
         </div>
 
-        {activeView ===
-        "history" ? (
-          <ChecklistHistory
-            records={
-              historyRecords
-            }
-            loading={
-              historyLoading
-            }
-            searchValue={
-              historySearch
-            }
-            statusValue={
-              historyStatus
-            }
-            onSearchChange={
-              setHistorySearch
-            }
-            onStatusChange={
-              setHistoryStatus
-            }
-            onRefresh={
-              loadChecklistHistory
-            }
-            onOpen={
-              openChecklist
-            }
-            onNew={
-              createNewChecklist
-            }
-          />
-        ) : null}
+          {activeView === "history" ? (
+            <div className="history-view">
+              <ChecklistExport profile={profile} />
+
+              <ChecklistHistory
+                records={historyRecords}
+                loading={historyLoading}
+                searchValue={historySearch}
+                statusValue={historyStatus}
+                onSearchChange={setHistorySearch}
+                onStatusChange={setHistoryStatus}
+                onRefresh={loadChecklistHistory}
+                onOpen={openChecklist}
+                onNew={createNewChecklist}
+              />
+            </div>
+          ) : null}
 
         {activeView ===
         "checklist" ? (
