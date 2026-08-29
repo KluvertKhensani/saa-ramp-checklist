@@ -4,9 +4,9 @@ import {
   EyeOff,
   LockKeyhole,
   Mail,
-  Plane,
   UserRound,
 } from "lucide-react";
+import AppLogo from "../components/AppLogo";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/useAuth";
 
@@ -90,9 +90,13 @@ export default function LoginPage() {
     <main className="auth-page">
       <section className="auth-visual">
         <div className="auth-visual-content">
-          <div className="brand-mark" aria-hidden="true">
-            <Plane size={36} strokeWidth={2.2} />
-          </div>
+          
+          <div className="login-brand-logo">
+            <AppLogo
+            className="saa-login-logo"
+            alt="South African Airways"
+          />
+        </div>
 
           <p className="eyebrow">Turnaround Operations</p>
           <h1>Precision control from chocks on to pushback</h1>
@@ -113,9 +117,15 @@ export default function LoginPage() {
       <section className="auth-panel">
         <div className="auth-card">
           <div className="mobile-brand">
-            <div className="brand-mark small">
-              <Plane size={25} />
-            </div>
+            
+            <div className="mobile-logo-shell">
+              <AppLogo
+              className="saa-mobile-login-logo"
+              alt="South African Airways"
+             />
+          </div>
+
+
             <div>
               <strong>SAA Ramp Checklist</strong>
               <span>Turnaround Operations</span>
