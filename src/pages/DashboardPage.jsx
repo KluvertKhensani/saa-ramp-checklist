@@ -10,11 +10,13 @@ import {
 } from "lucide-react";
 
 import AppLogo from "../components/AppLogo";
+import LiveClock from "../components/LiveClock";
 import ChecklistActivity from "../components/checklist/ChecklistActivity";
 import ChecklistHistory from "../components/checklist/ChecklistHistory";
 import ChecklistMetrics from "../components/checklist/ChecklistMetrics";
 import FlightInformation from "../components/checklist/FlightInformation";
 import { useAuth } from "../contexts/useAuth";
+import { getRoleLabel } from "../utils/roles";
 import {
   CHECKLIST_ITEMS,
   CHECKLIST_PHASES,
@@ -904,10 +906,11 @@ export default function DashboardPage() {
             </strong>
 
             <span>
-              {profile?.role ||
-                "controller"}
+              {getRoleLabel(profile?.role)}
             </span>
           </div>
+          
+          <LiveClock />
 
           <button
             type="button"

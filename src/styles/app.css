@@ -1373,3 +1373,109 @@
     height: 38px;
   }
 }
+
+.login-brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(260px, 82vw);
+  min-height: 88px;
+  padding: 12px 18px;
+  margin: 0 auto 18px;
+  background: #ffffff;
+  border-radius: 14px;
+}
+
+.saa-login-logo {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  height: 68px;
+  object-fit: contain;
+  object-position: center;
+  opacity: 1;
+  visibility: visible;
+}
+
+.ramp-brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  min-width: 150px;
+  height: 58px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border-radius: 10px;
+}
+
+.saa-app-logo {
+  display: block;
+  width: 100%;
+  max-width: 130px;
+  height: 46px;
+  object-fit: contain;
+  object-position: center;
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 760px) {
+  .login-brand-logo {
+    width: min(220px, 84vw);
+    min-height: 76px;
+  }
+
+  .saa-login-logo {
+    max-width: 190px;
+    height: 58px;
+  }
+
+  .ramp-brand-logo {
+    width: 125px;
+    min-width: 125px;
+    height: 52px;
+  }
+
+  .saa-app-logo {
+    max-width: 110px;
+    height: 40px;
+  }
+}
+
+.live-clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 8px 11px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 1050px) {
+  .live-clock {
+    order: 4;
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .live-clock {
+    width: 100%;
+    min-height: 40px;
+    font-size: 11px;
+  }
+}
+
+@media print {
+  .live-clock {
+    display: none !important;
+  }
+}

@@ -6,8 +6,8 @@ export const ROLE_LABELS = {
   turnaround_coordinator: "Turnaround Coordinator",
   ramp_agent: "Ramp Agent",
   qa_inspector: "QA Inspector",
-  viewer: "Viewer",
   auditor: "Auditor",
+  viewer: "Viewer",
 };
 
 export function getRoleLabel(role) {
@@ -16,15 +16,6 @@ export function getRoleLabel(role) {
   }
 
   return ROLE_LABELS[role] || role;
-}
-
-export function canApproveChecklist(role) {
-  return [
-    "administrator",
-    "occ_manager",
-    "controller",
-    "qa_inspector",
-  ].includes(role);
 }
 
 export function canOperateChecklist(role) {
@@ -38,11 +29,21 @@ export function canOperateChecklist(role) {
   ].includes(role);
 }
 
+export function canApproveChecklist(role) {
+  return [
+    "administrator",
+    "occ_manager",
+    "controller",
+    "qa_inspector",
+  ].includes(role);
+}
+
 export function canExportReports(role) {
   return [
     "administrator",
     "occ_manager",
     "controller",
+    "trc_coordinator",
     "turnaround_coordinator",
     "qa_inspector",
     "auditor",

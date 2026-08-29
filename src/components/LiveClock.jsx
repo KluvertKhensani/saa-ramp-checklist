@@ -16,13 +16,12 @@ function formatDateTime(value) {
 }
 
 export default function LiveClock() {
-  const [currentTime, setCurrentTime] = useState(
-    () => new Date()
-  );
+  const [currentDateTime, setCurrentDateTime] =
+    useState(() => new Date());
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentDateTime(new Date());
     }, 1000);
 
     return () => {
@@ -35,9 +34,11 @@ export default function LiveClock() {
       className="live-clock"
       aria-label="Current South African time"
     >
-      <Clock3 size={16} />
+      <Clock3 size={16} aria-hidden="true" />
 
-      <span>{formatDateTime(currentTime)}</span>
+      <span>
+        {formatDateTime(currentDateTime)}
+      </span>
     </div>
   );
 }
