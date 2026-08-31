@@ -1142,17 +1142,17 @@ export default function DashboardPage() {
           <div className="ramp-brand-logo">
             <AppLogo
               className="saa-app-logo"
-              alt="South African Airways"
+              alt="SAA GRU Turnaround Operations"
              />
           </div>
 
           <div>
             <h1>
-              SAA Ramp Checklist
+              SAA GRU Turnaround Operations
             </h1>
 
             <p>
-              Turnaround Operations
+              Mobile Operational Checklist
             </p>
           </div>
         </div>

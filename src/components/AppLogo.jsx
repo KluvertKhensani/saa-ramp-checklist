@@ -2,7 +2,7 @@ import { createElement } from "react";
 
 export default function AppLogo({
   className = "",
-  alt = "South African Airways",
+  alt = "SAA GRU Turnaround Operations",
 }) {
   const logoUrl = `${import.meta.env.BASE_URL}saa-logo.png`;
 

@@ -94,11 +94,11 @@ export default function LoginPage() {
           <div className="login-brand-logo">
             <AppLogo
             className="saa-login-logo"
-            alt="South African Airways"
+            alt="SAA GRU Turnaround Operations"
           />
         </div>
 
-          <p className="eyebrow">Turnaround Operations</p>
+          <p className="eyebrow">SAA GRU Turnaround Operations</p>
           <h1>Precision control from chocks on to pushback</h1>
           <p className="auth-introduction">
             Record operational milestones, monitor turnaround performance,
@@ -121,13 +121,13 @@ export default function LoginPage() {
             <div className="mobile-logo-shell">
               <AppLogo
               className="saa-mobile-login-logo"
-              alt="South African Airways"
+              alt="SAA GRU Turnaround Operations"
              />
           </div>
 
 
             <div>
-              <strong>SAA Ramp Checklist</strong>
+              <strong>SAA GRU</strong>
               <span>Turnaround Operations</span>
             </div>
           </div>
