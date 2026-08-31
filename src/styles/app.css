@@ -1818,3 +1818,27 @@
     display: none !important;
   }
 }
+
+.checklist-row-readonly {
+  background: #f7f9fc;
+}
+
+.checklist-row-readonly .checklist-number {
+  opacity: 0.7;
+}
+
+.checklist-row-readonly .mark-button:disabled {
+  color: #6f7c91;
+  background: #e8ecf2;
+  border-color: #d6dce5;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.checklist-row-readonly input:disabled {
+  color: #59667d;
+  background: #eef1f5;
+  border-color: #d9dfe7;
+  cursor: not-allowed;
+  opacity: 1;
+}

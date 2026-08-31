@@ -31,6 +31,17 @@ export function getRoleLabel(role) {
   );
 }
 
+export function canCreateChecklist(role) {
+  return [
+    "administrator",
+    "occ_manager",
+    "controller",
+    "trc_coordinator",
+    "turnaround_coordinator",
+    "ramp_agent",
+  ].includes(normalizeRole(role));
+}
+
 export function canOperateChecklist(role) {
   return [
     "administrator",
@@ -62,5 +73,25 @@ export function canExportReports(role) {
     "trc_coordinator",
     "turnaround_coordinator",
     "auditor",
+  ].includes(normalizeRole(role));
+}
+
+export function canViewAuditHistory(role) {
+  return [
+    "administrator",
+    "occ_manager",
+    "controller",
+    "qa_inspector",
+    "trc_coordinator",
+    "turnaround_coordinator",
+    "auditor",
+  ].includes(normalizeRole(role));
+}
+
+export function isReadOnlyRole(role) {
+  return [
+    "qa_inspector",
+    "auditor",
+    "viewer",
   ].includes(normalizeRole(role));
 }

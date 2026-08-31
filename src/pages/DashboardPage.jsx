@@ -6,20 +6,18 @@ import {
   LogOut,
   RefreshCw,
   Save,
-  
 } from "lucide-react";
 
 import AppLogo from "../components/AppLogo";
 import LiveClock from "../components/LiveClock";
 import ChecklistActivity from "../components/checklist/ChecklistActivity";
 import ChecklistApproval from "../components/checklist/ChecklistApproval";
-import ChecklistExport from "../components/checklist/ChecklistExport";
 import ChecklistAuditHistory from "../components/checklist/ChecklistAuditHistory";
+import ChecklistExport from "../components/checklist/ChecklistExport";
 import ChecklistHistory from "../components/checklist/ChecklistHistory";
 import ChecklistMetrics from "../components/checklist/ChecklistMetrics";
 import FlightInformation from "../components/checklist/FlightInformation";
 import { useAuth } from "../contexts/useAuth";
-import { getRoleLabel } from "../utils/roles";
 import {
   CHECKLIST_ITEMS,
   CHECKLIST_PHASES,
@@ -34,6 +32,13 @@ import {
   secondsToTime,
   timeToSeconds,
 } from "../utils/checklistTime";
+import {
+  canCreateChecklist,
+  canOperateChecklist,
+  canViewAuditHistory,
+  getRoleLabel,
+  isReadOnlyRole,
+} from "../utils/roles";
 
 const EMPTY_FLIGHT = {
   flightIn: "",
@@ -48,6 +53,13 @@ const EMPTY_FLIGHT = {
   chocksOn: "",
   std: "",
   trcCoordinator: "",
+};
+
+const EMPTY_APPROVAL_DETAILS = {
+  approvedBy: null,
+  approvedByName: "",
+  approvedAt: null,
+  notes: "",
 };
 
 const DATABASE_STATUS = {
@@ -109,20 +121,44 @@ export default function DashboardPage() {
   const [recordLocked, setRecordLocked] =
     useState(false);
 
-    const [approving, setApproving] = useState(false);
+  const [approving, setApproving] =
+    useState(false);
 
-  const [approvalDetails, setApprovalDetails] = useState({
-    approvedBy: null,
-    approvedByName: "",
-    approvedAt: null,
-    notes: "",
-  });
+  const [
+    approvalDetails,
+    setApprovalDetails,
+  ] = useState(EMPTY_APPROVAL_DETAILS);
 
-  const [auditRecords, setAuditRecords] = useState([]);
-  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditRecords, setAuditRecords] =
+    useState([]);
+
+  const [auditLoading, setAuditLoading] =
+    useState(false);
+
+  const roleCanCreate =
+    canCreateChecklist(profile?.role);
+
+  const roleCanOperate =
+    canOperateChecklist(profile?.role);
+
+  const roleCanViewAudit =
+    canViewAuditHistory(profile?.role);
+
+  const roleIsReadOnly =
+    isReadOnlyRole(profile?.role);
+
+  const checklistReadOnly =
+    recordLocked ||
+    approving ||
+    roleIsReadOnly ||
+    !roleCanOperate;
 
   function plannedTimeFor(index) {
     const item = CHECKLIST_ITEMS[index];
+
+    if (!item) {
+      return "";
+    }
 
     const baseSeconds =
       item.base === "std"
@@ -174,17 +210,16 @@ export default function DashboardPage() {
     }
 
     return CHECKLIST_ITEMS.filter(
-      (item) => item.phase === activePhase
+      (item) =>
+        item.phase === activePhase
     );
   }, [activePhase]);
 
   function updateFlight(field, value) {
-    if (recordLocked || approving) {
-      window.alert(
-        "This checklist is locked or currently being approved."
-      );
+    if (checklistReadOnly) {
       return;
     }
+
     setFlight((currentFlight) => {
       const updatedFlight = {
         ...currentFlight,
@@ -203,24 +238,21 @@ export default function DashboardPage() {
   }
 
   function updateRow(itemNumber, changes) {
-    if (recordLocked || approving) {
-      window.alert(
-        "This checklist is locked or currently being approved."
-      );
-
+    if (checklistReadOnly) {
       return;
     }
-    
+
     const index = itemNumber - 1;
 
     setRows((currentRows) =>
-      currentRows.map((row, rowIndex) =>
-        rowIndex === index
-          ? {
-              ...row,
-              ...changes,
-            }
-          : row
+      currentRows.map(
+        (row, rowIndex) =>
+          rowIndex === index
+            ? {
+                ...row,
+                ...changes,
+              }
+            : row
       )
     );
 
@@ -231,8 +263,11 @@ export default function DashboardPage() {
     itemNumber,
     actualTime
   ) {
-    const index = itemNumber - 1;
+    if (checklistReadOnly) {
+      return;
+    }
 
+    const index = itemNumber - 1;
     const plannedTime =
       plannedTimeFor(index);
 
@@ -249,19 +284,24 @@ export default function DashboardPage() {
         plannedTime &&
         delaySeconds !== null
           ? classifyDelay(delaySeconds)
-          : rows[index].status,
+          : rows[index]?.status ||
+            "pending",
     });
   }
 
   function markActivity(itemNumber) {
+    if (checklistReadOnly) {
+      window.alert(
+        "This checklist is read-only for your current role or has already been locked."
+      );
+
+      return;
+    }
+
     const index = itemNumber - 1;
     const row = rows[index];
 
-    if (recordLocked) {
-      window.alert(
-        "This checklist is locked and cannot be edited."
-      );
-
+    if (!row) {
       return;
     }
 
@@ -275,7 +315,8 @@ export default function DashboardPage() {
     }
 
     const actualTime =
-      row.actualTime || currentTime();
+      row.actualTime ||
+      currentTime();
 
     const plannedTime =
       plannedTimeFor(index);
@@ -298,9 +339,9 @@ export default function DashboardPage() {
   }
 
   function markChocksOnNow() {
-    if (recordLocked) {
+    if (checklistReadOnly) {
       window.alert(
-        "This checklist is locked and cannot be edited."
+        "This checklist is read-only for your current role or has already been locked."
       );
 
       return;
@@ -323,18 +364,18 @@ export default function DashboardPage() {
   }
 
   function resetChecklist() {
-    setAuditRecords([]);
-    if (recordLocked) {
+    if (checklistReadOnly) {
       window.alert(
-        "This checklist is locked and cannot be reset."
+        "This checklist is read-only and cannot be reset."
       );
 
       return;
     }
 
-    const confirmed = window.confirm(
-      "Reset the current checklist and clear all entered data?"
-    );
+    const confirmed =
+      window.confirm(
+        "Reset the current checklist and clear all entered data?"
+      );
 
     if (!confirmed) {
       return;
@@ -357,13 +398,12 @@ export default function DashboardPage() {
     setActivePhase("All");
     setChecklistId(null);
     setRecordLocked(false);
-    setApprovalDetails({
-      approvedBy: null,
-      approvedByName: "",
-      approvedAt: null,
-      notes: "",
-  });
 
+    setApprovalDetails({
+      ...EMPTY_APPROVAL_DETAILS,
+    });
+
+    setAuditRecords([]);
     setStatusMessage("Not saved");
 
     localStorage.removeItem(
@@ -401,13 +441,27 @@ export default function DashboardPage() {
             "updated_at",
           ].join(",")
         )
-        .eq("owner_id", user.id)
         .order("updated_at", {
           ascending: false,
         })
         .limit(100);
 
-      if (historyStatus !== "all") {
+      if (
+        !roleCanViewAudit &&
+        profile?.role !==
+          "turnaround_coordinator" &&
+        profile?.role !==
+          "trc_coordinator"
+      ) {
+        query = query.eq(
+          "owner_id",
+          user.id
+        );
+      }
+
+      if (
+        historyStatus !== "all"
+      ) {
         query = query.eq(
           "checklist_status",
           historyStatus
@@ -484,7 +538,14 @@ export default function DashboardPage() {
   }
 
   function createNewChecklist() {
-    setAuditRecords([]);
+    if (!roleCanCreate) {
+      window.alert(
+        "Your role does not have permission to create operational checklists."
+      );
+
+      return;
+    }
+
     setFlight({
       ...EMPTY_FLIGHT,
       flightDate:
@@ -501,12 +562,12 @@ export default function DashboardPage() {
 
     setChecklistId(null);
     setRecordLocked(false);
+
     setApprovalDetails({
-      approvedBy: null,
-      approvedByName: "",
-      approvedAt: null,
-      notes: "",
+      ...EMPTY_APPROVAL_DETAILS,
     });
+
+    setAuditRecords([]);
     setActivePhase("All");
 
     setStatusMessage(
@@ -518,6 +579,119 @@ export default function DashboardPage() {
     localStorage.removeItem(
       "saa_ramp_checklist_draft"
     );
+  }
+
+  async function loadAuditHistory(
+    targetChecklistId = checklistId
+  ) {
+    try {
+      if (!targetChecklistId) {
+        setAuditRecords([]);
+        return;
+      }
+
+      if (!roleCanViewAudit) {
+        setAuditRecords([]);
+        return;
+      }
+
+      setAuditLoading(true);
+
+      const { data, error } =
+        await supabase
+          .from("ramp_audit_logs")
+          .select(
+            [
+              "id",
+              "checklist_id",
+              "user_id",
+              "action",
+              "entity_type",
+              "old_values",
+              "new_values",
+              "created_at",
+            ].join(",")
+          )
+          .eq(
+            "checklist_id",
+            targetChecklistId
+          )
+          .order("created_at", {
+            ascending: false,
+          });
+
+      if (error) {
+        throw error;
+      }
+
+      const userIds = [
+        ...new Set(
+          (data || [])
+            .map(
+              (record) =>
+                record.user_id
+            )
+            .filter(Boolean)
+        ),
+      ];
+
+      let profileMap =
+        new Map();
+
+      if (userIds.length > 0) {
+        const {
+          data: auditProfiles,
+          error: profileError,
+        } = await supabase
+          .from("profiles")
+          .select(
+            "id, full_name"
+          )
+          .in("id", userIds);
+
+        if (
+          !profileError &&
+          auditProfiles
+        ) {
+          profileMap = new Map(
+            auditProfiles.map(
+              (auditProfile) => [
+                auditProfile.id,
+                auditProfile.full_name,
+              ]
+            )
+          );
+        }
+      }
+
+      const enrichedRecords =
+        (data || []).map(
+          (record) => ({
+            ...record,
+            user_name:
+              profileMap.get(
+                record.user_id
+              ) || "",
+          })
+        );
+
+      setAuditRecords(
+        enrichedRecords
+      );
+    } catch (error) {
+      console.error(
+        "Audit history load failed:",
+        error
+      );
+
+      window.alert(
+        "Audit history could not be loaded.\n\n" +
+          (error?.message ||
+            "Unknown error")
+      );
+    } finally {
+      setAuditLoading(false);
+    }
   }
 
   async function openChecklist(
@@ -546,7 +720,6 @@ export default function DashboardPage() {
           "id",
           checklistIdentifier
         )
-        .eq("owner_id", user.id)
         .maybeSingle();
 
       if (checklistError) {
@@ -563,7 +736,9 @@ export default function DashboardPage() {
         data: savedItems,
         error: itemsError,
       } = await supabase
-        .from("ramp_checklist_items")
+        .from(
+          "ramp_checklist_items"
+        )
         .select("*")
         .eq(
           "checklist_id",
@@ -577,14 +752,27 @@ export default function DashboardPage() {
         throw itemsError;
       }
 
-      setChecklistId(checklist.id);
-      setRecordLocked(Boolean(checklist.is_locked));
+      setChecklistId(
+        checklist.id
+      );
+
+      setRecordLocked(
+        Boolean(
+          checklist.is_locked
+        )
+      );
 
       setApprovalDetails({
-        approvedBy: checklist.approved_by || null,
+        approvedBy:
+          checklist.approved_by ||
+          null,
         approvedByName: "",
-        approvedAt: checklist.approved_at || null,
-        notes: checklist.approval_notes || "",
+        approvedAt:
+          checklist.approved_at ||
+          null,
+        notes:
+          checklist.approval_notes ||
+          "",
       });
 
       if (checklist.approved_by) {
@@ -594,31 +782,45 @@ export default function DashboardPage() {
         } = await supabase
           .from("profiles")
           .select("full_name")
-          .eq("id", checklist.approved_by)
+          .eq(
+            "id",
+            checklist.approved_by
+          )
           .maybeSingle();
 
-        if (!approverError && approverProfile) {
-          setApprovalDetails((currentDetails) => ({
-            ...currentDetails,
-            approvedByName:
-              approverProfile.full_name || "",
-          }));
+        if (
+          !approverError &&
+          approverProfile
+        ) {
+          setApprovalDetails(
+            (currentDetails) => ({
+              ...currentDetails,
+              approvedByName:
+                approverProfile
+                  .full_name || "",
+            })
+          );
         }
       }
 
       setFlight({
         flightIn:
-          checklist.flight_in || "",
+          checklist.flight_in ||
+          "",
         flightOut:
-          checklist.flight_out || "",
+          checklist.flight_out ||
+          "",
         flightDate:
-          checklist.flight_date || "",
+          checklist.flight_date ||
+          "",
         bay:
           checklist.bay || "",
         aircraftType:
-          checklist.aircraft_type || "",
+          checklist.aircraft_type ||
+          "",
         registration:
-          checklist.registration || "",
+          checklist.registration ||
+          "",
         sta:
           normalizeDatabaseTime(
             checklist.sta
@@ -684,7 +886,8 @@ export default function DashboardPage() {
                     .operational_status
                 ] || "pending",
               delaySeconds:
-                savedItem.delay_seconds,
+                savedItem
+                  .delay_seconds,
             };
           }
         )
@@ -692,7 +895,13 @@ export default function DashboardPage() {
 
       setActiveView("checklist");
 
-      await loadAuditHistory(checklist.id);
+      if (roleCanViewAudit) {
+        await loadAuditHistory(
+          checklist.id
+        );
+      } else {
+        setAuditRecords([]);
+      }
 
       setStatusMessage(
         `Opened ${checklist.flight_out}`
@@ -703,7 +912,9 @@ export default function DashboardPage() {
         error
       );
 
-      setStatusMessage("Open failed");
+      setStatusMessage(
+        "Open failed"
+      );
 
       window.alert(
         "The checklist could not be opened.\n\n" +
@@ -715,199 +926,131 @@ export default function DashboardPage() {
     }
   }
 
-  async function loadAuditHistory(
-  targetChecklistId = checklistId
-) {
-  try {
-    if (!targetChecklistId) {
-      setAuditRecords([]);
-      return;
-    }
-
-    setAuditLoading(true);
-
-    const { data, error } = await supabase
-      .from("ramp_audit_logs")
-      .select(
-        [
-          "id",
-          "checklist_id",
-          "user_id",
-          "action",
-          "entity_type",
-          "old_values",
-          "new_values",
-          "created_at",
-        ].join(",")
-      )
-      .eq(
-        "checklist_id",
-        targetChecklistId
-      )
-      .order("created_at", {
-        ascending: false,
-      });
-
-    if (error) {
-      throw error;
-    }
-
-    const userIds = [
-      ...new Set(
-        (data || [])
-          .map((record) => record.user_id)
-          .filter(Boolean)
-      ),
-    ];
-
-    let profileMap = new Map();
-
-    if (userIds.length > 0) {
-      const {
-        data: auditProfiles,
-        error: profileError,
-      } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", userIds);
-
-      if (!profileError) {
-        profileMap = new Map(
-          (auditProfiles || []).map(
-            (auditProfile) => [
-              auditProfile.id,
-              auditProfile.full_name,
-            ]
-          )
+  async function approveChecklist(
+    notes
+  ) {
+    try {
+      if (!user?.id) {
+        throw new Error(
+          "Your authenticated session could not be found. Sign in again."
         );
       }
-    }
 
-    const enrichedRecords = (data || []).map(
-      (record) => ({
-        ...record,
-        user_name:
-          profileMap.get(record.user_id) || "",
-      })
-    );
-
-    setAuditRecords(enrichedRecords);
-  } catch (error) {
-    console.error(
-      "Audit history load failed:",
-      error
-    );
-
-    window.alert(
-      "Audit history could not be loaded.\n\n" +
-        (error?.message || "Unknown error")
-    );
-  } finally {
-    setAuditLoading(false);
-  }
-}
-
-  async function approveChecklist(notes) {
-  try {
-    if (!user?.id) {
-      throw new Error(
-        "Your authenticated session could not be found. Sign in again."
-      );
-    }
-
-    if (!checklistId) {
-      throw new Error(
-        "Save the checklist before approving it."
-      );
-    }
-
-    if (recordLocked) {
-      throw new Error(
-        "This checklist has already been approved and locked."
-      );
-    }
-
-    setApproving(true);
-    setStatusMessage("Approving checklist...");
-
-    const { data, error } = await supabase.rpc(
-      "approve_ramp_checklist",
-      {
-        target_checklist_id: checklistId,
-        supervisor_notes:
-          notes?.trim() || null,
+      if (!checklistId) {
+        throw new Error(
+          "Save the checklist before approving it."
+        );
       }
-    );
 
-    if (error) {
-      throw error;
-    }
+      if (recordLocked) {
+        throw new Error(
+          "This checklist has already been approved and locked."
+        );
+      }
 
-    const approvedChecklist =
-      Array.isArray(data)
-        ? data[0]
-        : data;
+      setApproving(true);
 
-    if (!approvedChecklist) {
-      throw new Error(
-        "Supabase did not return the approved checklist."
+      setStatusMessage(
+        "Approving checklist..."
       );
+
+      const { data, error } =
+        await supabase.rpc(
+          "approve_ramp_checklist",
+          {
+            target_checklist_id:
+              checklistId,
+            supervisor_notes:
+              notes?.trim() ||
+              null,
+          }
+        );
+
+      if (error) {
+        throw error;
+      }
+
+      const approvedChecklist =
+        Array.isArray(data)
+          ? data[0]
+          : data;
+
+      if (!approvedChecklist) {
+        throw new Error(
+          "Supabase did not return the approved checklist."
+        );
+      }
+
+      setRecordLocked(true);
+
+      setApprovalDetails({
+        approvedBy:
+          approvedChecklist
+            .approved_by ||
+          user.id,
+        approvedByName:
+          profile?.full_name ||
+          user.email ||
+          "Authorised user",
+        approvedAt:
+          approvedChecklist
+            .approved_at ||
+          new Date().toISOString(),
+        notes:
+          approvedChecklist
+            .approval_notes ||
+          notes?.trim() ||
+          "",
+      });
+
+      if (roleCanViewAudit) {
+        await loadAuditHistory(
+          checklistId
+        );
+      }
+
+      setStatusMessage(
+        `Approved and locked: ${flight.flightOut}`
+      );
+
+      localStorage.removeItem(
+        "saa_ramp_checklist_draft"
+      );
+
+      window.alert(
+        "Checklist approved successfully.\n\n" +
+          `Flight: ${flight.flightOut}\n` +
+          "Status: Completed\n" +
+          "Editing: Locked"
+      );
+    } catch (error) {
+      console.error(
+        "Checklist approval failed:",
+        error
+      );
+
+      setStatusMessage(
+        "Approval failed"
+      );
+
+      window.alert(
+        "The checklist could not be approved.\n\n" +
+          (error?.message ||
+            "Unknown error")
+      );
+    } finally {
+      setApproving(false);
     }
-
-    setRecordLocked(true);
-
-    await loadAuditHistory(checklistId);
-
-    setApprovalDetails({
-      approvedBy:
-        approvedChecklist.approved_by ||
-        user.id,
-      approvedByName:
-        profile?.full_name ||
-        user?.email ||
-        "Authorised user",
-      approvedAt:
-        approvedChecklist.approved_at ||
-        new Date().toISOString(),
-      notes:
-        approvedChecklist.approval_notes ||
-        notes?.trim() ||
-        "",
-    });
-
-    setStatusMessage(
-      `Approved and locked: ${flight.flightOut}`
-    );
-
-    localStorage.removeItem(
-      "saa_ramp_checklist_draft"
-    );
-
-    window.alert(
-      "Checklist approved successfully.\n\n" +
-        `Flight: ${flight.flightOut}\n` +
-        "Status: Completed\n" +
-        "Editing: Locked"
-    );
-  } catch (error) {
-    console.error(
-      "Checklist approval failed:",
-      error
-    );
-
-    setStatusMessage("Approval failed");
-
-    window.alert(
-      "The checklist could not be approved.\n\n" +
-        (error?.message || "Unknown error")
-    );
-  } finally {
-    setApproving(false);
   }
-}
 
   async function saveChecklist() {
     try {
+      if (!roleCanOperate) {
+        throw new Error(
+          "Your role does not have permission to save operational checklists."
+        );
+      }
+
       if (recordLocked) {
         throw new Error(
           "This checklist has been approved and locked. It cannot be edited."
@@ -934,8 +1077,6 @@ export default function DashboardPage() {
         );
       }
 
-      await loadAuditHistory(activeChecklistId);
-
       setSaving(true);
 
       setStatusMessage(
@@ -957,8 +1098,8 @@ export default function DashboardPage() {
           flight.aircraftType ||
           null,
         registration:
-          flight.registration.trim() ||
-          null,
+          flight.registration
+            .trim() || null,
         sta:
           flight.sta || null,
         eta:
@@ -966,7 +1107,8 @@ export default function DashboardPage() {
         ata:
           flight.ata || null,
         chocks_on:
-          flight.chocksOn || null,
+          flight.chocksOn ||
+          null,
         std:
           flight.std || null,
         trc_coordinator:
@@ -977,7 +1119,8 @@ export default function DashboardPage() {
           CHECKLIST_ITEMS.length
             ? "completed"
             : "in_progress",
-        owner_id: user.id,
+        owner_id:
+          user.id,
       };
 
       let activeChecklistId =
@@ -988,8 +1131,12 @@ export default function DashboardPage() {
           data,
           error,
         } = await supabase
-          .from("ramp_checklists")
-          .insert(checklistRecord)
+          .from(
+            "ramp_checklists"
+          )
+          .insert(
+            checklistRecord
+          )
           .select()
           .single();
 
@@ -1000,7 +1147,9 @@ export default function DashboardPage() {
         activeChecklistId =
           data.id;
 
-        setChecklistId(data.id);
+        setChecklistId(
+          data.id
+        );
       } else {
         const updateRecord = {
           ...checklistRecord,
@@ -1013,7 +1162,9 @@ export default function DashboardPage() {
             .from(
               "ramp_checklists"
             )
-            .update(updateRecord)
+            .update(
+              updateRecord
+            )
             .eq(
               "id",
               activeChecklistId
@@ -1048,8 +1199,9 @@ export default function DashboardPage() {
               planned_offset_seconds:
                 item.offsetSec,
               planned_time:
-                plannedTimeFor(index) ||
-                null,
+                plannedTimeFor(
+                  index
+                ) || null,
               actual_time:
                 row.actualTime ||
                 null,
@@ -1083,13 +1235,22 @@ export default function DashboardPage() {
         .from(
           "ramp_checklist_items"
         )
-        .upsert(itemRecords, {
-          onConflict:
-            "checklist_id,item_number",
-        });
+        .upsert(
+          itemRecords,
+          {
+            onConflict:
+              "checklist_id,item_number",
+          }
+        );
 
       if (itemError) {
         throw itemError;
+      }
+
+      if (roleCanViewAudit) {
+        await loadAuditHistory(
+          activeChecklistId
+        );
       }
 
       localStorage.setItem(
@@ -1104,7 +1265,9 @@ export default function DashboardPage() {
 
       const savedTime =
         new Date()
-          .toLocaleTimeString();
+          .toLocaleTimeString(
+            "en-ZA"
+          );
 
       setStatusMessage(
         `Saved to Supabase at ${savedTime}`
@@ -1143,7 +1306,7 @@ export default function DashboardPage() {
             <AppLogo
               className="saa-app-logo"
               alt="SAA GRU Turnaround Operations"
-             />
+            />
           </div>
 
           <div>
@@ -1162,11 +1325,13 @@ export default function DashboardPage() {
             <strong>
               {profile?.full_name ||
                 user?.email ||
-                "Ramp Controller"}
+                "Operational User"}
             </strong>
 
             <span>
-              {getRoleLabel(profile?.role)}
+              {getRoleLabel(
+                profile?.role
+              )}
             </span>
           </div>
 
@@ -1187,14 +1352,17 @@ export default function DashboardPage() {
                 className="spin"
               />
             ) : (
-              <History size={17} />
+              <History
+                size={17}
+              />
             )}
 
             History
           </button>
 
           {activeView ===
-          "checklist" ? (
+            "checklist" &&
+          roleCanOperate ? (
             <button
               type="button"
               className="ramp-button ramp-button-gold"
@@ -1211,7 +1379,9 @@ export default function DashboardPage() {
                   className="spin"
                 />
               ) : (
-                <Save size={17} />
+                <Save
+                  size={17}
+                />
               )}
 
               {saving
@@ -1225,7 +1395,10 @@ export default function DashboardPage() {
             className="ramp-button ramp-button-light"
             onClick={handleSignOut}
           >
-            <LogOut size={17} />
+            <LogOut
+              size={17}
+            />
+
             Sign out
           </button>
         </div>
@@ -1240,23 +1413,47 @@ export default function DashboardPage() {
             : statusMessage}
         </div>
 
-          {activeView === "history" ? (
-            <div className="history-view">
-              <ChecklistExport profile={profile} />
+        {activeView ===
+        "history" ? (
+          <div className="history-view">
+            <ChecklistExport
+              profile={profile}
+            />
 
-              <ChecklistHistory
-                records={historyRecords}
-                loading={historyLoading}
-                searchValue={historySearch}
-                statusValue={historyStatus}
-                onSearchChange={setHistorySearch}
-                onStatusChange={setHistoryStatus}
-                onRefresh={loadChecklistHistory}
-                onOpen={openChecklist}
-                onNew={createNewChecklist}
-              />
-            </div>
-          ) : null}
+            <ChecklistHistory
+              records={
+                historyRecords
+              }
+              loading={
+                historyLoading
+              }
+              searchValue={
+                historySearch
+              }
+              statusValue={
+                historyStatus
+              }
+              onSearchChange={
+                setHistorySearch
+              }
+              onStatusChange={
+                setHistoryStatus
+              }
+              onRefresh={
+                loadChecklistHistory
+              }
+              onOpen={
+                openChecklist
+              }
+              onNew={
+                createNewChecklist
+              }
+              canCreate={
+                roleCanCreate
+              }
+            />
+          </div>
+        ) : null}
 
         {activeView ===
         "checklist" ? (
@@ -1265,10 +1462,22 @@ export default function DashboardPage() {
               <div className="locked-banner">
                 This checklist has
                 been approved and
-                locked. It is
-                available for review
-                but cannot be saved
-                again.
+                locked. It is available
+                for review but cannot
+                be saved again.
+              </div>
+            ) : null}
+
+            {!recordLocked &&
+            roleIsReadOnly ? (
+              <div className="readonly-banner">
+                You are viewing this
+                checklist in read-only
+                mode as{" "}
+                {getRoleLabel(
+                  profile?.role
+                )}
+                .
               </div>
             ) : null}
 
@@ -1280,6 +1489,9 @@ export default function DashboardPage() {
               onChocksNow={
                 markChocksOnNow
               }
+              disabled={
+                checklistReadOnly
+              }
             />
 
             <ChecklistMetrics
@@ -1290,20 +1502,37 @@ export default function DashboardPage() {
             />
 
             <ChecklistApproval
-              checklistId={checklistId}
+              checklistId={
+                checklistId
+              }
               profile={profile}
-              locked={recordLocked}
-              approvalDetails={approvalDetails}
-              approving={approving}
-              onApprove={approveChecklist}
+              locked={
+                recordLocked
+              }
+              approvalDetails={
+                approvalDetails
+              }
+              approving={
+                approving
+              }
+              onApprove={
+                approveChecklist
+              }
             />
 
-            {checklistId ? (
+            {checklistId &&
+            roleCanViewAudit ? (
               <ChecklistAuditHistory
-                records={auditRecords}
-                loading={auditLoading}
+                records={
+                  auditRecords
+                }
+                loading={
+                  auditLoading
+                }
                 onRefresh={() =>
-                  loadAuditHistory(checklistId)
+                  loadAuditHistory(
+                    checklistId
+                  )
                 }
               />
             ) : null}
@@ -1376,6 +1605,9 @@ export default function DashboardPage() {
                           item.itemNumber
                         )
                       }
+                      disabled={
+                        checklistReadOnly
+                      }
                     />
                   );
                 }
@@ -1388,6 +1620,10 @@ export default function DashboardPage() {
                 className="ramp-button ramp-button-light"
                 onClick={
                   showHistory
+                }
+                disabled={
+                  historyLoading ||
+                  approving
                 }
               >
                 <History
@@ -1404,10 +1640,8 @@ export default function DashboardPage() {
                   resetChecklist
                 }
                 disabled={
-                  approving ||
-                  recordLocked
+                  checklistReadOnly
                 }
-
               >
                 <RefreshCw
                   size={17}
@@ -1430,33 +1664,35 @@ export default function DashboardPage() {
                 PDF
               </button>
 
-              <button
-                type="button"
-                className="ramp-button ramp-button-gold"
-                onClick={
-                  saveChecklist
-                }
-                disabled={
-                  saving ||
-                  approving ||
-                  recordLocked
-                }
-              >
-                {saving ? (
-                  <LoaderCircle
-                    size={17}
-                    className="spin"
-                  />
-                ) : (
-                  <Save
-                    size={17}
-                  />
-                )}
+              {roleCanOperate ? (
+                <button
+                  type="button"
+                  className="ramp-button ramp-button-gold"
+                  onClick={
+                    saveChecklist
+                  }
+                  disabled={
+                    saving ||
+                    approving ||
+                    recordLocked
+                  }
+                >
+                  {saving ? (
+                    <LoaderCircle
+                      size={17}
+                      className="spin"
+                    />
+                  ) : (
+                    <Save
+                      size={17}
+                    />
+                  )}
 
-                {saving
-                  ? "Saving..."
-                  : "Save Checklist"}
-              </button>
+                  {saving
+                    ? "Saving..."
+                    : "Save Checklist"}
+                </button>
+              ) : null}
             </section>
           </>
         ) : null}
