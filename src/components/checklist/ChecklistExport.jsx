@@ -4,7 +4,6 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import { useState } from "react";
-import ExcelJS from "exceljs";
 
 import { supabase } from "../../lib/supabase";
 import {
@@ -155,6 +154,9 @@ export default function ChecklistExport({
       }
 
       setExporting(true);
+
+      const excelModule = await import("exceljs");
+    const ExcelJS = excelModule.default;
 
       const {
         data: checklists,
@@ -493,7 +495,7 @@ export default function ChecklistExport({
             actualTime:
               item.actual_time || "",
             delaySeconds:
-              item.delay_seconds,
+              item.delay_seconds ?? "",
             status:
               item.operational_status,
             observation:
