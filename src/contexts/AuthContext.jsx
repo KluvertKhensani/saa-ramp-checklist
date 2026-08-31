@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
       setProfile(null);
       return null;
     }
-
+    
     setProfile(data);
     return data;
   }

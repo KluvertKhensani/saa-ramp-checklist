@@ -2,20 +2,33 @@ export const ROLE_LABELS = {
   administrator: "Administrator",
   occ_manager: "OCC Manager",
   controller: "Controller",
-  trc_coordinator: "TRC Coordinator",
-  turnaround_coordinator: "Turnaround Coordinator",
-  ramp_agent: "Ramp Agent",
   qa_inspector: "QA Inspector",
+  trc_coordinator: "TRC Coordinator",
+  turnaround_coordinator:
+    "Turnaround Coordinator",
+  ramp_agent: "Ramp Agent",
   auditor: "Auditor",
   viewer: "Viewer",
 };
 
+function normalizeRole(role) {
+  return String(role || "")
+    .trim()
+    .toLowerCase();
+}
+
 export function getRoleLabel(role) {
-  if (!role) {
+  const normalizedRole =
+    normalizeRole(role);
+
+  if (!normalizedRole) {
     return "User";
   }
 
-  return ROLE_LABELS[role] || role;
+  return (
+    ROLE_LABELS[normalizedRole] ||
+    normalizedRole
+  );
 }
 
 export function canOperateChecklist(role) {
@@ -26,7 +39,7 @@ export function canOperateChecklist(role) {
     "trc_coordinator",
     "turnaround_coordinator",
     "ramp_agent",
-  ].includes(role);
+  ].includes(normalizeRole(role));
 }
 
 export function canApproveChecklist(role) {
@@ -35,7 +48,9 @@ export function canApproveChecklist(role) {
     "occ_manager",
     "controller",
     "qa_inspector",
-  ].includes(role);
+    "trc_coordinator",
+    "turnaround_coordinator",
+  ].includes(normalizeRole(role));
 }
 
 export function canExportReports(role) {
@@ -43,9 +58,9 @@ export function canExportReports(role) {
     "administrator",
     "occ_manager",
     "controller",
+    "qa_inspector",
     "trc_coordinator",
     "turnaround_coordinator",
-    "qa_inspector",
     "auditor",
-  ].includes(role);
+  ].includes(normalizeRole(role));
 }
