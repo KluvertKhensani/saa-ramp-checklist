@@ -12,7 +12,9 @@ import {
 import AppLogo from "../components/AppLogo";
 import LiveClock from "../components/LiveClock";
 import ChecklistActivity from "../components/checklist/ChecklistActivity";
+import ChecklistApproval from "../components/checklist/ChecklistApproval";
 import ChecklistExport from "../components/checklist/ChecklistExport";
+import ChecklistAuditHistory from "../components/checklist/ChecklistAuditHistory";
 import ChecklistHistory from "../components/checklist/ChecklistHistory";
 import ChecklistMetrics from "../components/checklist/ChecklistMetrics";
 import FlightInformation from "../components/checklist/FlightInformation";
@@ -107,6 +109,18 @@ export default function DashboardPage() {
   const [recordLocked, setRecordLocked] =
     useState(false);
 
+    const [approving, setApproving] = useState(false);
+
+  const [approvalDetails, setApprovalDetails] = useState({
+    approvedBy: null,
+    approvedByName: "",
+    approvedAt: null,
+    notes: "",
+  });
+
+  const [auditRecords, setAuditRecords] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+
   function plannedTimeFor(index) {
     const item = CHECKLIST_ITEMS[index];
 
@@ -165,6 +179,12 @@ export default function DashboardPage() {
   }, [activePhase]);
 
   function updateFlight(field, value) {
+    if (recordLocked || approving) {
+      window.alert(
+        "This checklist is locked or currently being approved."
+      );
+      return;
+    }
     setFlight((currentFlight) => {
       const updatedFlight = {
         ...currentFlight,
@@ -183,6 +203,14 @@ export default function DashboardPage() {
   }
 
   function updateRow(itemNumber, changes) {
+    if (recordLocked || approving) {
+      window.alert(
+        "This checklist is locked or currently being approved."
+      );
+
+      return;
+    }
+    
     const index = itemNumber - 1;
 
     setRows((currentRows) =>
@@ -295,6 +323,7 @@ export default function DashboardPage() {
   }
 
   function resetChecklist() {
+    setAuditRecords([]);
     if (recordLocked) {
       window.alert(
         "This checklist is locked and cannot be reset."
@@ -328,6 +357,13 @@ export default function DashboardPage() {
     setActivePhase("All");
     setChecklistId(null);
     setRecordLocked(false);
+    setApprovalDetails({
+      approvedBy: null,
+      approvedByName: "",
+      approvedAt: null,
+      notes: "",
+  });
+
     setStatusMessage("Not saved");
 
     localStorage.removeItem(
@@ -448,6 +484,7 @@ export default function DashboardPage() {
   }
 
   function createNewChecklist() {
+    setAuditRecords([]);
     setFlight({
       ...EMPTY_FLIGHT,
       flightDate:
@@ -464,6 +501,12 @@ export default function DashboardPage() {
 
     setChecklistId(null);
     setRecordLocked(false);
+    setApprovalDetails({
+      approvedBy: null,
+      approvedByName: "",
+      approvedAt: null,
+      notes: "",
+    });
     setActivePhase("All");
 
     setStatusMessage(
@@ -534,13 +577,34 @@ export default function DashboardPage() {
         throw itemsError;
       }
 
-      setChecklistId(
-        checklist.id
-      );
+      setChecklistId(checklist.id);
+      setRecordLocked(Boolean(checklist.is_locked));
 
-      setRecordLocked(
-        Boolean(checklist.is_locked)
-      );
+      setApprovalDetails({
+        approvedBy: checklist.approved_by || null,
+        approvedByName: "",
+        approvedAt: checklist.approved_at || null,
+        notes: checklist.approval_notes || "",
+      });
+
+      if (checklist.approved_by) {
+        const {
+          data: approverProfile,
+          error: approverError,
+        } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", checklist.approved_by)
+          .maybeSingle();
+
+        if (!approverError && approverProfile) {
+          setApprovalDetails((currentDetails) => ({
+            ...currentDetails,
+            approvedByName:
+              approverProfile.full_name || "",
+          }));
+        }
+      }
 
       setFlight({
         flightIn:
@@ -628,6 +692,8 @@ export default function DashboardPage() {
 
       setActiveView("checklist");
 
+      await loadAuditHistory(checklist.id);
+
       setStatusMessage(
         `Opened ${checklist.flight_out}`
       );
@@ -648,6 +714,197 @@ export default function DashboardPage() {
       setLoadingRecord(false);
     }
   }
+
+  async function loadAuditHistory(
+  targetChecklistId = checklistId
+) {
+  try {
+    if (!targetChecklistId) {
+      setAuditRecords([]);
+      return;
+    }
+
+    setAuditLoading(true);
+
+    const { data, error } = await supabase
+      .from("ramp_audit_logs")
+      .select(
+        [
+          "id",
+          "checklist_id",
+          "user_id",
+          "action",
+          "entity_type",
+          "old_values",
+          "new_values",
+          "created_at",
+        ].join(",")
+      )
+      .eq(
+        "checklist_id",
+        targetChecklistId
+      )
+      .order("created_at", {
+        ascending: false,
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    const userIds = [
+      ...new Set(
+        (data || [])
+          .map((record) => record.user_id)
+          .filter(Boolean)
+      ),
+    ];
+
+    let profileMap = new Map();
+
+    if (userIds.length > 0) {
+      const {
+        data: auditProfiles,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+
+      if (!profileError) {
+        profileMap = new Map(
+          (auditProfiles || []).map(
+            (auditProfile) => [
+              auditProfile.id,
+              auditProfile.full_name,
+            ]
+          )
+        );
+      }
+    }
+
+    const enrichedRecords = (data || []).map(
+      (record) => ({
+        ...record,
+        user_name:
+          profileMap.get(record.user_id) || "",
+      })
+    );
+
+    setAuditRecords(enrichedRecords);
+  } catch (error) {
+    console.error(
+      "Audit history load failed:",
+      error
+    );
+
+    window.alert(
+      "Audit history could not be loaded.\n\n" +
+        (error?.message || "Unknown error")
+    );
+  } finally {
+    setAuditLoading(false);
+  }
+}
+
+  async function approveChecklist(notes) {
+  try {
+    if (!user?.id) {
+      throw new Error(
+        "Your authenticated session could not be found. Sign in again."
+      );
+    }
+
+    if (!checklistId) {
+      throw new Error(
+        "Save the checklist before approving it."
+      );
+    }
+
+    if (recordLocked) {
+      throw new Error(
+        "This checklist has already been approved and locked."
+      );
+    }
+
+    setApproving(true);
+    setStatusMessage("Approving checklist...");
+
+    const { data, error } = await supabase.rpc(
+      "approve_ramp_checklist",
+      {
+        target_checklist_id: checklistId,
+        supervisor_notes:
+          notes?.trim() || null,
+      }
+    );
+
+    if (error) {
+      throw error;
+    }
+
+    const approvedChecklist =
+      Array.isArray(data)
+        ? data[0]
+        : data;
+
+    if (!approvedChecklist) {
+      throw new Error(
+        "Supabase did not return the approved checklist."
+      );
+    }
+
+    setRecordLocked(true);
+
+    await loadAuditHistory(checklistId);
+
+    setApprovalDetails({
+      approvedBy:
+        approvedChecklist.approved_by ||
+        user.id,
+      approvedByName:
+        profile?.full_name ||
+        user?.email ||
+        "Authorised user",
+      approvedAt:
+        approvedChecklist.approved_at ||
+        new Date().toISOString(),
+      notes:
+        approvedChecklist.approval_notes ||
+        notes?.trim() ||
+        "",
+    });
+
+    setStatusMessage(
+      `Approved and locked: ${flight.flightOut}`
+    );
+
+    localStorage.removeItem(
+      "saa_ramp_checklist_draft"
+    );
+
+    window.alert(
+      "Checklist approved successfully.\n\n" +
+        `Flight: ${flight.flightOut}\n` +
+        "Status: Completed\n" +
+        "Editing: Locked"
+    );
+  } catch (error) {
+    console.error(
+      "Checklist approval failed:",
+      error
+    );
+
+    setStatusMessage("Approval failed");
+
+    window.alert(
+      "The checklist could not be approved.\n\n" +
+        (error?.message || "Unknown error")
+    );
+  } finally {
+    setApproving(false);
+  }
+}
 
   async function saveChecklist() {
     try {
@@ -676,6 +933,8 @@ export default function DashboardPage() {
           "Flight Date is required."
         );
       }
+
+      await loadAuditHistory(activeChecklistId);
 
       setSaving(true);
 
@@ -917,7 +1176,10 @@ export default function DashboardPage() {
             type="button"
             className="ramp-button ramp-button-light"
             onClick={showHistory}
-            disabled={historyLoading}
+            disabled={
+              historyLoading ||
+              approving
+            }
           >
             {historyLoading ? (
               <LoaderCircle
@@ -939,6 +1201,7 @@ export default function DashboardPage() {
               onClick={saveChecklist}
               disabled={
                 saving ||
+                approving ||
                 recordLocked
               }
             >
@@ -1025,6 +1288,25 @@ export default function DashboardPage() {
                 CHECKLIST_ITEMS.length
               }
             />
+
+            <ChecklistApproval
+              checklistId={checklistId}
+              profile={profile}
+              locked={recordLocked}
+              approvalDetails={approvalDetails}
+              approving={approving}
+              onApprove={approveChecklist}
+            />
+
+            {checklistId ? (
+              <ChecklistAuditHistory
+                records={auditRecords}
+                loading={auditLoading}
+                onRefresh={() =>
+                  loadAuditHistory(checklistId)
+                }
+              />
+            ) : null}
 
             <section className="phase-tabs">
               {CHECKLIST_PHASES.map(
@@ -1122,8 +1404,10 @@ export default function DashboardPage() {
                   resetChecklist
                 }
                 disabled={
+                  approving ||
                   recordLocked
                 }
+
               >
                 <RefreshCw
                   size={17}
@@ -1154,6 +1438,7 @@ export default function DashboardPage() {
                 }
                 disabled={
                   saving ||
+                  approving ||
                   recordLocked
                 }
               >
