@@ -2,14 +2,26 @@ import {
   CheckCircle2,
   LoaderCircle,
   LockKeyhole,
+  ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 
-const APPROVER_ROLES = [
-  "administrator",
-  "occ_manager",
-  "controller",
-];
+import {
+  canApproveChecklist,
+  getRoleLabel,
+} from "../../utils/roles";
+
+function formatApprovalTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-ZA", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Africa/Johannesburg",
+  }).format(new Date(value));
+}
 
 export default function ChecklistApproval({
   checklistId,
@@ -21,78 +33,130 @@ export default function ChecklistApproval({
 }) {
   const [notes, setNotes] = useState("");
 
-  const role =
-    profile?.role || "viewer";
-
-  const canApprove =
-    APPROVER_ROLES.includes(role);
-
   if (!checklistId) {
-    return null;
+    return (
+      <section className="approval-panel">
+        <div className="approval-heading">
+          <ShieldCheck size={25} />
+
+          <div>
+            <h3>Supervisor approval</h3>
+
+            <p>
+              Save the checklist before requesting
+              supervisor or QA approval.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   if (locked) {
     return (
       <section className="approval-panel approval-locked">
-        <div className="approval-icon">
-          <LockKeyhole size={23} />
+        <div className="approval-heading">
+          <LockKeyhole size={25} />
+
+          <div>
+            <h3>Approved and locked</h3>
+
+            <p>
+              This operational checklist is read-only
+              and cannot be changed through the normal
+              save workflow.
+            </p>
+          </div>
         </div>
 
-        <div>
-          <h3>Checklist approved and locked</h3>
+        <dl className="approval-details">
+          <div>
+            <dt>Approved by</dt>
 
-          <p>
-            This operational record is now read-only.
-          </p>
+            <dd>
+              {approvalDetails?.approvedByName ||
+                approvalDetails?.approvedBy ||
+                "Authorised user"}
+            </dd>
+          </div>
 
-          {approvalDetails?.approvedAt ? (
-            <small>
-              Approved{" "}
-              {new Date(
-                approvalDetails.approvedAt
-              ).toLocaleString("en-ZA")}
-            </small>
-          ) : null}
+          <div>
+            <dt>Approved at</dt>
 
-          {approvalDetails?.notes ? (
-            <blockquote>
-              {approvalDetails.notes}
-            </blockquote>
-          ) : null}
-        </div>
+            <dd>
+              {approvalDetails?.approvedAt
+                ? formatApprovalTime(
+                    approvalDetails.approvedAt
+                  )
+                : "Not available"}
+            </dd>
+          </div>
+
+          <div>
+            <dt>Approval notes</dt>
+
+            <dd>
+              {approvalDetails?.notes ||
+                "No approval notes entered."}
+            </dd>
+          </div>
+        </dl>
       </section>
     );
   }
 
-  if (!canApprove) {
+  if (!canApproveChecklist(profile?.role)) {
     return (
       <section className="approval-panel">
-        <div>
-          <h3>Supervisor approval</h3>
+        <div className="approval-heading">
+          <ShieldCheck size={25} />
 
-          <p>
-            This checklist has not yet been approved.
-            An authorized controller or manager must
-            review and lock the record.
-          </p>
+          <div>
+            <h3>Awaiting approval</h3>
+
+            <p>
+              This checklist requires review by an
+              authorised supervisor, coordinator, or
+              QA inspector.
+            </p>
+          </div>
         </div>
+
+        <p className="approval-role-note">
+          Current role:{" "}
+          <strong>
+            {getRoleLabel(profile?.role)}
+          </strong>
+        </p>
       </section>
     );
+  }
+
+  async function handleApproval() {
+    const confirmed = window.confirm(
+      "Approve and permanently lock this checklist?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    await onApprove(notes);
   }
 
   return (
     <section className="approval-panel">
       <div className="approval-heading">
+        <CheckCircle2 size={25} />
+
         <div>
           <h3>Supervisor approval</h3>
 
           <p>
             Approval marks the checklist as completed
-            and permanently locks normal editing.
+            and locks further operational editing.
           </p>
         </div>
-
-        <CheckCircle2 size={25} />
       </div>
 
       <label className="approval-notes">
@@ -103,16 +167,17 @@ export default function ChecklistApproval({
           onChange={(event) =>
             setNotes(event.target.value)
           }
-          placeholder="Enter supervisor review notes"
-          rows="3"
+          placeholder="Record the review outcome, exceptions, or approval comments"
+          rows="4"
+          disabled={approving}
         />
       </label>
 
       <button
         type="button"
         className="ramp-button ramp-button-green"
+        onClick={handleApproval}
         disabled={approving}
-        onClick={() => onApprove(notes)}
       >
         {approving ? (
           <LoaderCircle
