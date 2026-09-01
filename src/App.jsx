@@ -1,5 +1,4 @@
 ﻿import {
-  BrowserRouter,
   Navigate,
   Route,
   Routes,
@@ -12,7 +11,6 @@ import "./styles/app.css";
 
 export default function App() {
   return (
-    <BrowserRouter>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -24,6 +22,5 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
-    </BrowserRouter>
   );
 }
