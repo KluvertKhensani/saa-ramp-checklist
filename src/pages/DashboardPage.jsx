@@ -1,5 +1,6 @@
 ﻿import { useMemo, useState } from "react";
 import {
+  ArrowLeft,
   Download,
   History,
   LoaderCircle,
@@ -259,36 +260,6 @@ export default function DashboardPage() {
     setStatusMessage("Not saved");
   }
 
-  function handleActualChange(
-    itemNumber,
-    actualTime
-  ) {
-    if (checklistReadOnly) {
-      return;
-    }
-
-    const index = itemNumber - 1;
-    const plannedTime =
-      plannedTimeFor(index);
-
-    const delaySeconds =
-      calculateDelaySeconds(
-        actualTime,
-        plannedTime
-      );
-
-    updateRow(itemNumber, {
-      actualTime,
-      delaySeconds,
-      status:
-        plannedTime &&
-        delaySeconds !== null
-          ? classifyDelay(delaySeconds)
-          : rows[index]?.status ||
-            "pending",
-    });
-  }
-
   function markActivity(itemNumber) {
     if (checklistReadOnly) {
       window.alert(
@@ -307,6 +278,7 @@ export default function DashboardPage() {
 
     if (row.status !== "pending") {
       updateRow(itemNumber, {
+        actualTime: "",
         status: "pending",
         delaySeconds: null,
       });
@@ -314,10 +286,7 @@ export default function DashboardPage() {
       return;
     }
 
-    const actualTime =
-      row.actualTime ||
-      currentTime();
-
+    const actualTime = currentTime();
     const plannedTime =
       plannedTimeFor(index);
 
@@ -459,9 +428,7 @@ export default function DashboardPage() {
         );
       }
 
-      if (
-        historyStatus !== "all"
-      ) {
+      if (historyStatus !== "all") {
         query = query.eq(
           "checklist_status",
           historyStatus
@@ -529,6 +496,19 @@ export default function DashboardPage() {
     } finally {
       setHistoryLoading(false);
     }
+  }
+
+  function returnToChecklist() {
+    setActiveView("checklist");
+
+    setStatusMessage(
+      checklistId
+        ? `Returned to ${
+            flight.flightOut ||
+            "saved checklist"
+          }`
+        : "Checklist ready"
+    );
   }
 
   async function showHistory() {
@@ -1266,7 +1246,12 @@ export default function DashboardPage() {
       const savedTime =
         new Date()
           .toLocaleTimeString(
-            "en-ZA"
+            "en-ZA",
+            {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            }
           );
 
       setStatusMessage(
@@ -1413,44 +1398,38 @@ export default function DashboardPage() {
             : statusMessage}
         </div>
 
-        {activeView ===
-        "history" ? (
+        {activeView === "history" ? (
           <div className="history-view">
+            <div className="history-navigation">
+              <button
+                type="button"
+                className="ramp-button ramp-button-light"
+                onClick={returnToChecklist}
+              >
+                <ArrowLeft
+                  size={17}
+                  aria-hidden="true"
+                />
+
+                Back to Checklist
+              </button>
+            </div>
+
             <ChecklistExport
               profile={profile}
             />
 
             <ChecklistHistory
-              records={
-                historyRecords
-              }
-              loading={
-                historyLoading
-              }
-              searchValue={
-                historySearch
-              }
-              statusValue={
-                historyStatus
-              }
-              onSearchChange={
-                setHistorySearch
-              }
-              onStatusChange={
-                setHistoryStatus
-              }
-              onRefresh={
-                loadChecklistHistory
-              }
-              onOpen={
-                openChecklist
-              }
-              onNew={
-                createNewChecklist
-              }
-              canCreate={
-                roleCanCreate
-              }
+              records={historyRecords}
+              loading={historyLoading}
+              searchValue={historySearch}
+              statusValue={historyStatus}
+              onSearchChange={setHistorySearch}
+              onStatusChange={setHistoryStatus}
+              onRefresh={loadChecklistHistory}
+              onOpen={openChecklist}
+              onNew={createNewChecklist}
+              canCreate={roleCanCreate}
             />
           </div>
         ) : null}
@@ -1483,9 +1462,7 @@ export default function DashboardPage() {
 
             <FlightInformation
               flight={flight}
-              onChange={
-                updateFlight
-              }
+              onChange={updateFlight}
               onChocksNow={
                 markChocksOnNow
               }
@@ -1506,15 +1483,11 @@ export default function DashboardPage() {
                 checklistId
               }
               profile={profile}
-              locked={
-                recordLocked
-              }
+              locked={recordLocked}
               approvalDetails={
                 approvalDetails
               }
-              approving={
-                approving
-              }
+              approving={approving}
               onApprove={
                 approveChecklist
               }
@@ -1523,12 +1496,8 @@ export default function DashboardPage() {
             {checklistId &&
             roleCanViewAudit ? (
               <ChecklistAuditHistory
-                records={
-                  auditRecords
-                }
-                loading={
-                  auditLoading
-                }
+                records={auditRecords}
+                loading={auditLoading}
                 onRefresh={() =>
                   loadAuditHistory(
                     checklistId
@@ -1581,14 +1550,6 @@ export default function DashboardPage() {
                       plannedTime={plannedTimeFor(
                         index
                       )}
-                      onActualChange={(
-                        value
-                      ) =>
-                        handleActualChange(
-                          item.itemNumber,
-                          value
-                        )
-                      }
                       onObservationChange={(
                         value
                       ) =>
@@ -1618,9 +1579,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 className="ramp-button ramp-button-light"
-                onClick={
-                  showHistory
-                }
+                onClick={showHistory}
                 disabled={
                   historyLoading ||
                   approving

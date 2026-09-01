@@ -1,4 +1,11 @@
-import { Check } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Clock3,
+  RotateCcw,
+} from "lucide-react";
+import { useState } from "react";
 
 import { formatDelay } from "../../utils/checklistTime";
 
@@ -9,32 +16,51 @@ const STATUS_LABELS = {
   delay: "Delay",
 };
 
+function displayTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  return String(value).slice(0, 5);
+}
+
 export default function ChecklistActivity({
   item,
   row,
   plannedTime,
-  onActualChange,
   onObservationChange,
   onMark,
   disabled = false,
 }) {
+  const [expanded, setExpanded] =
+    useState(false);
+
   const isCompleted =
     row.status !== "pending";
 
-  const rowClassName = disabled
-    ? "checklist-row checklist-row-readonly"
-    : "checklist-row";
+  const plannedDisplay =
+    displayTime(plannedTime);
 
-  const markButtonClassName = isCompleted
-    ? "mark-button completed"
-    : "mark-button";
+  const actualDisplay =
+    displayTime(row.actualTime);
 
-  function handleActualChange(event) {
-    if (disabled) {
-      return;
-    }
+  const rowClassName = [
+    "checklist-row",
+    disabled
+      ? "checklist-row-readonly"
+      : "",
+    expanded
+      ? "checklist-row-expanded"
+      : "checklist-row-collapsed",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-    onActualChange(event.target.value);
+  function toggleExpanded() {
+    setExpanded(
+      (currentValue) =>
+        !currentValue
+    );
   }
 
   function handleObservationChange(event) {
@@ -42,7 +68,9 @@ export default function ChecklistActivity({
       return;
     }
 
-    onObservationChange(event.target.value);
+    onObservationChange(
+      event.target.value
+    );
   }
 
   function handleMark() {
@@ -58,97 +86,166 @@ export default function ChecklistActivity({
       className={rowClassName}
       aria-readonly={disabled}
     >
-      <div className="checklist-number">
-        {item.itemNumber}
-      </div>
-
-      <div className="checklist-main">
-        <span className="checklist-phase">
-          {item.phase}
+      <button
+        type="button"
+        className="checklist-row-toggle"
+        onClick={toggleExpanded}
+        aria-expanded={expanded}
+        aria-controls={`task-details-${item.itemNumber}`}
+        aria-label={
+          expanded
+            ? `Collapse ${item.activity}`
+            : `Expand ${item.activity}`
+        }
+      >
+        <span className="checklist-number">
+          {item.itemNumber}
         </span>
 
-        <h3>{item.activity}</h3>
+        <span className="checklist-toggle-content">
+          <span className="checklist-phase">
+            {item.phase}
+          </span>
 
-        <div className="checklist-times">
-          <label>
-            <span>Planned</span>
+          <strong className="checklist-task-name">
+            {item.activity}
+          </strong>
 
-            <input
-              value={plannedTime}
-              readOnly
-              placeholder="Awaiting base time"
-              aria-label={`Planned time for ${item.activity}`}
-            />
-          </label>
-
-          <label>
-            <span>Actual</span>
-
-            <input
-              type="time"
-              step="1"
-              value={row.actualTime}
-              onChange={handleActualChange}
-              disabled={disabled}
-              aria-label={`Actual time for ${item.activity}`}
-            />
-          </label>
-        </div>
-
-        <label className="observation-field">
-          <span>Observation</span>
-
-          <input
-            value={row.observation}
-            onChange={handleObservationChange}
-            placeholder="Operational observation"
-            disabled={disabled}
-            aria-label={`Observation for ${item.activity}`}
-          />
-        </label>
-      </div>
-
-        <div className="checklist-result">
-            <span
-            className={`activity-status status-${row.status}`}
-            >
-            {STATUS_LABELS[row.status] || "Pending"}
-            </span>
-
-            <small>
-            {formatDelay(row.delaySeconds)}
-            </small>
-
-            <button
-            type="button"
-            className={markButtonClassName}
-            onClick={handleMark}
-            disabled={disabled}
-            title={
-                disabled
-                ? "This checklist is read-only"
-                : isCompleted
-                    ? "Return this activity to pending"
-                    : "Mark this activity as completed"
-            }
-            aria-label={
-                disabled
-                ? `${item.activity} is read-only`
-                : isCompleted
-                    ? `Return ${item.activity} to pending`
-                    : `Mark ${item.activity} as completed`
-            }
-            >
-            <Check
-                size={17}
-                aria-hidden="true"
+          <span className="checklist-compact-time">
+            <Clock3
+              size={14}
+              aria-hidden="true"
             />
 
             {isCompleted
-                ? "Completed"
-                : "Mark Done"}
+              ? `Completed at ${
+                  actualDisplay ||
+                  "recorded time"
+                }`
+              : plannedDisplay
+                ? `Planned ${plannedDisplay}`
+                : "Awaiting base time"}
+          </span>
+        </span>
+
+        <span className="checklist-toggle-status">
+          <span
+            className={`activity-status status-${row.status}`}
+          >
+            {STATUS_LABELS[row.status] ||
+              "Pending"}
+          </span>
+
+          {expanded ? (
+            <ChevronUp
+              size={20}
+              aria-hidden="true"
+            />
+          ) : (
+            <ChevronDown
+              size={20}
+              aria-hidden="true"
+            />
+          )}
+        </span>
+      </button>
+
+      {expanded ? (
+        <div
+          id={`task-details-${item.itemNumber}`}
+          className="checklist-row-details"
+        >
+          <div className="checklist-times checklist-times-display">
+            <div className="activity-time-display">
+              <span>Planned</span>
+
+              <strong>
+                {plannedDisplay ||
+                  "Awaiting base time"}
+              </strong>
+            </div>
+
+            <div className="activity-time-display">
+              <span>Actual</span>
+
+              <strong>
+                {actualDisplay ||
+                  "Not completed"}
+              </strong>
+            </div>
+          </div>
+
+          <label className="observation-field">
+            <span>Observation</span>
+
+            <input
+              value={row.observation}
+              onChange={
+                handleObservationChange
+              }
+              placeholder="Operational observation"
+              disabled={disabled}
+              aria-label={`Observation for ${item.activity}`}
+            />
+          </label>
+
+          <div className="checklist-result checklist-result-compact">
+            <div className="activity-delay-summary">
+              <span>Delay status</span>
+
+              <strong>
+                {formatDelay(
+                  row.delaySeconds
+                )}
+              </strong>
+            </div>
+
+            <button
+              type="button"
+              className={
+                isCompleted
+                  ? "mark-button completed"
+                  : "mark-button"
+              }
+              onClick={handleMark}
+              disabled={disabled}
+              title={
+                disabled
+                  ? "This checklist is read-only"
+                  : isCompleted
+                    ? "Return this activity to pending"
+                    : "Record the activity completion time"
+              }
+              aria-label={
+                disabled
+                  ? `${item.activity} is read-only`
+                  : isCompleted
+                    ? `Return ${item.activity} to pending`
+                    : `Complete ${item.activity} now`
+              }
+            >
+              {isCompleted ? (
+                <RotateCcw
+                  size={17}
+                  aria-hidden="true"
+                />
+              ) : (
+                <Check
+                  size={17}
+                  aria-hidden="true"
+                />
+              )}
+
+              {isCompleted
+                ? `Completed at ${
+                    actualDisplay ||
+                    "recorded time"
+                  }`
+                : "Mark Complete"}
             </button>
+          </div>
         </div>
-        </article>
-    );
-    }
+      ) : null}
+    </article>
+  );
+}
