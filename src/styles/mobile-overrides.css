@@ -1,6 +1,6 @@
 /*
   SAA GRU Turnaround Operations
-  Responsive layout and compact task overrides
+  Responsive layout and compact activity overrides
 */
 
 *,
@@ -17,8 +17,6 @@ body,
   margin: 0;
   overflow-x: hidden;
 }
-
-/* Prevent containers from exceeding the screen */
 
 .auth-page,
 .auth-panel,
@@ -40,8 +38,6 @@ body,
   max-width: 100%;
   min-width: 0;
 }
-
-/* Login form and role selector */
 
 .auth-form,
 .input-group,
@@ -77,8 +73,6 @@ body,
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(27, 79, 160, 0.12);
 }
-
-/* Responsive flight information fields */
 
 .flight-grid {
   display: grid;
@@ -125,8 +119,6 @@ body,
   gap: 8px;
 }
 
-/* History navigation */
-
 .history-view {
   display: grid;
   gap: 16px;
@@ -139,8 +131,6 @@ body,
   justify-content: flex-start;
   width: 100%;
 }
-
-/* Excel export panel */
 
 .export-panel {
   width: 100%;
@@ -204,8 +194,6 @@ body,
   font-size: 16px;
 }
 
-/* Phase buttons remain horizontal across the screen */
-
 .phase-tabs {
   display: flex !important;
   flex-direction: row !important;
@@ -248,8 +236,6 @@ body,
 .phase-tabs::-webkit-scrollbar-thumb:hover {
   background: #71809a;
 }
-
-/* Compact collapsible activity cards */
 
 .checklist-row {
   display: block;
@@ -380,8 +366,6 @@ body,
   min-width: 0;
 }
 
-/* Read-only controls */
-
 .checklist-row-readonly {
   background: #f7f9fc;
 }
@@ -428,8 +412,6 @@ textarea:disabled {
 button:disabled {
   cursor: not-allowed;
 }
-
-/* Tablet and mobile layout */
 
 @media (max-width: 760px) {
   .ramp-header {
@@ -649,10 +631,17 @@ button:disabled {
   }
 }
 
-/* Print layout */
-
 @media print {
-  .history-navigation {
+  .history-navigation,
+  .export-panel,
+  .live-clock,
+  .ramp-header-actions,
+  .phase-tabs,
+  .bottom-actions,
+  .mark-button,
+  .approval-notes,
+  .approval-panel .ramp-button,
+  .audit-heading .ramp-button {
     display: none !important;
   }
 }
