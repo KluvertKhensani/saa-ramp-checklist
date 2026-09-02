@@ -7,7 +7,10 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { formatDelay } from "../../utils/checklistTime";
+import {
+  formatDelay,
+  formatDuration,
+} from "../../utils/checklistTime";
 
 const STATUS_LABELS = {
   pending: "Pending",
@@ -126,6 +129,12 @@ export default function ChecklistActivity({
                 ? `Planned ${plannedDisplay}`
                 : "Awaiting base time"}
           </span>
+
+          <span className="checklist-allocation-summary">
+            {formatDuration(
+                item.allocationSec
+            )}
+          </span>
         </span>
 
         <span className="checklist-toggle-status">
@@ -163,6 +172,16 @@ export default function ChecklistActivity({
                 {plannedDisplay ||
                   "Awaiting base time"}
               </strong>
+            </div>
+
+            <div className="activity-allocation">
+                <span>Task allocation</span>
+
+                <strong>
+                    {formatDuration(
+                        item.allocationSec
+                    )}
+                </strong>
             </div>
 
             <div className="activity-time-display">

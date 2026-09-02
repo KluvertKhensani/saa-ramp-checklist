@@ -1,4 +1,4 @@
-import {
+﻿import {
   Clock3,
   Plane,
 } from "lucide-react";
@@ -172,7 +172,7 @@ export default function FlightInformation({
 
           <input
             type="time"
-            step="1"
+            step="60"
             value={flight.sta}
             onChange={(event) =>
               change(
@@ -191,7 +191,7 @@ export default function FlightInformation({
 
           <input
             type="time"
-            step="1"
+            step="60"
             value={flight.eta}
             onChange={(event) =>
               change(
@@ -210,7 +210,7 @@ export default function FlightInformation({
 
           <input
             type="time"
-            step="1"
+            step="60"
             value={flight.ata}
             onChange={(event) =>
               change(
@@ -230,7 +230,7 @@ export default function FlightInformation({
           <div className="field-with-button">
             <input
               type="time"
-              step="1"
+              step="60"
               value={flight.chocksOn}
               onChange={(event) =>
                 change(
@@ -268,7 +268,7 @@ export default function FlightInformation({
 
           <input
             type="time"
-            step="1"
+            step="60"
             value={flight.std}
             onChange={(event) =>
               change(

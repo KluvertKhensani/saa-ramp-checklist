@@ -11,6 +11,7 @@ import {
 
 import AppLogo from "../components/AppLogo";
 import LiveClock from "../components/LiveClock";
+import PushbackCountdown from "../components/checklist/PushbackCountdown";
 import ChecklistActivity from "../components/checklist/ChecklistActivity";
 import ChecklistApproval from "../components/checklist/ChecklistApproval";
 import ChecklistAuditHistory from "../components/checklist/ChecklistAuditHistory";
@@ -1475,6 +1476,12 @@ export default function DashboardPage() {
               disabled={
                 checklistReadOnly
               }
+            />
+
+            <PushbackCountdown
+              chocksOn={flight.chocksOn}
+              std={flight.std}
+              disabled={checklistReadOnly}
             />
 
             <ChecklistMetrics
