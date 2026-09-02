@@ -9,6 +9,7 @@ export const ROLE_LABELS = {
   ramp_agent: "Ramp Agent",
   auditor: "Auditor",
   viewer: "Viewer",
+  data_analyst: "Data Analyst",
 };
 
 function normalizeRole(role) {
@@ -65,15 +66,10 @@ export function canApproveChecklist(role) {
 }
 
 export function canExportReports(role) {
-  return [
-    "administrator",
-    "occ_manager",
-    "controller",
-    "qa_inspector",
-    "trc_coordinator",
-    "turnaround_coordinator",
-    "auditor",
-  ].includes(normalizeRole(role));
+  return (
+    normalizeRole(role) ===
+    "data_analyst"
+  );
 }
 
 export function canViewAuditHistory(role) {
@@ -85,6 +81,21 @@ export function canViewAuditHistory(role) {
     "trc_coordinator",
     "turnaround_coordinator",
     "auditor",
+    "data_analyst",
+  ].includes(normalizeRole(role));
+}
+
+export function canViewOperationalHistory(role) {
+  return [
+    "administrator",
+    "occ_manager",
+    "controller",
+    "qa_inspector",
+    "trc_coordinator",
+    "turnaround_coordinator",
+    "auditor",
+    "viewer",
+    "data_analyst",
   ].includes(normalizeRole(role));
 }
 
@@ -93,5 +104,6 @@ export function isReadOnlyRole(role) {
     "qa_inspector",
     "auditor",
     "viewer",
+    "data_analyst",
   ].includes(normalizeRole(role));
 }

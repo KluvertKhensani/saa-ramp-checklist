@@ -35,6 +35,7 @@ import {
 } from "../utils/checklistTime";
 import {
   canCreateChecklist,
+  canExportReports,
   canOperateChecklist,
   canViewAuditHistory,
   getRoleLabel,
@@ -144,6 +145,9 @@ export default function DashboardPage() {
 
   const roleCanViewAudit =
     canViewAuditHistory(profile?.role);
+
+  const roleCanExport =
+    canExportReports(profile?.role);
 
   const roleIsReadOnly =
     isReadOnlyRole(profile?.role);
@@ -1415,9 +1419,11 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <ChecklistExport
-              profile={profile}
-            />
+            {roleCanExport ? (
+              <ChecklistExport
+                profile={profile}
+              />
+            ) : null}
 
             <ChecklistHistory
               records={historyRecords}

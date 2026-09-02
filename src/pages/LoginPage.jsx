@@ -49,6 +49,11 @@ const LOGIN_ROLE_OPTIONS = [
     value: "viewer",
     label: "Viewer",
   },
+
+  {
+    value: "data_analyst",
+    label: "Data Analyst",
+  },
 ];
 
 function normalizeRole(role) {

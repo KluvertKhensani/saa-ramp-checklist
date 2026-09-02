@@ -1,14 +1,25 @@
 ﻿import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabasePublishableKey =
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const supabaseUrl =
+  import.meta.env.VITE_SUPABASE_URL;
 
-if (!supabaseUrl || !supabasePublishableKey) {
+const supabasePublishableKey =
+  import.meta.env
+    .VITE_SUPABASE_PUBLISHABLE_KEY;
+
+if (
+  !supabaseUrl ||
+  !supabasePublishableKey
+) {
   throw new Error(
     "Supabase configuration is missing. Check the VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY settings in .env.local."
   );
 }
+
+const browserSessionStorage =
+  typeof window !== "undefined"
+    ? window.sessionStorage
+    : undefined;
 
 export const supabase = createClient(
   supabaseUrl,
@@ -18,6 +29,9 @@ export const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      storage: browserSessionStorage,
+      storageKey:
+        "saa-gru-auth-session",
     },
   }
 );
