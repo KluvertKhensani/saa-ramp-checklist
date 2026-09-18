@@ -1,6 +1,11 @@
-﻿import { useMemo, useState } from "react";
+﻿import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   ArrowLeft,
+  ClipboardCheck,
   Download,
   History,
   LoaderCircle,
@@ -11,7 +16,6 @@ import {
 
 import AppLogo from "../components/AppLogo";
 import LiveClock from "../components/LiveClock";
-import PushbackCountdown from "../components/checklist/PushbackCountdown";
 import ChecklistActivity from "../components/checklist/ChecklistActivity";
 import ChecklistApproval from "../components/checklist/ChecklistApproval";
 import ChecklistAuditHistory from "../components/checklist/ChecklistAuditHistory";
@@ -19,6 +23,7 @@ import ChecklistExport from "../components/checklist/ChecklistExport";
 import ChecklistHistory from "../components/checklist/ChecklistHistory";
 import ChecklistMetrics from "../components/checklist/ChecklistMetrics";
 import FlightInformation from "../components/checklist/FlightInformation";
+import PushbackCountdown from "../components/checklist/PushbackCountdown";
 import { useAuth } from "../contexts/useAuth";
 import {
   CHECKLIST_ITEMS,
@@ -30,6 +35,7 @@ import {
   calculateDelaySeconds,
   classifyDelay,
   currentTime,
+  getPendingTaskTiming,
   normalizeDatabaseTime,
   secondsToTime,
   timeToSeconds,
@@ -43,10 +49,16 @@ import {
   isReadOnlyRole,
 } from "../utils/roles";
 
+function getTodayDate() {
+  return new Date()
+    .toISOString()
+    .slice(0, 10);
+}
+
 const EMPTY_FLIGHT = {
   flightIn: "",
   flightOut: "",
-  flightDate: new Date().toISOString().slice(0, 10),
+  flightDate: getTodayDate(),
   bay: "",
   aircraftType: "",
   registration: "",
@@ -79,79 +91,196 @@ const APPLICATION_STATUS = {
   delay: "delay",
 };
 
-export default function DashboardPage() {
-  const { user, profile, signOut } = useAuth();
-
-  const [flight, setFlight] = useState({
+function createInitialFlight(
+  coordinatorName = ""
+) {
+  return {
     ...EMPTY_FLIGHT,
-    trcCoordinator: profile?.full_name || "",
-  });
+    flightDate: getTodayDate(),
+    trcCoordinator:
+      coordinatorName,
+  };
+}
 
-  const [rows, setRows] = useState(
-    createEmptyChecklistRows
-  );
+function compareTaskCandidates(
+  firstCandidate,
+  secondCandidate
+) {
+  if (
+    firstCandidate.timing.overdue !==
+    secondCandidate.timing.overdue
+  ) {
+    return firstCandidate.timing.overdue
+      ? -1
+      : 1;
+  }
 
-  const [activePhase, setActivePhase] =
-    useState("All");
+  const firstTime =
+    timeToSeconds(
+      firstCandidate.plannedTime
+    );
 
-  const [checklistId, setChecklistId] =
-    useState(null);
+  const secondTime =
+    timeToSeconds(
+      secondCandidate.plannedTime
+    );
+
+  if (
+    firstTime === null &&
+    secondTime === null
+  ) {
+    return (
+      firstCandidate.item.itemNumber -
+      secondCandidate.item.itemNumber
+    );
+  }
+
+  if (firstTime === null) {
+    return 1;
+  }
+
+  if (secondTime === null) {
+    return -1;
+  }
+
+  if (firstTime === secondTime) {
+    return (
+      firstCandidate.item.itemNumber -
+      secondCandidate.item.itemNumber
+    );
+  }
+
+  return firstTime - secondTime;
+}
+
+export default function DashboardPage() {
+  const {
+    user,
+    profile,
+    signOut,
+  } = useAuth();
+
+  const [flight, setFlight] =
+    useState(() =>
+      createInitialFlight(
+        profile?.full_name || ""
+      )
+    );
+
+  const [rows, setRows] =
+    useState(
+      createEmptyChecklistRows
+    );
+
+  const [
+    activePhase,
+    setActivePhase,
+  ] = useState("All");
+
+  const [
+    checklistId,
+    setChecklistId,
+  ] = useState(null);
 
   const [saving, setSaving] =
     useState(false);
 
-  const [loadingRecord, setLoadingRecord] =
-    useState(false);
+  const [
+    loadingRecord,
+    setLoadingRecord,
+  ] = useState(false);
 
-  const [statusMessage, setStatusMessage] =
-    useState("Not saved");
+  const [
+    statusMessage,
+    setStatusMessage,
+  ] = useState("Not saved");
 
-  const [activeView, setActiveView] =
-    useState("checklist");
+  const [
+    activeView,
+    setActiveView,
+  ] = useState("checklist");
 
-  const [historyRecords, setHistoryRecords] =
-    useState([]);
+  const [
+    historyRecords,
+    setHistoryRecords,
+  ] = useState([]);
 
-  const [historyLoading, setHistoryLoading] =
-    useState(false);
+  const [
+    historyLoading,
+    setHistoryLoading,
+  ] = useState(false);
 
-  const [historySearch, setHistorySearch] =
-    useState("");
+  const [
+    historySearch,
+    setHistorySearch,
+  ] = useState("");
 
-  const [historyStatus, setHistoryStatus] =
-    useState("all");
+  const [
+    historyStatus,
+    setHistoryStatus,
+  ] = useState("all");
 
-  const [recordLocked, setRecordLocked] =
-    useState(false);
+  const [
+    recordLocked,
+    setRecordLocked,
+  ] = useState(false);
 
-  const [approving, setApproving] =
-    useState(false);
+  const [
+    approving,
+    setApproving,
+  ] = useState(false);
 
   const [
     approvalDetails,
     setApprovalDetails,
-  ] = useState(EMPTY_APPROVAL_DETAILS);
+  ] = useState(
+    EMPTY_APPROVAL_DETAILS
+  );
 
-  const [auditRecords, setAuditRecords] =
-    useState([]);
+  const [
+    auditRecords,
+    setAuditRecords,
+  ] = useState([]);
 
-  const [auditLoading, setAuditLoading] =
-    useState(false);
+  const [
+    auditLoading,
+    setAuditLoading,
+  ] = useState(false);
+
+  const [
+    operationalNow,
+    setOperationalNow,
+  ] = useState(() => new Date());
+
+  const [
+    focusedTaskNumber,
+    setFocusedTaskNumber,
+  ] = useState(null);
 
   const roleCanCreate =
-    canCreateChecklist(profile?.role);
+    canCreateChecklist(
+      profile?.role
+    );
 
   const roleCanOperate =
-    canOperateChecklist(profile?.role);
+    canOperateChecklist(
+      profile?.role
+    );
 
   const roleCanViewAudit =
-    canViewAuditHistory(profile?.role);
+    canViewAuditHistory(
+      profile?.role
+    );
 
   const roleCanExport =
-    canExportReports(profile?.role);
+    canExportReports(
+      profile?.role
+    );
 
   const roleIsReadOnly =
-    isReadOnlyRole(profile?.role);
+    isReadOnlyRole(
+      profile?.role
+    );
 
   const checklistReadOnly =
     recordLocked ||
@@ -159,43 +288,84 @@ export default function DashboardPage() {
     roleIsReadOnly ||
     !roleCanOperate;
 
+  useEffect(() => {
+    const intervalId =
+      window.setInterval(() => {
+        setOperationalNow(
+          new Date()
+        );
+      }, 15000);
+
+    return () => {
+      window.clearInterval(
+        intervalId
+      );
+    };
+  }, []);
+
   function plannedTimeFor(index) {
-    const item = CHECKLIST_ITEMS[index];
+    const item =
+      CHECKLIST_ITEMS[index];
 
     if (!item) {
       return "";
     }
 
-    const baseSeconds =
-      item.base === "std"
-        ? timeToSeconds(flight.std)
-        : timeToSeconds(flight.chocksOn);
+    const chocksOnSeconds =
+      timeToSeconds(
+        flight.chocksOn
+      );
 
-    if (baseSeconds === null) {
+    if (chocksOnSeconds === null) {
       return "";
     }
 
+    if (item.base === "std") {
+      const stdSeconds =
+        timeToSeconds(
+          flight.std
+        );
+
+      if (stdSeconds === null) {
+        return "";
+      }
+
+      return secondsToTime(
+        stdSeconds +
+          item.offsetSec
+      );
+    }
+
     return secondsToTime(
-      baseSeconds + item.offsetSec
+      chocksOnSeconds +
+        item.offsetSec
     );
   }
 
   const metrics = useMemo(() => {
     return rows.reduce(
       (totals, row) => {
-        if (row.status !== "pending") {
+        if (
+          row.status !== "pending"
+        ) {
           totals.done += 1;
         }
 
-        if (row.status === "ontime") {
+        if (
+          row.status === "ontime"
+        ) {
           totals.ontime += 1;
         }
 
-        if (row.status === "light") {
+        if (
+          row.status === "light"
+        ) {
           totals.light += 1;
         }
 
-        if (row.status === "delay") {
+        if (
+          row.status === "delay"
+        ) {
           totals.delay += 1;
         }
 
@@ -210,45 +380,104 @@ export default function DashboardPage() {
     );
   }, [rows]);
 
-  const visibleItems = useMemo(() => {
-    if (activePhase === "All") {
-      return CHECKLIST_ITEMS;
-    }
+  const matchingItems =
+    activePhase === "All"
+      ? CHECKLIST_ITEMS
+      : CHECKLIST_ITEMS.filter(
+          (item) =>
+            item.phase ===
+            activePhase
+        );
 
-    return CHECKLIST_ITEMS.filter(
-      (item) =>
-        item.phase === activePhase
+  const visibleItems =
+    [...matchingItems].sort(
+      (
+        firstItem,
+        secondItem
+      ) => {
+        const firstIndex =
+          firstItem.itemNumber - 1;
+
+        const secondIndex =
+          secondItem.itemNumber - 1;
+
+        const firstTime =
+          timeToSeconds(
+            plannedTimeFor(
+              firstIndex
+            )
+          );
+
+        const secondTime =
+          timeToSeconds(
+            plannedTimeFor(
+              secondIndex
+            )
+          );
+
+        if (
+          firstTime === null &&
+          secondTime === null
+        ) {
+          return (
+            firstItem.itemNumber -
+            secondItem.itemNumber
+          );
+        }
+
+        if (firstTime === null) {
+          return 1;
+        }
+
+        if (secondTime === null) {
+          return -1;
+        }
+
+        if (
+          firstTime === secondTime
+        ) {
+          return (
+            firstItem.itemNumber -
+            secondItem.itemNumber
+          );
+        }
+
+        return (
+          firstTime -
+          secondTime
+        );
+      }
     );
-  }, [activePhase]);
 
-  function updateFlight(field, value) {
+  function updateFlight(
+    field,
+    value
+  ) {
     if (checklistReadOnly) {
       return;
     }
 
-    setFlight((currentFlight) => {
-      const updatedFlight = {
+    setFlight(
+      (currentFlight) => ({
         ...currentFlight,
-      };
+        [field]: value,
+      })
+    );
 
-      Reflect.set(
-        updatedFlight,
-        field,
-        value
-      );
-
-      return updatedFlight;
-    });
-
+    setFocusedTaskNumber(null);
     setStatusMessage("Not saved");
   }
 
-  function updateRow(itemNumber, changes) {
+  function updateRow(
+    itemNumber,
+    changes
+  ) {
     if (checklistReadOnly) {
       return;
     }
 
-    const index = itemNumber - 1;
+    const index =
+      itemNumber - 1;
 
     setRows((currentRows) =>
       currentRows.map(
@@ -265,7 +494,9 @@ export default function DashboardPage() {
     setStatusMessage("Not saved");
   }
 
-  function markActivity(itemNumber) {
+  function markActivity(
+    itemNumber
+  ) {
     if (checklistReadOnly) {
       window.alert(
         "This checklist is read-only for your current role or has already been locked."
@@ -274,14 +505,19 @@ export default function DashboardPage() {
       return;
     }
 
-    const index = itemNumber - 1;
-    const row = rows[index];
+    const index =
+      itemNumber - 1;
+
+    const row =
+      rows[index];
 
     if (!row) {
       return;
     }
 
-    if (row.status !== "pending") {
+    if (
+      row.status !== "pending"
+    ) {
       updateRow(itemNumber, {
         actualTime: "",
         status: "pending",
@@ -291,9 +527,19 @@ export default function DashboardPage() {
       return;
     }
 
-    const actualTime = currentTime();
     const plannedTime =
       plannedTimeFor(index);
+
+    if (!plannedTime) {
+      window.alert(
+        "Enter Chocks On and any required STD timing before completing this activity."
+      );
+
+      return;
+    }
+
+    const actualTime =
+      currentTime();
 
     const delaySeconds =
       calculateDelaySeconds(
@@ -301,14 +547,21 @@ export default function DashboardPage() {
         plannedTime
       );
 
+    if (delaySeconds === null) {
+      window.alert(
+        "The activity performance could not be calculated because its planned time is unavailable."
+      );
+
+      return;
+    }
+
     updateRow(itemNumber, {
       actualTime,
       delaySeconds,
       status:
-        plannedTime &&
-        delaySeconds !== null
-          ? classifyDelay(delaySeconds)
-          : "ontime",
+        classifyDelay(
+          delaySeconds
+        ),
     });
   }
 
@@ -327,14 +580,119 @@ export default function DashboardPage() {
     );
   }
 
+  function openNextPendingTask() {
+    const pendingCandidates =
+      CHECKLIST_ITEMS
+        .map((item, index) => {
+          const row =
+            rows[index];
+
+          const plannedTime =
+            plannedTimeFor(index);
+
+          const timing =
+            getPendingTaskTiming(
+              plannedTime,
+              operationalNow
+            );
+
+          return {
+            item,
+            row,
+            plannedTime,
+            timing,
+          };
+        })
+        .filter(
+          ({ row }) =>
+            row?.status ===
+            "pending"
+        )
+        .sort(
+          compareTaskCandidates
+        );
+
+    if (
+      pendingCandidates.length ===
+      0
+    ) {
+      window.alert(
+        "All checklist activities are complete."
+      );
+
+      return;
+    }
+
+    const nextCandidate =
+      pendingCandidates[0];
+
+    setActiveView("checklist");
+    setActivePhase("All");
+
+    setFocusedTaskNumber(
+      nextCandidate.item
+        .itemNumber
+    );
+
+    setStatusMessage(
+      nextCandidate.timing
+        .overdue
+        ? `Next overdue task: ${nextCandidate.item.activity}`
+        : `Next pending task: ${nextCandidate.item.activity}`
+    );
+
+    window.setTimeout(() => {
+      document
+        .getElementById(
+          `checklist-task-${nextCandidate.item.itemNumber}`
+        )
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+    }, 150);
+  }
+
   async function handleSignOut() {
-    const { error } = await signOut();
+    const { error } =
+      await signOut();
 
     if (error) {
       window.alert(
         `Sign out failed: ${error.message}`
       );
     }
+  }
+
+  function clearChecklistState(
+    message
+  ) {
+    setFlight(
+      createInitialFlight(
+        profile?.full_name || ""
+      )
+    );
+
+    setRows(
+      createEmptyChecklistRows()
+    );
+
+    setActivePhase("All");
+    setChecklistId(null);
+    setRecordLocked(false);
+    setFocusedTaskNumber(null);
+
+    setApprovalDetails({
+      ...EMPTY_APPROVAL_DETAILS,
+    });
+
+    setAuditRecords([]);
+    setStatusMessage(message);
+    setActiveView("checklist");
+
+    localStorage.removeItem(
+      "saa_ramp_checklist_draft"
+    );
   }
 
   function resetChecklist() {
@@ -355,33 +713,8 @@ export default function DashboardPage() {
       return;
     }
 
-    setFlight({
-      ...EMPTY_FLIGHT,
-      flightDate:
-        new Date()
-          .toISOString()
-          .slice(0, 10),
-      trcCoordinator:
-        profile?.full_name || "",
-    });
-
-    setRows(
-      createEmptyChecklistRows()
-    );
-
-    setActivePhase("All");
-    setChecklistId(null);
-    setRecordLocked(false);
-
-    setApprovalDetails({
-      ...EMPTY_APPROVAL_DETAILS,
-    });
-
-    setAuditRecords([]);
-    setStatusMessage("Not saved");
-
-    localStorage.removeItem(
-      "saa_ramp_checklist_draft"
+    clearChecklistState(
+      "Not saved"
     );
   }
 
@@ -433,15 +766,19 @@ export default function DashboardPage() {
         );
       }
 
-      if (historyStatus !== "all") {
+      if (
+        historyStatus !== "all"
+      ) {
         query = query.eq(
           "checklist_status",
           historyStatus
         );
       }
 
-      const { data, error } =
-        await query;
+      const {
+        data,
+        error,
+      } = await query;
 
       if (error) {
         throw error;
@@ -466,7 +803,9 @@ export default function DashboardPage() {
 
                 return values.some(
                   (value) =>
-                    String(value || "")
+                    String(
+                      value || ""
+                    )
                       .toLowerCase()
                       .includes(
                         normalizedSearch
@@ -517,6 +856,7 @@ export default function DashboardPage() {
   }
 
   async function showHistory() {
+    setFocusedTaskNumber(null);
     setActiveView("history");
 
     await loadChecklistHistory();
@@ -531,43 +871,14 @@ export default function DashboardPage() {
       return;
     }
 
-    setFlight({
-      ...EMPTY_FLIGHT,
-      flightDate:
-        new Date()
-          .toISOString()
-          .slice(0, 10),
-      trcCoordinator:
-        profile?.full_name || "",
-    });
-
-    setRows(
-      createEmptyChecklistRows()
-    );
-
-    setChecklistId(null);
-    setRecordLocked(false);
-
-    setApprovalDetails({
-      ...EMPTY_APPROVAL_DETAILS,
-    });
-
-    setAuditRecords([]);
-    setActivePhase("All");
-
-    setStatusMessage(
+    clearChecklistState(
       "New checklist ready"
-    );
-
-    setActiveView("checklist");
-
-    localStorage.removeItem(
-      "saa_ramp_checklist_draft"
     );
   }
 
   async function loadAuditHistory(
-    targetChecklistId = checklistId
+    targetChecklistId =
+      checklistId
   ) {
     try {
       if (!targetChecklistId) {
@@ -582,28 +893,30 @@ export default function DashboardPage() {
 
       setAuditLoading(true);
 
-      const { data, error } =
-        await supabase
-          .from("ramp_audit_logs")
-          .select(
-            [
-              "id",
-              "checklist_id",
-              "user_id",
-              "action",
-              "entity_type",
-              "old_values",
-              "new_values",
-              "created_at",
-            ].join(",")
-          )
-          .eq(
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("ramp_audit_logs")
+        .select(
+          [
+            "id",
             "checklist_id",
-            targetChecklistId
-          )
-          .order("created_at", {
-            ascending: false,
-          });
+            "user_id",
+            "action",
+            "entity_type",
+            "old_values",
+            "new_values",
+            "created_at",
+          ].join(",")
+        )
+        .eq(
+          "checklist_id",
+          targetChecklistId
+        )
+        .order("created_at", {
+          ascending: false,
+        });
 
       if (error) {
         throw error;
@@ -638,14 +951,18 @@ export default function DashboardPage() {
           !profileError &&
           auditProfiles
         ) {
-          profileMap = new Map(
-            auditProfiles.map(
-              (auditProfile) => [
-                auditProfile.id,
-                auditProfile.full_name,
-              ]
-            )
-          );
+          profileMap =
+            new Map(
+              auditProfiles.map(
+                (
+                  auditProfile
+                ) => [
+                  auditProfile.id,
+                  auditProfile
+                    .full_name,
+                ]
+              )
+            );
         }
       }
 
@@ -729,9 +1046,12 @@ export default function DashboardPage() {
           "checklist_id",
           checklist.id
         )
-        .order("item_number", {
-          ascending: true,
-        });
+        .order(
+          "item_number",
+          {
+            ascending: true,
+          }
+        );
 
       if (itemsError) {
         throw itemsError;
@@ -747,6 +1067,8 @@ export default function DashboardPage() {
         )
       );
 
+      setFocusedTaskNumber(null);
+
       setApprovalDetails({
         approvedBy:
           checklist.approved_by ||
@@ -760,10 +1082,14 @@ export default function DashboardPage() {
           "",
       });
 
-      if (checklist.approved_by) {
+      if (
+        checklist.approved_by
+      ) {
         const {
-          data: approverProfile,
-          error: approverError,
+          data:
+            approverProfile,
+          error:
+            approverError,
         } = await supabase
           .from("profiles")
           .select("full_name")
@@ -778,7 +1104,9 @@ export default function DashboardPage() {
           approverProfile
         ) {
           setApprovalDetails(
-            (currentDetails) => ({
+            (
+              currentDetails
+            ) => ({
               ...currentDetails,
               approvedByName:
                 approverProfile
@@ -827,18 +1155,20 @@ export default function DashboardPage() {
             checklist.std
           ),
         trcCoordinator:
-          checklist.trc_coordinator ||
+          checklist
+            .trc_coordinator ||
           "",
       });
 
-      const itemMap = new Map(
-        (savedItems || []).map(
-          (item) => [
-            item.item_number,
-            item,
-          ]
-        )
-      );
+      const itemMap =
+        new Map(
+          (savedItems || []).map(
+            (item) => [
+              item.item_number,
+              item,
+            ]
+          )
+        );
 
       setRows(
         CHECKLIST_ITEMS.map(
@@ -853,17 +1183,20 @@ export default function DashboardPage() {
                 actualTime: "",
                 observation: "",
                 status: "pending",
-                delaySeconds: null,
+                delaySeconds:
+                  null,
               };
             }
 
             return {
               actualTime:
                 normalizeDatabaseTime(
-                  savedItem.actual_time
+                  savedItem
+                    .actual_time
                 ),
               observation:
-                savedItem.observation ||
+                savedItem
+                  .observation ||
                 "",
               status:
                 APPLICATION_STATUS[
@@ -879,6 +1212,7 @@ export default function DashboardPage() {
       );
 
       setActiveView("checklist");
+      setActivePhase("All");
 
       if (roleCanViewAudit) {
         await loadAuditHistory(
@@ -889,7 +1223,9 @@ export default function DashboardPage() {
       }
 
       setStatusMessage(
-        `Opened ${checklist.flight_out}`
+        `Opened ${
+          checklist.flight_out
+        }`
       );
     } catch (error) {
       console.error(
@@ -939,17 +1275,19 @@ export default function DashboardPage() {
         "Approving checklist..."
       );
 
-      const { data, error } =
-        await supabase.rpc(
-          "approve_ramp_checklist",
-          {
-            target_checklist_id:
-              checklistId,
-            supervisor_notes:
-              notes?.trim() ||
-              null,
-          }
-        );
+      const {
+        data,
+        error,
+      } = await supabase.rpc(
+        "approve_ramp_checklist",
+        {
+          target_checklist_id:
+            checklistId,
+          supervisor_notes:
+            notes?.trim() ||
+            null,
+        }
+      );
 
       if (error) {
         throw error;
@@ -980,7 +1318,8 @@ export default function DashboardPage() {
         approvedAt:
           approvedChecklist
             .approved_at ||
-          new Date().toISOString(),
+          new Date()
+            .toISOString(),
         notes:
           approvedChecklist
             .approval_notes ||
@@ -995,7 +1334,9 @@ export default function DashboardPage() {
       }
 
       setStatusMessage(
-        `Approved and locked: ${flight.flightOut}`
+        `Approved and locked: ${
+          flight.flightOut
+        }`
       );
 
       localStorage.removeItem(
@@ -1140,7 +1481,8 @@ export default function DashboardPage() {
           ...checklistRecord,
         };
 
-        delete updateRecord.owner_id;
+        delete updateRecord
+          .owner_id;
 
         const { error } =
           await supabase
@@ -1264,7 +1606,7 @@ export default function DashboardPage() {
       );
 
       window.alert(
-        "Ramp checklist saved successfully.\n\n" +
+        "OPS checklist saved successfully.\n\n" +
           `Flight: ${flight.flightOut}\n` +
           `Completed: ${metrics.done}/${CHECKLIST_ITEMS.length}`
       );
@@ -1295,17 +1637,19 @@ export default function DashboardPage() {
           <div className="ramp-brand-logo">
             <AppLogo
               className="saa-app-logo"
-              alt="SAA GRU Turnaround Operations"
+              alt="OPS Check-List GRU - Turnaround Report"
             />
           </div>
 
           <div>
             <h1>
-              SAA GRU Turnaround Operations
+              OPS Check-List GRU -
+              Turnaround Report
             </h1>
 
             <p>
-              Mobile Operational Checklist
+              PTS Turnaround Performance
+              Report
             </p>
           </div>
         </div>
@@ -1327,6 +1671,28 @@ export default function DashboardPage() {
 
           <LiveClock />
 
+          {activeView ===
+          "checklist" ? (
+            <button
+              type="button"
+              className="ramp-button ramp-button-green"
+              onClick={
+                openNextPendingTask
+              }
+              disabled={
+                loadingRecord ||
+                historyLoading
+              }
+            >
+              <ClipboardCheck
+                size={17}
+                aria-hidden="true"
+              />
+
+              Checklist
+            </button>
+          ) : null}
+
           <button
             type="button"
             className="ramp-button ramp-button-light"
@@ -1340,10 +1706,12 @@ export default function DashboardPage() {
               <LoaderCircle
                 size={17}
                 className="spin"
+                aria-hidden="true"
               />
             ) : (
               <History
                 size={17}
+                aria-hidden="true"
               />
             )}
 
@@ -1367,10 +1735,12 @@ export default function DashboardPage() {
                 <LoaderCircle
                   size={17}
                   className="spin"
+                  aria-hidden="true"
                 />
               ) : (
                 <Save
                   size={17}
+                  aria-hidden="true"
                 />
               )}
 
@@ -1387,6 +1757,7 @@ export default function DashboardPage() {
           >
             <LogOut
               size={17}
+              aria-hidden="true"
             />
 
             Sign out
@@ -1396,20 +1767,26 @@ export default function DashboardPage() {
 
       <section className="ramp-content">
         <div className="ramp-status-bar">
-          <span className="status-online" />
+          <span
+            className="status-online"
+            aria-hidden="true"
+          />
 
           {loadingRecord
             ? "Loading checklist..."
             : statusMessage}
         </div>
 
-        {activeView === "history" ? (
+        {activeView ===
+        "history" ? (
           <div className="history-view">
             <div className="history-navigation">
               <button
                 type="button"
                 className="ramp-button ramp-button-light"
-                onClick={returnToChecklist}
+                onClick={
+                  returnToChecklist
+                }
               >
                 <ArrowLeft
                   size={17}
@@ -1427,16 +1804,36 @@ export default function DashboardPage() {
             ) : null}
 
             <ChecklistHistory
-              records={historyRecords}
-              loading={historyLoading}
-              searchValue={historySearch}
-              statusValue={historyStatus}
-              onSearchChange={setHistorySearch}
-              onStatusChange={setHistoryStatus}
-              onRefresh={loadChecklistHistory}
-              onOpen={openChecklist}
-              onNew={createNewChecklist}
-              canCreate={roleCanCreate}
+              records={
+                historyRecords
+              }
+              loading={
+                historyLoading
+              }
+              searchValue={
+                historySearch
+              }
+              statusValue={
+                historyStatus
+              }
+              onSearchChange={
+                setHistorySearch
+              }
+              onStatusChange={
+                setHistoryStatus
+              }
+              onRefresh={
+                loadChecklistHistory
+              }
+              onOpen={
+                openChecklist
+              }
+              onNew={
+                createNewChecklist
+              }
+              canCreate={
+                roleCanCreate
+              }
             />
           </div>
         ) : null}
@@ -1446,11 +1843,11 @@ export default function DashboardPage() {
           <>
             {recordLocked ? (
               <div className="locked-banner">
-                This checklist has
-                been approved and
-                locked. It is available
-                for review but cannot
-                be saved again.
+                This checklist has been
+                approved and locked. It
+                is available for review
+                but cannot be saved
+                again.
               </div>
             ) : null}
 
@@ -1479,9 +1876,13 @@ export default function DashboardPage() {
             />
 
             <PushbackCountdown
-              chocksOn={flight.chocksOn}
+              chocksOn={
+                flight.chocksOn
+              }
               std={flight.std}
-              disabled={checklistReadOnly}
+              disabled={
+                checklistReadOnly
+              }
             />
 
             <ChecklistMetrics
@@ -1509,8 +1910,12 @@ export default function DashboardPage() {
             {checklistId &&
             roleCanViewAudit ? (
               <ChecklistAuditHistory
-                records={auditRecords}
-                loading={auditLoading}
+                records={
+                  auditRecords
+                }
+                loading={
+                  auditLoading
+                }
                 onRefresh={() =>
                   loadAuditHistory(
                     checklistId
@@ -1519,7 +1924,10 @@ export default function DashboardPage() {
               />
             ) : null}
 
-            <section className="phase-tabs">
+            <section
+              className="phase-tabs"
+              aria-label="Checklist phases"
+            >
               {CHECKLIST_PHASES.map(
                 (phase) => (
                   <button
@@ -1531,11 +1939,15 @@ export default function DashboardPage() {
                         ? "phase-tab active"
                         : "phase-tab"
                     }
-                    onClick={() =>
+                    onClick={() => {
                       setActivePhase(
                         phase
-                      )
-                    }
+                      );
+
+                      setFocusedTaskNumber(
+                        null
+                      );
+                    }}
                   >
                     {phase}
                   </button>
@@ -1553,6 +1965,30 @@ export default function DashboardPage() {
                   const row =
                     rows[index];
 
+                  if (!row) {
+                    return null;
+                  }
+
+                  const plannedTime =
+                    plannedTimeFor(
+                      index
+                    );
+
+                  const pendingTiming =
+                    row.status ===
+                    "pending"
+                      ? getPendingTaskTiming(
+                          plannedTime,
+                          operationalNow
+                        )
+                      : {
+                          overdue:
+                            false,
+                          overdueSeconds:
+                            null,
+                          label: "",
+                        };
+
                   return (
                     <ChecklistActivity
                       key={
@@ -1560,25 +1996,44 @@ export default function DashboardPage() {
                       }
                       item={item}
                       row={row}
-                      plannedTime={plannedTimeFor(
-                        index
-                      )}
+                      plannedTime={
+                        plannedTime
+                      }
+                      overdue={
+                        pendingTiming
+                          .overdue
+                      }
+                      overdueLabel={
+                        pendingTiming
+                          .label
+                      }
+                      forceExpanded={
+                        focusedTaskNumber ===
+                        item.itemNumber
+                      }
+                      onExpanded={(
+                        taskNumber
+                      ) => {
+                        setFocusedTaskNumber(
+                          taskNumber
+                        );
+                      }}
                       onObservationChange={(
                         value
-                      ) =>
+                      ) => {
                         updateRow(
                           item.itemNumber,
                           {
                             observation:
                               value,
                           }
-                        )
-                      }
-                      onMark={() =>
+                        );
+                      }}
+                      onMark={() => {
                         markActivity(
                           item.itemNumber
-                        )
-                      }
+                        );
+                      }}
                       disabled={
                         checklistReadOnly
                       }
@@ -1591,8 +2046,29 @@ export default function DashboardPage() {
             <section className="bottom-actions">
               <button
                 type="button"
+                className="ramp-button ramp-button-green"
+                onClick={
+                  openNextPendingTask
+                }
+                disabled={
+                  loadingRecord ||
+                  historyLoading
+                }
+              >
+                <ClipboardCheck
+                  size={17}
+                  aria-hidden="true"
+                />
+
+                Checklist
+              </button>
+
+              <button
+                type="button"
                 className="ramp-button ramp-button-light"
-                onClick={showHistory}
+                onClick={
+                  showHistory
+                }
                 disabled={
                   historyLoading ||
                   approving
@@ -1600,6 +2076,7 @@ export default function DashboardPage() {
               >
                 <History
                   size={17}
+                  aria-hidden="true"
                 />
 
                 History
@@ -1617,6 +2094,7 @@ export default function DashboardPage() {
               >
                 <RefreshCw
                   size={17}
+                  aria-hidden="true"
                 />
 
                 Reset
@@ -1631,6 +2109,7 @@ export default function DashboardPage() {
               >
                 <Download
                   size={17}
+                  aria-hidden="true"
                 />
 
                 PDF
@@ -1653,10 +2132,12 @@ export default function DashboardPage() {
                     <LoaderCircle
                       size={17}
                       className="spin"
+                      aria-hidden="true"
                     />
                   ) : (
                     <Save
                       size={17}
+                      aria-hidden="true"
                     />
                   )}
 

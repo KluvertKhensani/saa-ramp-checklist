@@ -185,31 +185,31 @@ const RAW_CHECKLIST_ITEMS = [
   [
     "Departure",
     "Doors armed and cross-checked",
-    "std",
+    "chocks",
     -300,
   ],
   [
     "Departure",
     "Cabin doors and hold doors closed",
-    "std",
+    "chocks",
     -360,
   ],
   [
     "Departure",
     "Stairs / jet bridge removed",
-    "std",
+    "chocks",
     -240,
   ],
   [
     "Departure",
     "Pushback clearance received",
-    "std",
+   "chocks",
     -180,
   ],
   [
     "Departure",
     "Aircraft pushback",
-    "std",
+    "chocks",
     -300,
   ],
 ];

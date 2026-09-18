@@ -831,3 +831,36 @@ button:disabled {
     padding: 16px;
   }
 }
+
+.status-overdue {
+  color: #ffffff;
+  background: #c6323c;
+}
+
+.checklist-row-overdue {
+  border-color: #c6323c;
+  box-shadow:
+    0 0 0 2px
+    rgba(198, 50, 60, 0.12);
+}
+
+.checklist-row-overdue
+.checklist-row-toggle {
+  background: #fff6f6;
+}
+
+.checklist-row-overdue
+.checklist-number {
+  color: #ffffff;
+  background: #c6323c;
+}
+
+.activity-overdue-alert {
+  padding: 10px 12px;
+  color: #a3222c;
+  background: #fbe6e7;
+  border: 1px solid #efb7bc;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 800;
+}

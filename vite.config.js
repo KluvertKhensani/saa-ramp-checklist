@@ -23,13 +23,13 @@ export default defineConfig({
         id: "/saa-ramp-checklist/",
 
         name:
-          "SAA GRU Turnaround Operations",
+          "OPS Check-List GRU - Turnaround Report",
 
         short_name:
-          "SAA GRU",
+          "OPS GRU",
 
         description:
-          "Operational turnaround checklist, pushback countdown and performance monitoring tool.",
+          "PTS-aligned GRU turnaround reporting, operational task monitoring and delay performance application.",
 
         start_url:
           "/saa-ramp-checklist/#/login",

@@ -258,7 +258,7 @@ export default function LoginPage() {
         setMessage({
           type: "success",
           text:
-            "Role verified. Opening SAA GRU Turnaround Operations...",
+            "Role verified. Opening OPS Check-List GRU - Turnaround Report...",
         });
       }
     } catch (error) {
@@ -291,12 +291,12 @@ export default function LoginPage() {
           <div className="login-brand-logo">
             <AppLogo
               className="saa-login-logo"
-              alt="SAA GRU Turnaround Operations"
+              alt="OPS Check-List GRU - Turnaround Report"
             />
           </div>
 
           <p className="eyebrow">
-            SAA GRU Turnaround Operations
+            OPS Check-List GRU - Turnaround Report
           </p>
 
           <h1>
@@ -335,13 +335,13 @@ export default function LoginPage() {
             <div className="mobile-logo-shell">
               <AppLogo
                 className="saa-mobile-login-logo"
-                alt="SAA GRU Turnaround Operations"
+                alt="OPS Check-List GRU - Turnaround Report"
               />
             </div>
 
             <div>
               <strong>
-                SAA GRU
+                OPS GRU
               </strong>
 
               <span>

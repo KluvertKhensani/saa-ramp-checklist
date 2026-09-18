@@ -238,3 +238,60 @@ export function formatCountdown(
     ).padStart(2, "0"),
   ].join(":");
 }
+
+export function getPendingTaskTiming(
+  plannedTime,
+  currentDate = new Date()
+) {
+  const plannedSeconds =
+    timeToSeconds(plannedTime);
+
+  if (plannedSeconds === null) {
+    return {
+      overdue: false,
+      overdueSeconds: null,
+      label: "Awaiting timing",
+    };
+  }
+
+  const currentSeconds =
+    currentDate.getHours() * 3600 +
+    currentDate.getMinutes() * 60 +
+    currentDate.getSeconds();
+
+  let difference =
+    currentSeconds -
+    plannedSeconds;
+
+  if (difference < -43200) {
+    difference += 86400;
+  }
+
+  if (difference > 43200) {
+    difference -= 86400;
+  }
+
+  if (difference <= 0) {
+    return {
+      overdue: false,
+      overdueSeconds: 0,
+      label: "Pending",
+    };
+  }
+
+  const overdueMinutes =
+    Math.max(
+      1,
+      Math.floor(
+        difference / 60
+      )
+    );
+
+  return {
+    overdue: true,
+    overdueSeconds:
+      difference,
+    label:
+      `Overdue by ${overdueMinutes} min`,
+  };
+}

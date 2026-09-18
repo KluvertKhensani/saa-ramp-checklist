@@ -15,8 +15,8 @@ import {
 const STATUS_LABELS = {
   pending: "Pending",
   ontime: "On Time",
-  light: "Light Delay",
-  delay: "Delay",
+  light: "Slightly Delayed",
+  delay: "Delayed",
 };
 
 function displayTime(value) {
@@ -31,6 +31,10 @@ export default function ChecklistActivity({
   item,
   row,
   plannedTime,
+  overdue = false,
+  overdueLabel = "",
+  forceExpanded = false,
+  onExpanded,
   onObservationChange,
   onMark,
   disabled = false,
@@ -38,8 +42,14 @@ export default function ChecklistActivity({
   const [expanded, setExpanded] =
     useState(false);
 
+  const isExpanded =
+    forceExpanded || expanded;
+
   const isCompleted =
     row.status !== "pending";
+
+  const isOverdue =
+    overdue && !isCompleted;
 
   const plannedDisplay =
     displayTime(plannedTime);
@@ -47,12 +57,26 @@ export default function ChecklistActivity({
   const actualDisplay =
     displayTime(row.actualTime);
 
+  const visibleStatus =
+    isOverdue
+      ? "overdue"
+      : row.status;
+
+  const visibleStatusLabel =
+    isOverdue
+      ? "Overdue"
+      : STATUS_LABELS[row.status] ||
+        "Pending";
+
   const rowClassName = [
     "checklist-row",
     disabled
       ? "checklist-row-readonly"
       : "",
-    expanded
+    isOverdue
+      ? "checklist-row-overdue"
+      : "",
+    isExpanded
       ? "checklist-row-expanded"
       : "checklist-row-collapsed",
   ]
@@ -60,18 +84,24 @@ export default function ChecklistActivity({
     .join(" ");
 
   function toggleExpanded() {
-    setExpanded(
-      (currentValue) =>
-        !currentValue
-    );
+    if (isExpanded) {
+      setExpanded(false);
+      onExpanded?.(null);
+      return;
+    }
+
+    setExpanded(true);
+    onExpanded?.(item.itemNumber);
   }
 
-  function handleObservationChange(event) {
+  function handleObservationChange(
+    event
+  ) {
     if (disabled) {
       return;
     }
 
-    onObservationChange(
+    onObservationChange?.(
       event.target.value
     );
   }
@@ -81,11 +111,12 @@ export default function ChecklistActivity({
       return;
     }
 
-    onMark();
+    onMark?.();
   }
 
   return (
     <article
+      id={`checklist-task-${item.itemNumber}`}
       className={rowClassName}
       aria-readonly={disabled}
     >
@@ -93,10 +124,12 @@ export default function ChecklistActivity({
         type="button"
         className="checklist-row-toggle"
         onClick={toggleExpanded}
-        aria-expanded={expanded}
-        aria-controls={`task-details-${item.itemNumber}`}
+        aria-expanded={isExpanded}
+        aria-controls={
+          `task-details-${item.itemNumber}`
+        }
         aria-label={
-          expanded
+          isExpanded
             ? `Collapse ${item.activity}`
             : `Expand ${item.activity}`
         }
@@ -127,25 +160,35 @@ export default function ChecklistActivity({
                 }`
               : plannedDisplay
                 ? `Planned ${plannedDisplay}`
-                : "Awaiting base time"}
+                : "Awaiting Chocks On"}
           </span>
 
           <span className="checklist-allocation-summary">
             {formatDuration(
-                item.allocationSec
+              item.allocationSec
             )}
           </span>
+
+          {isOverdue ? (
+            <span className="checklist-overdue-summary">
+              {overdueLabel ||
+                "Activity overdue"}
+            </span>
+          ) : null}
         </span>
 
         <span className="checklist-toggle-status">
           <span
-            className={`activity-status status-${row.status}`}
+            className={
+              visibleStatus === "overdue"
+                ? "activity-status status-overdue"
+                : `activity-status status-${visibleStatus}`
+            }
           >
-            {STATUS_LABELS[row.status] ||
-              "Pending"}
+            {visibleStatusLabel}
           </span>
 
-          {expanded ? (
+          {isExpanded ? (
             <ChevronUp
               size={20}
               aria-hidden="true"
@@ -159,33 +202,37 @@ export default function ChecklistActivity({
         </span>
       </button>
 
-      {expanded ? (
+      {isExpanded ? (
         <div
           id={`task-details-${item.itemNumber}`}
           className="checklist-row-details"
         >
+          {isOverdue ? (
+            <div
+              className="activity-overdue-alert"
+              role="alert"
+            >
+              {overdueLabel ||
+                "This activity is overdue."}
+            </div>
+          ) : null}
+
           <div className="checklist-times checklist-times-display">
             <div className="activity-time-display">
-              <span>Planned</span>
+              <span>
+                Planned
+              </span>
 
               <strong>
                 {plannedDisplay ||
-                  "Awaiting base time"}
+                  "Awaiting Chocks On"}
               </strong>
             </div>
 
-            <div className="activity-allocation">
-                <span>Task allocation</span>
-
-                <strong>
-                    {formatDuration(
-                        item.allocationSec
-                    )}
-                </strong>
-            </div>
-
             <div className="activity-time-display">
-              <span>Actual</span>
+              <span>
+                Actual
+              </span>
 
               <strong>
                 {actualDisplay ||
@@ -194,28 +241,54 @@ export default function ChecklistActivity({
             </div>
           </div>
 
+          <div className="activity-allocation">
+            <span>
+              Task allocation
+            </span>
+
+            <strong>
+              {formatDuration(
+                item.allocationSec
+              )}
+            </strong>
+          </div>
+
           <label className="observation-field">
-            <span>Observation</span>
+            <span>
+              Observation
+            </span>
 
             <input
-              value={row.observation}
+              type="text"
+              value={
+                row.observation || ""
+              }
               onChange={
                 handleObservationChange
               }
               placeholder="Operational observation"
               disabled={disabled}
-              aria-label={`Observation for ${item.activity}`}
+              aria-label={
+                `Observation for ${item.activity}`
+              }
             />
           </label>
 
           <div className="checklist-result checklist-result-compact">
             <div className="activity-delay-summary">
-              <span>Delay status</span>
+              <span>
+                Performance status
+              </span>
 
               <strong>
-                {formatDelay(
-                  row.delaySeconds
-                )}
+                {isOverdue
+                  ? overdueLabel ||
+                    "Overdue"
+                  : isCompleted
+                    ? visibleStatusLabel
+                    : formatDelay(
+                        row.delaySeconds
+                      )}
               </strong>
             </div>
 
