@@ -251,16 +251,16 @@ export default function ChecklistExport({
 
       workbook.creator =
         profile?.full_name ||
-        "SAA Ramp Checklist";
+        "SAA GRU Turnaround Operations";
 
       workbook.created = new Date();
       workbook.modified = new Date();
 
       workbook.title =
-        `SAA Ramp Checklist ${fromDate} to ${toDate}`;
+        `SAA GRU Turnaround Operations ${fromDate} to ${toDate}`;
 
       workbook.subject =
-        "SAA Ramp Checklist Operational Export";
+        "SAA GRU Turnaround Operations Operational Export";
 
       const summarySheet =
         workbook.addWorksheet(
@@ -532,7 +532,7 @@ export default function ChecklistExport({
         {
           field: "Report",
           value:
-            "SAA Ramp Checklist Date Range Export",
+            "SAA GRU Turnaround Operations Date Range Export",
         },
         {
           field: "From Date",
@@ -577,7 +577,7 @@ export default function ChecklistExport({
         await workbook.xlsx.writeBuffer();
 
       const filename =
-        `SAA-Ramp-Checklist-${fromDate}-to-${toDate}.xlsx`;
+        `SAA-GRU-Turnaround-Operations-${fromDate}-to-${toDate}.xlsx`;
 
       downloadWorkbook(
         buffer,
