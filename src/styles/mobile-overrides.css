@@ -1,4 +1,4 @@
-/*
+﻿/*
   SAA GRU Turnaround Operations
   Responsive layout and compact activity overrides
 */
@@ -863,4 +863,722 @@ button:disabled {
   border-radius: 9px;
   font-size: 13px;
   font-weight: 800;
+}
+
+/* Operations Menu */
+
+.operations-menu-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.operations-menu-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: rgba(4, 17, 33, 0.62);
+  border: 0;
+  cursor: pointer;
+  backdrop-filter: blur(3px);
+}
+
+.operations-menu {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 92vw);
+  height: 100%;
+  padding: 18px;
+  overflow-y: auto;
+  color: #16233d;
+  background: #f3f5f8;
+  box-shadow:
+    -14px 0 40px
+    rgba(4, 17, 33, 0.24);
+}
+
+.operations-menu-header {
+  position: sticky;
+  top: -18px;
+  z-index: 4;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 0 14px;
+  background: #f3f5f8;
+}
+
+.operations-menu-header h2 {
+  margin: 0;
+  color: #0b2545;
+}
+
+.operations-menu-close {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  flex: 0 0 auto;
+  color: #ffffff;
+  background: #0b2545;
+  border: 0;
+  border-radius: 11px;
+  cursor: pointer;
+}
+
+.operations-menu-summary {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.operations-menu-summary div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px;
+  background: #ffffff;
+  border: 1px solid #e3e7ee;
+  border-radius: 10px;
+}
+
+.operations-menu-summary span {
+  color: #6b7a99;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.operations-menu-summary strong {
+  color: #16233d;
+  overflow-wrap: anywhere;
+}
+
+.operations-menu-next {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+  color: #ffffff;
+  background:
+    linear-gradient(
+      135deg,
+      #0b2545,
+      #123063
+    );
+  border-radius: 13px;
+}
+
+.operations-menu-next > span {
+  color: #c9d4e8;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.operations-menu-next > strong {
+  line-height: 1.45;
+}
+
+.operations-menu-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 3px;
+  color: #0b2545;
+  background: #f5b700;
+  border: 0;
+  border-radius: 9px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.operations-menu-section {
+  padding: 14px;
+  margin-bottom: 14px;
+  background: #ffffff;
+  border: 1px solid #e3e7ee;
+  border-radius: 13px;
+}
+
+.operations-menu-section h3 {
+  margin: 0 0 10px;
+  color: #0b2545;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.operations-menu-item,
+.operations-phase-button {
+  display: grid;
+  grid-template-columns:
+    24px
+    minmax(0, 1fr)
+    20px;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 46px;
+  padding: 9px 10px;
+  color: #16233d;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #edf0f5;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.operations-phase-button {
+  grid-template-columns:
+    minmax(0, 1fr)
+    20px;
+}
+
+.operations-menu-item:last-child,
+.operations-phase-button:last-child {
+  border-bottom: 0;
+}
+
+.operations-menu-item:hover,
+.operations-phase-button:hover {
+  background: #f4f7fb;
+}
+
+.operations-menu-item:disabled {
+  color: #8c96a8;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.operations-menu-item-danger {
+  color: #c6323c;
+}
+
+.operations-phase-button.active {
+  color: #ffffff;
+  background: #0b2545;
+  border-radius: 9px;
+}
+
+.operations-menu-trigger {
+  min-width: 92px;
+}
+
+body:has(.operations-menu-layer) {
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .operations-menu {
+    width: min(390px, 94vw);
+    padding: 14px;
+  }
+
+  .operations-menu-header {
+    top: -14px;
+  }
+
+  .operations-menu-summary {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .phase-tabs {
+    display: none !important;
+  }
+
+  .bottom-actions {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .operations-menu {
+    width: 100%;
+  }
+
+  .operations-menu-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .bottom-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .operations-menu-layer,
+  .operations-menu-trigger {
+    display: none !important;
+  }
+}
+
+.ramp-header {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  width: 100%;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(11, 37, 69, 0.12);
+}
+
+.ramp-content {
+  position: relative;
+  z-index: 1;
+}
+
+.phase-tabs,
+.checklist-row,
+.pushback-panel,
+.approval-panel,
+.audit-panel {
+  position: relative;
+  z-index: auto;
+}
+
+#flight-information,
+#pushback-countdown,
+#performance-summary,
+#approval-section,
+#audit-history,
+#checklist-tasks,
+#excel-export,
+.checklist-row {
+  scroll-margin-top: 170px;
+}
+
+@media (max-width: 760px) {
+  .ramp-header {
+    padding: 10px 12px;
+  }
+
+  .ramp-brand {
+    align-items: center;
+  }
+
+  .ramp-brand-logo {
+    flex: 0 0 auto;
+  }
+
+  .saa-app-logo {
+    max-width: 66px;
+    max-height: 44px;
+  }
+
+  .ramp-brand h1 {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  .ramp-brand p {
+    display: none;
+  }
+
+  .ramp-header-actions {
+    margin-top: 9px;
+  }
+
+  .ramp-user,
+  .live-clock {
+    display: none;
+  }
+
+  #flight-information,
+  #pushback-countdown,
+  #performance-summary,
+  #approval-section,
+  #audit-history,
+  #checklist-tasks,
+  #excel-export,
+  .checklist-row {
+    scroll-margin-top: 145px;
+  }
+}
+
+@media print {
+  .ramp-header {
+    position: static;
+    box-shadow: none;
+  }
+}
+
+.ramp-page {
+  min-height: 100vh;
+  padding-top: 104px;
+  padding-bottom: 96px;
+  overflow: visible;
+}
+
+.ramp-header {
+  position: fixed !important;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 900;
+  width: 100%;
+  min-height: 88px;
+  color: #ffffff;
+  background: #0b2545 !important;
+  border-bottom: 3px solid #f5b700;
+  box-shadow: 0 5px 20px rgba(4, 17, 33, 0.28);
+}
+
+.ramp-header h1,
+.ramp-header p,
+.ramp-header strong,
+.ramp-header span {
+  color: #ffffff;
+}
+
+.ramp-header .ramp-user span {
+  color: #d7e1f0;
+}
+
+.ramp-header .live-clock {
+  color: #ffffff;
+}
+
+.ramp-header .ramp-button-light {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.ramp-header .ramp-button-light:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.ramp-content {
+  position: relative;
+  z-index: 1;
+}
+
+.phase-tabs {
+  position: fixed !important;
+  right: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 850;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center;
+  width: auto;
+  max-width: calc(100vw - 28px);
+  padding: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: rgba(11, 37, 69, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  box-shadow: 0 8px 28px rgba(4, 17, 33, 0.32);
+  transform: translateX(50%);
+  backdrop-filter: blur(12px);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.phase-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.phase-tab {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: max-content;
+  min-height: 42px;
+  padding: 9px 15px;
+  color: #ffffff;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+}
+
+.phase-tab:hover {
+  color: #0b2545;
+  background: #ffffff;
+}
+
+.phase-tab.active {
+  color: #0b2545;
+  background: #f5b700;
+  box-shadow: 0 3px 10px rgba(4, 17, 33, 0.22);
+}
+
+#flight-information,
+#pushback-countdown,
+#performance-summary,
+#approval-section,
+#audit-history,
+#checklist-tasks,
+#excel-export,
+.checklist-row {
+  scroll-margin-top: 124px;
+}
+
+.operations-menu-layer {
+  z-index: 1200;
+}
+
+@media (max-width: 760px) {
+  .ramp-page {
+    padding-top: 156px;
+    padding-bottom: 94px;
+  }
+
+  .ramp-header {
+    min-height: 140px;
+    padding: 10px 12px;
+  }
+
+  .ramp-brand {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ramp-brand-logo {
+    flex: 0 0 auto;
+  }
+
+  .saa-app-logo {
+    max-width: 62px;
+    max-height: 42px;
+  }
+
+  .ramp-brand h1 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 14px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .ramp-brand p {
+    display: none;
+  }
+
+  .ramp-header-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    width: 100%;
+    margin-top: 9px;
+  }
+
+  .ramp-header-actions .ramp-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  .ramp-user,
+  .live-clock {
+    display: none;
+  }
+
+  .phase-tabs {
+    display: flex !important;
+    right: 50%;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: calc(100vw - 20px);
+    max-width: 520px;
+    padding: 7px;
+    border-radius: 18px;
+  }
+
+  .phase-tab {
+    min-height: 40px;
+    padding: 8px 13px;
+    font-size: 12px;
+  }
+
+  #flight-information,
+  #pushback-countdown,
+  #performance-summary,
+  #approval-section,
+  #audit-history,
+  #checklist-tasks,
+  #excel-export,
+  .checklist-row {
+    scroll-margin-top: 170px;
+  }
+}
+
+@media (max-width: 420px) {
+  .ramp-page {
+    padding-top: 150px;
+    padding-bottom: 92px;
+  }
+
+  .ramp-header {
+    min-height: 134px;
+  }
+
+  .ramp-header-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .phase-tabs {
+    width: calc(100vw - 16px);
+  }
+
+  .phase-tab {
+    padding: 8px 12px;
+  }
+}
+
+@media print {
+  .ramp-page {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .ramp-header {
+    position: static !important;
+    color: #16233d;
+    background: #ffffff !important;
+    border-bottom: 1px solid #d9dfe9;
+    box-shadow: none;
+  }
+
+  .ramp-header h1,
+  .ramp-header p,
+  .ramp-header strong,
+  .ramp-header span {
+    color: #16233d;
+  }
+
+  .phase-tabs {
+    display: none !important;
+  }
+}
+
+.ramp-header {
+  color: #ffffff;
+  background: #0b2545 !important;
+}
+
+.ramp-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.ramp-brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 110px;
+  min-height: 62px;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  background: #0b2545 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.ramp-brand-logo::before,
+.ramp-brand-logo::after {
+  display: none !important;
+  content: none !important;
+}
+
+.ramp-brand-logo .saa-app-logo,
+.ramp-brand-logo img,
+.saa-app-logo {
+  display: block;
+  width: 140px;
+  max-width: 140px;
+  height: 62px;
+  max-height: 62px;
+  padding: 0;
+  margin: 0;
+  object-fit: contain;
+  object-position: center;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.ramp-brand > div:last-child {
+  min-width: 0;
+}
+
+.ramp-brand h1,
+.ramp-brand p {
+  color: #ffffff;
+}
+
+@media (max-width: 760px) {
+  .ramp-brand {
+    gap: 10px;
+  }
+
+  .ramp-brand-logo {
+    min-width: 72px;
+    min-height: 44px;
+  }
+
+  .ramp-brand-logo .saa-app-logo,
+  .ramp-brand-logo img,
+  .saa-app-logo {
+    width: 72px;
+    max-width: 72px;
+    height: 44px;
+    max-height: 44px;
+  }
+
+  .ramp-header-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .ramp-brand-logo {
+    min-width: 64px;
+    min-height: 40px;
+  }
+
+  .ramp-brand-logo .saa-app-logo,
+  .ramp-brand-logo img,
+  .saa-app-logo {
+    width: 64px;
+    max-width: 64px;
+    height: 40px;
+    max-height: 40px;
+  }
+}
+
+@media print {
+  .ramp-brand-logo {
+    background: transparent !important;
+  }
+
+  .ramp-brand h1,
+  .ramp-brand p {
+    color: #16233d;
+  }
 }

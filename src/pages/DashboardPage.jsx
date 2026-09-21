@@ -48,6 +48,9 @@ import {
   getRoleLabel,
   isReadOnlyRole,
 } from "../utils/roles";
+import OperationsMenu, {
+  OperationsMenuButton,
+} from "../components/navigation/OperationsMenu";
 
 function getTodayDate() {
   return new Date()
@@ -256,6 +259,11 @@ export default function DashboardPage() {
     focusedTaskNumber,
     setFocusedTaskNumber,
   ] = useState(null);
+
+  const [
+    operationsMenuOpen,
+    setOperationsMenuOpen,
+  ] = useState(false);
 
   const roleCanCreate =
     canCreateChecklist(
@@ -649,6 +657,59 @@ export default function DashboardPage() {
         ?.scrollIntoView({
           behavior: "smooth",
           block: "center",
+        });
+    }, 150);
+  }
+
+  function navigateToSection(
+    sectionId
+  ) {
+    setActiveView("checklist");
+
+    window.setTimeout(() => {
+      document
+        .getElementById(
+          sectionId
+        )
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+    }, 100);
+  }
+
+  function navigateToPhase(
+    phase
+  ) {
+    setActiveView("checklist");
+    setActivePhase(phase);
+    setFocusedTaskNumber(null);
+
+    window.setTimeout(() => {
+      document
+        .getElementById(
+          "checklist-tasks"
+        )
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+    }, 100);
+  }
+
+  async function openExcelExport() {
+    setActiveView("history");
+
+    await loadChecklistHistory();
+
+    window.setTimeout(() => {
+      document
+        .getElementById(
+          "excel-export"
+        )
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
         });
     }, 150);
   }
@@ -1160,56 +1221,88 @@ export default function DashboardPage() {
           "",
       });
 
-      const itemMap =
-        new Map(
-          (savedItems || []).map(
-            (item) => [
-              item.item_number,
-              item,
-            ]
+      const savedItemsByTaskCode =
+  new Map(
+    (savedItems || [])
+      .filter(
+        (savedItem) =>
+          Boolean(
+            savedItem.task_code
           )
+      )
+      .map(
+        (savedItem) => [
+          savedItem.task_code,
+          savedItem,
+        ]
+      )
+  );
+
+const savedItemsByActivity =
+  new Map(
+    (savedItems || [])
+      .filter(
+        (savedItem) =>
+          Boolean(
+            savedItem.activity
+          )
+      )
+      .map(
+        (savedItem) => [
+          String(
+            savedItem.activity
+          )
+            .trim()
+            .toLowerCase(),
+          savedItem,
+        ]
+      )
+  );
+
+setRows(
+  CHECKLIST_ITEMS.map(
+    (item) => {
+      const activityKey =
+        item.activity
+          .trim()
+          .toLowerCase();
+
+      const savedItem =
+        savedItemsByTaskCode.get(
+          item.taskCode
+        ) ||
+        savedItemsByActivity.get(
+          activityKey
         );
 
-      setRows(
-        CHECKLIST_ITEMS.map(
-          (item) => {
-            const savedItem =
-              itemMap.get(
-                item.itemNumber
-              );
+      if (!savedItem) {
+        return {
+          actualTime: "",
+          observation: "",
+          status: "pending",
+          delaySeconds: null,
+        };
+      }
 
-            if (!savedItem) {
-              return {
-                actualTime: "",
-                observation: "",
-                status: "pending",
-                delaySeconds:
-                  null,
-              };
-            }
-
-            return {
-              actualTime:
-                normalizeDatabaseTime(
-                  savedItem
-                    .actual_time
-                ),
-              observation:
-                savedItem
-                  .observation ||
-                "",
-              status:
-                APPLICATION_STATUS[
-                  savedItem
-                    .operational_status
-                ] || "pending",
-              delaySeconds:
-                savedItem
-                  .delay_seconds,
-            };
-          }
-        )
-      );
+      return {
+        actualTime:
+          normalizeDatabaseTime(
+            savedItem.actual_time
+          ),
+        observation:
+          savedItem.observation ||
+          "",
+        status:
+          APPLICATION_STATUS[
+            savedItem
+              .operational_status
+          ] || "pending",
+        delaySeconds:
+          savedItem.delay_seconds,
+      };
+    }
+  )
+);
 
       setActiveView("checklist");
       setActivePhase("All");
@@ -1513,12 +1606,14 @@ export default function DashboardPage() {
               rows[index];
 
             return {
-              checklist_id:
-                activeChecklistId,
-              item_number:
-                item.itemNumber,
-              phase:
-                item.phase,
+  checklist_id:
+    activeChecklistId,
+  task_code:
+    item.taskCode,
+  item_number:
+    item.itemNumber,
+  phase:
+    item.phase,
               activity:
                 item.activity,
               base_time:
@@ -1630,8 +1725,111 @@ export default function DashboardPage() {
     }
   }
 
+  const nextPendingCandidate =
+    CHECKLIST_ITEMS
+      .map((item, index) => {
+        const row =
+          rows[index];
+
+        const plannedTime =
+          plannedTimeFor(index);
+
+        const timing =
+          getPendingTaskTiming(
+            plannedTime,
+            operationalNow
+          );
+
+        return {
+          item,
+          row,
+          plannedTime,
+          timing,
+        };
+      })
+      .filter(
+        ({ row }) =>
+          row?.status ===
+          "pending"
+      )
+      .sort(
+        compareTaskCandidates
+      )[0];
+
+  const nextTaskLabel =
+    nextPendingCandidate
+      ? nextPendingCandidate
+          .item.activity
+      : "All activities complete";
+
   return (
     <main className="ramp-page">
+      <OperationsMenu
+        open={operationsMenuOpen}
+        onClose={() =>
+          setOperationsMenuOpen(
+            false
+          )
+        }
+        flight={flight}
+        profile={profile}
+        completedCount={
+          metrics.done
+        }
+        totalCount={
+          CHECKLIST_ITEMS.length
+        }
+        nextTaskLabel={
+          nextTaskLabel
+        }
+        phases={
+          CHECKLIST_PHASES
+        }
+        activePhase={
+          activePhase
+        }
+        onPhaseChange={
+          navigateToPhase
+        }
+        onNavigate={
+          navigateToSection
+        }
+        onNextTask={
+          openNextPendingTask
+        }
+        onHistory={
+          showHistory
+        }
+        onSave={
+          saveChecklist
+        }
+        onReset={
+          resetChecklist
+        }
+        onPrint={() =>
+          window.print()
+        }
+        onExport={
+          openExcelExport
+        }
+        onSignOut={
+          handleSignOut
+        }
+        canSave={
+          roleCanOperate
+        }
+        canExport={
+          roleCanExport
+        }
+        saveDisabled={
+          saving ||
+          approving ||
+          recordLocked
+        }
+        resetDisabled={
+          checklistReadOnly
+        }
+      />
       <header className="ramp-header">
         <div className="ramp-brand">
           <div className="ramp-brand-logo">
@@ -1670,6 +1868,14 @@ export default function DashboardPage() {
           </div>
 
           <LiveClock />
+
+          <OperationsMenuButton
+            onClick={() =>
+              setOperationsMenuOpen(
+                true
+              )
+            }
+          />
 
           {activeView ===
           "checklist" ? (
@@ -1798,9 +2004,11 @@ export default function DashboardPage() {
             </div>
 
             {roleCanExport ? (
-              <ChecklistExport
-                profile={profile}
-              />
+              <div id="excel-export">
+                <ChecklistExport
+                  profile={profile}
+                />
+              </div>
             ) : null}
 
             <ChecklistHistory
@@ -1864,67 +2072,82 @@ export default function DashboardPage() {
               </div>
             ) : null}
 
-            <FlightInformation
-              flight={flight}
-              onChange={updateFlight}
-              onChocksNow={
-                markChocksOnNow
-              }
-              disabled={
-                checklistReadOnly
-              }
-            />
+            <div id="flight-information">
+              <FlightInformation
+                flight={flight}
+                onChange={
+                  updateFlight
+                }
+                onChocksNow={
+                  markChocksOnNow
+                }
+                disabled={
+                  checklistReadOnly
+                }
+              />
+            </div>
 
-            <PushbackCountdown
-              chocksOn={
-                flight.chocksOn
-              }
-              std={flight.std}
-              disabled={
-                checklistReadOnly
-              }
-            />
+            <div id="pushback-countdown">
+              <PushbackCountdown
+                chocksOn={
+                  flight.chocksOn
+                }
+                std={flight.std}
+                disabled={
+                  checklistReadOnly
+                }
+              />
+            </div>
 
-            <ChecklistMetrics
-              metrics={metrics}
-              totalItems={
-                CHECKLIST_ITEMS.length
-              }
-            />
+            <div id="performance-summary">
+              <ChecklistMetrics
+                metrics={metrics}
+                totalItems={
+                  CHECKLIST_ITEMS.length
+                }
+              />
+            </div>
 
-            <ChecklistApproval
-              checklistId={
-                checklistId
-              }
-              profile={profile}
-              locked={recordLocked}
-              approvalDetails={
-                approvalDetails
-              }
-              approving={approving}
-              onApprove={
-                approveChecklist
-              }
-            />
+            <div id="approval-section">
+              <ChecklistApproval
+                checklistId={
+                  checklistId
+                }
+                profile={profile}
+                locked={recordLocked}
+                approvalDetails={
+                  approvalDetails
+                }
+                approving={
+                  approving
+                }
+                onApprove={
+                  approveChecklist
+                }
+              />
+            </div>
 
             {checklistId &&
             roleCanViewAudit ? (
-              <ChecklistAuditHistory
-                records={
-                  auditRecords
-                }
-                loading={
-                  auditLoading
-                }
-                onRefresh={() =>
-                  loadAuditHistory(
-                    checklistId
-                  )
-                }
-              />
+              <div id="audit-history">
+                <ChecklistAuditHistory
+                  records={
+                    auditRecords
+                  }
+                  loading={
+                    auditLoading
+                  }
+                  onRefresh={() =>
+                    loadAuditHistory(
+                      checklistId
+                    )
+                  }
+                />
+              </div>
             ) : null}
 
             <section
+              id="checklist-tasks"
               className="phase-tabs"
               aria-label="Checklist phases"
             >

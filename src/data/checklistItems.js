@@ -1,281 +1,394 @@
 const RAW_CHECKLIST_ITEMS = [
-  ["Arrival", "TRC at Parking Bay", "chocks", -120],
   [
-    "Arrival",
-    "Bay clear of GSE / FOD / Contamination",
-    "chocks",
-    -300,
-  ],
-  ["Arrival", "Safety cones in place", "chocks", 0],
-  [
-    "Arrival",
-    "Aircraft chocked correctly",
-    "chocks",
-    0,
+    "pre-arrival-departing-cargo-at-bay",
+    "Pre-Arrival",
+    "Departing Cargo at Parking Bay",
+    -3180,
+    100,
   ],
   [
-    "Arrival",
-    "Ground / Fixed power connected",
-    "chocks",
+    "pre-arrival-dispatcher-trc-position",
+    "Pre-Arrival",
+    "Dispatcher / TRC at Parking Position",
+    -2280,
+    105,
+  ],
+  [
+    "pre-arrival-confirm-cargo-secured",
+    "Pre-Arrival",
+    "Confirm Cargo Secured (Station Specific AVSEC Regulations)",
+    -2280,
+    20,
+  ],
+  [
+    "pre-arrival-staff-gse-catering-position",
+    "Pre-Arrival",
+    "Staff / All GSEs & Catering Truck at Parking Position",
+    -1980,
+    95,
+  ],
+  [
+    "pre-arrival-cargo-agent-position",
+    "Pre-Arrival",
+    "Cargo Agent at Parking Position",
+    -1980,
     120,
   ],
   [
-    "Arrival",
-    "FDC to release brakes when safe",
-    "chocks",
-    180,
+    "pre-arrival-stand-cleared-fod",
+    "Pre-Arrival",
+    "Ensure Stand is Cleared / FOD Inspection",
+    -1980,
+    3,
   ],
   [
+    "arrival-engines-off-chocks-cones",
     "Arrival",
-    "Check for visible A/C damage / leaks",
-    "chocks",
+    "Engines Off - Chocks & Cones On",
+    0,
+    90,
+  ],
+  [
+    "arrival-aircraft-landed-announcement",
+    "Arrival",
+    "Announcement to Paxs Aircraft Landed",
+    0,
+    null,
+  ],
+  [
+    "arrival-external-checks",
+    "Arrival",
+    "Aircraft External Checks (Engineers & Ramp Supervisor)",
+    180,
+    3,
+  ],
+  [
+    "arrival-bridge-or-stairs-on",
+    "Arrival",
+    "Bridge On or Paxs Stairs On",
+    180,
+    89,
+  ],
+  [
+    "arrival-cabin-doors-opened",
+    "Arrival",
+    "Cabin Doors Opened",
     240,
+    89,
   ],
   [
+    "arrival-hold-five-opened",
     "Arrival",
-    "Jet bridge / steps positioned",
-    "chocks",
-    180,
-  ],
-  ["Arrival", "Cabin doors opened", "chocks", 300],
-
-  [
-    "Ground Services",
-    "Staff on bay",
-    "chocks",
+    "Hold 5 Opened / Buggies / Wchrs taken",
     300,
+    89,
   ],
   [
-    "Ground Services",
-    "Equipment on bay",
-    "chocks",
-    360,
+    "arrival-cargo-holds-opened",
+    "Arrival",
+    "Cargo Holds opened",
+    300,
+    89,
   ],
   [
-    "Ground Services",
-    "Fuel bowser at bay",
-    "chocks",
+    "arrival-disembarkation-started",
+    "Arrival",
+    "Passenger Disembarkation Started",
+    300,
+    88,
+  ],
+  [
+    "arrival-start-fueling",
+    "Arrival",
+    "Start Fueling",
+    300,
+    90,
+  ],
+  [
+    "arrival-first-akes-off",
+    "Arrival",
+    "First AKEs Off (Priority & Transfer Bags)",
     480,
+    86,
   ],
   [
-    "Ground Services",
-    "Fuelling completed",
-    "chocks",
+    "arrival-disembarkation-completed",
+    "Arrival",
+    "Passenger Disembarkation Completed",
+    900,
+    80,
+  ],
+  [
+    "arrival-catering-truck-on",
+    "Arrival",
+    "Catering Truck On",
+    900,
+    89,
+  ],
+  [
+    "arrival-cleaners-on",
+    "Arrival",
+    "Cleaners On",
+    900,
+    87,
+  ],
+  [
+    "arrival-crew-disembarkation",
+    "Arrival",
+    "Crew Disembarkation",
+    1200,
+    null,
+  ],
+  [
+    "arrival-last-baggage-ake-off",
+    "Arrival",
+    "Last Baggage AKE Off",
+    1200,
+    70,
+  ],
+  [
+    "arrival-potable-water-truck-on",
+    "Arrival",
+    "Potable Water Truck On (QTA)",
+    1200,
+    null,
+  ],
+  [
+    "arrival-short-connection-bags-transferred",
+    "Arrival",
+    "Outbound Short CNX Bags Transferred (to the line)",
     1500,
+    null,
   ],
   [
-    "Ground Services",
-    "Step chute parked",
-    "chocks",
-    360,
-  ],
-  [
-    "Ground Services",
-    "TUG on bay",
-    "chocks",
-    1200,
-  ],
-
-  [
-    "Cargo & Baggage",
-    "Last baggage AKE off",
-    "chocks",
-    600,
-  ],
-  [
-    "Cargo & Baggage",
-    "Cargo offload complete",
-    "chocks",
-    900,
-  ],
-  [
-    "Cargo & Baggage",
-    "Baggage loading started",
-    "chocks",
-    900,
-  ],
-  [
-    "Cargo & Baggage",
-    "Loading complete / last bag AKE on",
-    "chocks",
-    1800,
-  ],
-  [
-    "Cargo & Baggage",
-    "Final cargo confirmed",
-    "chocks",
-    1920,
-  ],
-  [
-    "Cargo & Baggage",
-    "Final baggage confirmed",
-    "chocks",
-    1920,
-  ],
-  [
-    "Cargo & Baggage",
-    "Holds closed",
-    "chocks",
-    1980,
-  ],
-
-  [
-    "Catering & Cleaning",
-    "Cleaners on aircraft",
-    "chocks",
-    360,
-  ],
-  [
-    "Catering & Cleaning",
-    "Cleaners off aircraft",
-    "chocks",
-    1200,
-  ],
-  [
-    "Catering & Cleaning",
-    "Catering vehicles positioned",
-    "chocks",
-    360,
-  ],
-  [
-    "Catering & Cleaning",
-    "Airchefs sign off",
-    "chocks",
-    1200,
-  ],
-
-  ["Boarding", "OK to board", "chocks", 1500],
-  [
-    "Boarding",
-    "Main boarding started",
-    "chocks",
-    1560,
-  ],
-  [
-    "Boarding",
-    "First passenger boarded",
-    "chocks",
-    1620,
-  ],
-  [
-    "Boarding",
-    "Boarding ended",
-    "chocks",
+    "arrival-offload-completed",
+    "Arrival",
+    "Offload Completed",
     2100,
+    70,
   ],
   [
-    "Boarding",
-    "Last passenger boarded",
-    "chocks",
+    "arrival-uld-check-serviceability",
+    "Arrival",
+    "ULD check & serviceability",
     2100,
+    null,
   ],
   [
-    "Boarding",
-    "Final slip received",
-    "chocks",
-    2160,
-  ],
-  [
-    "Boarding",
-    "Pax count confirmed",
-    "chocks",
-    2160,
-  ],
-
-  [
+    "departure-countdown",
     "Departure",
-    "Doors armed and cross-checked",
-    "chocks",
-    -300,
+    "Departure Count Down",
+    120,
+    null,
   ],
   [
+    "departure-start-loading",
     "Departure",
-    "Cabin doors and hold doors closed",
-    "chocks",
-    -360,
+    "Start Baggage and Cargo Loading",
+    2220,
+    null,
   ],
   [
+    "departure-catering-off",
     "Departure",
-    "Stairs / jet bridge removed",
-    "chocks",
-    -240,
+    "Catering Off",
+    2520,
+    55,
   ],
   [
+    "departure-crew-onboard-documents",
     "Departure",
-    "Pushback clearance received",
-   "chocks",
-    -180,
+    "Crew Onboard / GENDEC Delivery & Checks / Cargo Docs",
+    2520,
+    10,
   ],
   [
+    "departure-final-fuel-figures",
     "Departure",
-    "Aircraft pushback",
-    "chocks",
-    -300,
+    "Final Fuel Figures Check (Inform CLC via FM Chat Box)",
+    2520,
+    20,
+  ],
+  [
+    "departure-waste-truck-on",
+    "Departure",
+    "Waste Truck On (QTU)",
+    2820,
+    55,
+  ],
+  [
+    "departure-pre-boarding",
+    "Departure",
+    "Pre-Boarding (Announcements/PRM/MAAS)",
+    2820,
+    null,
+  ],
+  [
+    "departure-cleaners-off",
+    "Departure",
+    "Cleaners Off",
+    2820,
+    55,
+  ],
+  [
+    "departure-fueling-complete",
+    "Departure",
+    "Fueling Complete",
+    3120,
+    20,
+  ],
+  [
+    "departure-main-boarding-started",
+    "Departure",
+    "Main Boarding Started (Main Announcement)",
+    3120,
+    55,
+  ],
+  [
+    "departure-preliminary-baggage-figures",
+    "Departure",
+    "Preliminary Baggage Figures to CLC",
+    3420,
+    null,
+  ],
+  [
+    "departure-boarding-ended",
+    "Departure",
+    "Boarding Ended",
+    4320,
+    5,
+  ],
+  [
+    "departure-offload-outstanding",
+    "Departure",
+    "Offload Outstanding Paxs and Bags",
+    4320,
+    null,
+  ],
+  [
+    "departure-loading-complete",
+    "Departure",
+    "Loading Complete / Last Bag AKE on A/C",
+    4620,
+    5,
+  ],
+  [
+    "departure-ramp-clearance",
+    "Departure",
+    "Ramp Clearance",
+    4620,
+    3,
+  ],
+  [
+    "departure-print-pax-lists",
+    "Departure",
+    "Print Paxs Lists / Deliver to Crew",
+    4620,
+    5,
+  ],
+  [
+    "departure-doors-closed",
+    "Departure",
+    "Cabin Doors and Hold Doors Closed",
+    4920,
+    3,
+  ],
+  [
+    "departure-final-baggage-figures",
+    "Departure",
+    "Final Baggage Figures to CLC",
+    4920,
+    10,
+  ],
+  [
+    "departure-load-sheet-acars",
+    "Departure",
+    "Load Sheet Sent via Acars",
+    4920,
+    30,
+  ],
+  [
+    "departure-pushback-tug-on-stand",
+    "Departure",
+    "Push back Tug on stand",
+    4920,
+    5,
+  ],
+  [
+    "departure-bridge-removed",
+    "Departure",
+    "Bridge Removed",
+    5100,
+    3,
+  ],
+  [
+    "departure-aircraft-pushback",
+    "Departure",
+    "Aircraft Push Back",
+    5520,
+    null,
   ],
 ];
 
-function calculateAllocationSeconds(
-  phase,
-  base,
-  offsetSec
-) {
-  const laterOffsets = RAW_CHECKLIST_ITEMS
-    .filter(
-      ([itemPhase, , itemBase, itemOffset]) =>
-        itemPhase === phase &&
-        itemBase === base &&
-        itemOffset > offsetSec
-    )
-    .map(([, , , itemOffset]) => itemOffset)
-    .sort((first, second) => first - second);
-
-  if (laterOffsets.length === 0) {
-    return null;
-  }
-
-  return laterOffsets[0] - offsetSec;
-}
-
 export const CHECKLIST_ITEMS =
-  RAW_CHECKLIST_ITEMS.map(
-    (
-      [
+  RAW_CHECKLIST_ITEMS
+    .map(
+      (
+        [
+          taskCode,
+          phase,
+          activity,
+          offsetSec,
+          allocationMinutesBeforeDeparture,
+        ],
+        sourceIndex
+      ) => ({
+        taskCode,
+        sourceSequence:
+          sourceIndex + 1,
         phase,
         activity,
-        base,
+        base: "chocks",
         offsetSec,
-      ],
-      index
-    ) => ({
+        allocationMinutesBeforeDeparture,
+        allocationSec:
+          allocationMinutesBeforeDeparture ===
+          null
+            ? null
+            : allocationMinutesBeforeDeparture *
+              60,
+      })
+    )
+    .sort(
+      (
+        firstItem,
+        secondItem
+      ) =>
+        firstItem.offsetSec -
+          secondItem.offsetSec ||
+        firstItem.sourceSequence -
+          secondItem.sourceSequence
+    )
+    .map((item, index) => ({
+      ...item,
       itemNumber: index + 1,
-      phase,
-      activity,
-      base,
-      offsetSec,
-      allocationSec:
-        calculateAllocationSeconds(
-          phase,
-          base,
-          offsetSec
-        ),
-    })
-  );
+      sequence: index + 1,
+    }));
 
 export const CHECKLIST_PHASES = [
   "All",
+  "Pre-Arrival",
   "Arrival",
-  "Ground Services",
-  "Cargo & Baggage",
-  "Catering & Cleaning",
-  "Boarding",
   "Departure",
 ];
 
 export function createEmptyChecklistRows() {
-  return CHECKLIST_ITEMS.map(() => ({
-    actualTime: "",
-    observation: "",
-    status: "pending",
-    delaySeconds: null,
-  }));
+  return CHECKLIST_ITEMS.map(
+    () => ({
+      actualTime: "",
+      observation: "",
+      status: "pending",
+      delaySeconds: null,
+    })
+  );
 }

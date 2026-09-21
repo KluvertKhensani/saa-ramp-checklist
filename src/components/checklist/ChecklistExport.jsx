@@ -5,19 +5,56 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import {
+  CHECKLIST_ITEMS,
+} from "../../data/checklistItems";
 import { supabase } from "../../lib/supabase";
 import {
   canExportReports,
   getRoleLabel,
 } from "../../utils/roles";
 
+const REPORT_NAME =
+  "OPS Check-List GRU - Turnaround Report";
+
+const STATUS_LABELS = {
+  pending: "Pending",
+  on_time: "On Time",
+  light_delay: "Slightly Delayed",
+  delay: "Delayed",
+};
+
+const STATUS_STYLES = {
+  Pending: {
+    fill: "FFE5E7EB",
+    font: "FF4B5563",
+  },
+  "On Time": {
+    fill: "FFD1FAE5",
+    font: "FF166534",
+  },
+  "Slightly Delayed": {
+    fill: "FFFFE7C2",
+    font: "FF9A3412",
+  },
+  Delayed: {
+    fill: "FFFECACA",
+    font: "FF991B1B",
+  },
+};
+
 function getToday() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date()
+    .toISOString()
+    .slice(0, 10);
 }
 
 function getFirstDayOfMonth() {
-  const currentDate = new Date();
-  const year = currentDate.getFullYear();
+  const currentDate =
+    new Date();
+
+  const year =
+    currentDate.getFullYear();
 
   const month = String(
     currentDate.getMonth() + 1
@@ -31,14 +68,95 @@ function formatTimestamp(value) {
     return "";
   }
 
-  return new Intl.DateTimeFormat("en-ZA", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Africa/Johannesburg",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    "en-ZA",
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone:
+        "Africa/Johannesburg",
+    }
+  ).format(new Date(value));
 }
 
-function styleWorksheet(worksheet) {
+function formatTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  return String(value).slice(
+    0,
+    5
+  );
+}
+
+function formatChecklistStatus(
+  value
+) {
+  if (!value) {
+    return "";
+  }
+
+  return String(value)
+    .split("_")
+    .map(
+      (part) =>
+        part.charAt(0)
+          .toUpperCase() +
+        part.slice(1)
+    )
+    .join(" ");
+}
+
+function formatPerformanceStatus(
+  value
+) {
+  return (
+    STATUS_LABELS[value] ||
+    "Pending"
+  );
+}
+
+function formatVariance(
+  delaySeconds
+) {
+  if (
+    delaySeconds === null ||
+    delaySeconds === undefined
+  ) {
+    return "";
+  }
+
+  if (delaySeconds === 0) {
+    return "On target";
+  }
+
+  const absoluteMinutes =
+    Math.max(
+      1,
+      Math.round(
+        Math.abs(delaySeconds) /
+          60
+      )
+    );
+
+  const sign =
+    delaySeconds < 0
+      ? "-"
+      : "+";
+
+  return `${sign}${absoluteMinutes} min`;
+}
+
+function normalizeActivity(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function styleWorksheet(
+  worksheet
+) {
   worksheet.views = [
     {
       state: "frozen",
@@ -53,11 +171,13 @@ function styleWorksheet(worksheet) {
     },
     to: {
       row: 1,
-      column: worksheet.columnCount,
+      column:
+        worksheet.columnCount,
     },
   };
 
-  const headerRow = worksheet.getRow(1);
+  const headerRow =
+    worksheet.getRow(1);
 
   headerRow.height = 28;
 
@@ -82,56 +202,185 @@ function styleWorksheet(worksheet) {
     wrapText: true,
   };
 
-  worksheet.eachRow((row, rowNumber) => {
-    if (rowNumber > 1) {
-      row.height = 22;
-    }
+  worksheet.eachRow(
+    (row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.height = 22;
+      }
 
-    row.alignment = {
-      vertical: "top",
-      wrapText: true,
-    };
-  });
+      row.alignment = {
+        vertical: "top",
+        wrapText: true,
+      };
+    }
+  );
 }
 
-function downloadWorkbook(buffer, filename) {
-  const blob = new Blob([buffer], {
-    type:
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
+function applyStatusStyle(
+  row,
+  statusLabel
+) {
+  const statusStyle =
+    STATUS_STYLES[
+      statusLabel
+    ];
 
-  const downloadUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
+  if (!statusStyle) {
+    return;
+  }
+
+  const statusCell =
+    row.getCell(
+      "performanceStatus"
+    );
+
+  statusCell.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: {
+      argb: statusStyle.fill,
+    },
+  };
+
+  statusCell.font = {
+    bold: true,
+    color: {
+      argb: statusStyle.font,
+    },
+  };
+
+  statusCell.alignment = {
+    vertical: "middle",
+    horizontal: "center",
+    wrapText: true,
+  };
+}
+
+function buildItemLookup(items) {
+  const byTaskCode =
+    new Map();
+
+  const byActivity =
+    new Map();
+
+  const byItemNumber =
+    new Map();
+
+  for (const item of items) {
+    if (item.task_code) {
+      byTaskCode.set(
+        item.task_code,
+        item
+      );
+    }
+
+    if (item.activity) {
+      byActivity.set(
+        normalizeActivity(
+          item.activity
+        ),
+        item
+      );
+    }
+
+    if (
+      item.item_number !== null &&
+      item.item_number !==
+        undefined
+    ) {
+      byItemNumber.set(
+        item.item_number,
+        item
+      );
+    }
+  }
+
+  return {
+    byTaskCode,
+    byActivity,
+    byItemNumber,
+  };
+}
+
+function findSavedItem(
+  task,
+  lookup
+) {
+  return (
+    lookup.byTaskCode.get(
+      task.taskCode
+    ) ||
+    lookup.byActivity.get(
+      normalizeActivity(
+        task.activity
+      )
+    ) ||
+    lookup.byItemNumber.get(
+      task.itemNumber
+    ) ||
+    null
+  );
+}
+
+function downloadWorkbook(
+  buffer,
+  filename
+) {
+  const blob = new Blob(
+    [buffer],
+    {
+      type:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }
+  );
+
+  const downloadUrl =
+    URL.createObjectURL(blob);
+
+  const link =
+    document.createElement("a");
 
   link.href = downloadUrl;
   link.download = filename;
 
-  document.body.appendChild(link);
+  document.body.appendChild(
+    link
+  );
+
   link.click();
   link.remove();
 
   window.setTimeout(() => {
-    URL.revokeObjectURL(downloadUrl);
+    URL.revokeObjectURL(
+      downloadUrl
+    );
   }, 1000);
 }
 
 export default function ChecklistExport({
   profile,
 }) {
-  const [fromDate, setFromDate] = useState(
+  const [
+    fromDate,
+    setFromDate,
+  ] = useState(
     getFirstDayOfMonth
   );
 
-  const [toDate, setToDate] = useState(
-    getToday
-  );
+  const [
+    toDate,
+    setToDate,
+  ] = useState(getToday);
 
-  const [exporting, setExporting] =
-    useState(false);
+  const [
+    exporting,
+    setExporting,
+  ] = useState(false);
 
-  const exportAllowed = canExportReports(
-    profile?.role
-  );
+  const exportAllowed =
+    canExportReports(
+      profile?.role
+    );
 
   async function exportToExcel() {
     try {
@@ -141,13 +390,18 @@ export default function ChecklistExport({
         );
       }
 
-      if (!fromDate || !toDate) {
+      if (
+        !fromDate ||
+        !toDate
+      ) {
         throw new Error(
           "Select both the From Date and To Date."
         );
       }
 
-      if (fromDate > toDate) {
+      if (
+        fromDate > toDate
+      ) {
         throw new Error(
           "The From Date cannot be later than the To Date."
         );
@@ -155,14 +409,22 @@ export default function ChecklistExport({
 
       setExporting(true);
 
-      const excelModule = await import("exceljs");
-    const ExcelJS = excelModule.default;
+      const excelModule =
+        await import(
+          "exceljs"
+        );
+
+      const ExcelJS =
+        excelModule.default ||
+        excelModule;
 
       const {
         data: checklists,
         error: checklistError,
       } = await supabase
-        .from("ramp_checklists")
+        .from(
+          "ramp_checklists"
+        )
         .select(
           [
             "id",
@@ -182,41 +444,59 @@ export default function ChecklistExport({
             "is_locked",
             "approved_at",
             "approval_notes",
-            "created_at",
             "updated_at",
           ].join(",")
         )
-        .gte("flight_date", fromDate)
-        .lte("flight_date", toDate)
-        .order("flight_date", {
-          ascending: true,
-        })
-        .order("flight_out", {
-          ascending: true,
-        });
+        .gte(
+          "flight_date",
+          fromDate
+        )
+        .lte(
+          "flight_date",
+          toDate
+        )
+        .order(
+          "flight_date",
+          {
+            ascending: true,
+          }
+        )
+        .order(
+          "flight_out",
+          {
+            ascending: true,
+          }
+        );
 
       if (checklistError) {
         throw checklistError;
       }
 
-      if (!checklists?.length) {
+      if (
+        !checklists?.length
+      ) {
         throw new Error(
           "No checklists were found for the selected date range."
         );
       }
 
-      const checklistIds = checklists.map(
-        (checklist) => checklist.id
-      );
+      const checklistIds =
+        checklists.map(
+          (checklist) =>
+            checklist.id
+        );
 
       const {
         data: checklistItems,
         error: itemsError,
       } = await supabase
-        .from("ramp_checklist_items")
+        .from(
+          "ramp_checklist_items"
+        )
         .select(
           [
             "checklist_id",
+            "task_code",
             "item_number",
             "phase",
             "activity",
@@ -225,42 +505,72 @@ export default function ChecklistExport({
             "delay_seconds",
             "operational_status",
             "observation",
-            "completed_at",
           ].join(",")
         )
-        .in("checklist_id", checklistIds)
-        .order("checklist_id", {
-          ascending: true,
-        })
-        .order("item_number", {
-          ascending: true,
-        });
+        .in(
+          "checklist_id",
+          checklistIds
+        )
+        .order(
+          "checklist_id",
+          {
+            ascending: true,
+          }
+        )
+        .order(
+          "item_number",
+          {
+            ascending: true,
+          }
+        );
 
       if (itemsError) {
         throw itemsError;
       }
 
-      const checklistById = new Map(
-        checklists.map((checklist) => [
-          checklist.id,
-          checklist,
-        ])
-      );
+      const itemsByChecklist =
+        new Map();
 
-      const workbook = new ExcelJS.Workbook();
+      for (
+        const item of
+        checklistItems || []
+      ) {
+        if (
+          !itemsByChecklist.has(
+            item.checklist_id
+          )
+        ) {
+          itemsByChecklist.set(
+            item.checklist_id,
+            []
+          );
+        }
+
+        itemsByChecklist
+          .get(
+            item.checklist_id
+          )
+          .push(item);
+      }
+
+      const workbook =
+        new ExcelJS.Workbook();
 
       workbook.creator =
         profile?.full_name ||
-        "SAA GRU Turnaround Operations";
+        REPORT_NAME;
 
-      workbook.created = new Date();
-      workbook.modified = new Date();
+      workbook.created =
+        new Date();
+
+      workbook.modified =
+        new Date();
 
       workbook.title =
-        `SAA GRU Turnaround Operations ${fromDate} to ${toDate}`;
+        `${REPORT_NAME} ${fromDate} to ${toDate}`;
 
       workbook.subject =
-        "SAA GRU Turnaround Operations Operational Export";
+        "PTS-aligned GRU operational export";
 
       const summarySheet =
         workbook.addWorksheet(
@@ -289,54 +599,85 @@ export default function ChecklistExport({
           width: 12,
         },
         {
-          header: "Aircraft Type",
+          header:
+            "Aircraft Type",
           key: "aircraftType",
           width: 18,
         },
         {
-          header: "Registration",
+          header:
+            "Registration",
           key: "registration",
           width: 18,
         },
         {
           header: "STA",
           key: "sta",
-          width: 12,
+          width: 10,
         },
         {
           header: "ETA",
           key: "eta",
-          width: 12,
+          width: 10,
         },
         {
           header: "ATA",
           key: "ata",
-          width: 12,
+          width: 10,
         },
         {
           header: "Chocks On",
           key: "chocksOn",
-          width: 14,
+          width: 12,
         },
         {
           header: "STD",
           key: "std",
-          width: 12,
+          width: 10,
         },
         {
-          header: "Coordinator",
+          header:
+            "Coordinator",
           key: "coordinator",
           width: 24,
         },
         {
-          header: "Status",
+          header:
+            "Checklist Status",
           key: "status",
+          width: 18,
+        },
+        {
+          header: "Completed",
+          key: "completed",
+          width: 12,
+        },
+        {
+          header: "On Time",
+          key: "onTime",
+          width: 11,
+        },
+        {
+          header:
+            "Slightly Delayed",
+          key:
+            "slightlyDelayed",
           width: 17,
+        },
+        {
+          header: "Delayed",
+          key: "delayed",
+          width: 11,
+        },
+        {
+          header: "Pending",
+          key: "pending",
+          width: 11,
         },
         {
           header: "Locked",
           key: "locked",
-          width: 11,
+          width: 10,
         },
         {
           header: "Approved At",
@@ -344,8 +685,10 @@ export default function ChecklistExport({
           width: 23,
         },
         {
-          header: "Approval Notes",
-          key: "approvalNotes",
+          header:
+            "Approval Notes",
+          key:
+            "approvalNotes",
           width: 34,
         },
         {
@@ -355,34 +698,109 @@ export default function ChecklistExport({
         },
       ];
 
-      checklists.forEach((checklist) => {
+      for (
+        const checklist of
+        checklists
+      ) {
+        const savedItems =
+          itemsByChecklist.get(
+            checklist.id
+          ) || [];
+
+        const lookup =
+          buildItemLookup(
+            savedItems
+          );
+
+        const orderedRows =
+          CHECKLIST_ITEMS.map(
+            (task) =>
+              findSavedItem(
+                task,
+                lookup
+              )
+          );
+
+        const completed =
+          orderedRows.filter(
+            (item) =>
+              item &&
+              item.operational_status !==
+                "pending"
+          ).length;
+
+        const onTime =
+          orderedRows.filter(
+            (item) =>
+              item?.operational_status ===
+              "on_time"
+          ).length;
+
+        const slightlyDelayed =
+          orderedRows.filter(
+            (item) =>
+              item?.operational_status ===
+              "light_delay"
+          ).length;
+
+        const delayed =
+          orderedRows.filter(
+            (item) =>
+              item?.operational_status ===
+              "delay"
+          ).length;
+
         summarySheet.addRow({
           flightDate:
             checklist.flight_date,
           flightIn:
-            checklist.flight_in || "",
+            checklist.flight_in ||
+            "",
           flightOut:
-            checklist.flight_out || "",
+            checklist.flight_out ||
+            "",
           bay:
             checklist.bay || "",
           aircraftType:
-            checklist.aircraft_type || "",
+            checklist.aircraft_type ||
+            "",
           registration:
-            checklist.registration || "",
+            checklist.registration ||
+            "",
           sta:
-            checklist.sta || "",
+            formatTime(
+              checklist.sta
+            ),
           eta:
-            checklist.eta || "",
+            formatTime(
+              checklist.eta
+            ),
           ata:
-            checklist.ata || "",
+            formatTime(
+              checklist.ata
+            ),
           chocksOn:
-            checklist.chocks_on || "",
+            formatTime(
+              checklist.chocks_on
+            ),
           std:
-            checklist.std || "",
+            formatTime(
+              checklist.std
+            ),
           coordinator:
-            checklist.trc_coordinator || "",
+            checklist.trc_coordinator ||
+            "",
           status:
-            checklist.checklist_status || "",
+            formatChecklistStatus(
+              checklist.checklist_status
+            ),
+          completed,
+          onTime,
+          slightlyDelayed,
+          delayed,
+          pending:
+            CHECKLIST_ITEMS.length -
+            completed,
           locked:
             checklist.is_locked
               ? "Yes"
@@ -392,19 +810,22 @@ export default function ChecklistExport({
               checklist.approved_at
             ),
           approvalNotes:
-            checklist.approval_notes || "",
+            checklist.approval_notes ||
+            "",
           updatedAt:
             formatTimestamp(
               checklist.updated_at
             ),
         });
-      });
+      }
 
-      styleWorksheet(summarySheet);
+      styleWorksheet(
+        summarySheet
+      );
 
       const activitySheet =
         workbook.addWorksheet(
-          "Checklist Activities"
+          "PTS Activities"
         );
 
       activitySheet.columns = [
@@ -419,96 +840,135 @@ export default function ChecklistExport({
           width: 14,
         },
         {
-          header: "Registration",
+          header:
+            "Registration",
           key: "registration",
           width: 18,
         },
         {
-          header: "Item Number",
-          key: "itemNumber",
-          width: 13,
+          header: "Sequence",
+          key: "sequence",
+          width: 11,
         },
         {
           header: "Phase",
           key: "phase",
-          width: 22,
+          width: 16,
         },
         {
           header: "Activity",
           key: "activity",
-          width: 42,
+          width: 52,
         },
         {
-          header: "Planned Time",
+          header:
+            "PTS Planned",
           key: "plannedTime",
-          width: 15,
+          width: 14,
         },
         {
-          header: "Actual Time",
+          header: "Actual",
           key: "actualTime",
-          width: 15,
+          width: 12,
         },
         {
-          header: "Delay Seconds",
-          key: "delaySeconds",
-          width: 16,
+          header: "Variance",
+          key: "variance",
+          width: 14,
         },
         {
-          header: "Status",
-          key: "status",
-          width: 18,
+          header:
+            "Performance Status",
+          key:
+            "performanceStatus",
+          width: 20,
         },
         {
-          header: "Observation",
+          header:
+            "Observation",
           key: "observation",
           width: 45,
         },
-        {
-          header: "Completed At",
-          key: "completedAt",
-          width: 23,
-        },
       ];
 
-      (checklistItems || []).forEach(
-        (item) => {
-          const checklist =
-            checklistById.get(
-              item.checklist_id
+      for (
+        const checklist of
+        checklists
+      ) {
+        const savedItems =
+          itemsByChecklist.get(
+            checklist.id
+          ) || [];
+
+        const lookup =
+          buildItemLookup(
+            savedItems
+          );
+
+        for (
+          const task of
+          CHECKLIST_ITEMS
+        ) {
+          const savedItem =
+            findSavedItem(
+              task,
+              lookup
             );
 
-          activitySheet.addRow({
-            flightDate:
-              checklist?.flight_date || "",
-            flightOut:
-              checklist?.flight_out || "",
-            registration:
-              checklist?.registration || "",
-            itemNumber:
-              item.item_number,
-            phase:
-              item.phase,
-            activity:
-              item.activity,
-            plannedTime:
-              item.planned_time || "",
-            actualTime:
-              item.actual_time || "",
-            delaySeconds:
-              item.delay_seconds ?? "",
-            status:
-              item.operational_status,
-            observation:
-              item.observation || "",
-            completedAt:
-              formatTimestamp(
-                item.completed_at
-              ),
-          });
-        }
-      );
+          const statusLabel =
+            formatPerformanceStatus(
+              savedItem
+                ?.operational_status
+            );
 
-      styleWorksheet(activitySheet);
+          const row =
+            activitySheet.addRow({
+              flightDate:
+                checklist.flight_date,
+              flightOut:
+                checklist.flight_out ||
+                "",
+              registration:
+                checklist.registration ||
+                "",
+              sequence:
+                task.sequence,
+              phase: task.phase,
+              activity:
+                task.activity,
+              plannedTime:
+                formatTime(
+                  savedItem
+                    ?.planned_time
+                ),
+              actualTime:
+                formatTime(
+                  savedItem
+                    ?.actual_time
+                ),
+              variance:
+                formatVariance(
+                  savedItem
+                    ?.delay_seconds
+                ),
+              performanceStatus:
+                statusLabel,
+              observation:
+                savedItem
+                  ?.observation ||
+                "",
+            });
+
+          applyStatusStyle(
+            row,
+            statusLabel
+          );
+        }
+      }
+
+      styleWorksheet(
+        activitySheet
+      );
 
       const informationSheet =
         workbook.addWorksheet(
@@ -524,7 +984,7 @@ export default function ChecklistExport({
         {
           header: "Value",
           key: "value",
-          width: 55,
+          width: 60,
         },
       ];
 
@@ -532,7 +992,7 @@ export default function ChecklistExport({
         {
           field: "Report",
           value:
-            "SAA GRU Turnaround Operations Date Range Export",
+            `${REPORT_NAME} Date Range Export`,
         },
         {
           field: "From Date",
@@ -550,34 +1010,43 @@ export default function ChecklistExport({
         },
         {
           field: "Role",
-          value: getRoleLabel(
-            profile?.role
-          ),
+          value:
+            getRoleLabel(
+              profile?.role
+            ),
         },
         {
           field: "Exported At",
-          value: formatTimestamp(
-            new Date().toISOString()
-          ),
-        },
-        {
-          field: "Checklist Count",
-          value: checklists.length,
-        },
-        {
-          field: "Activity Count",
           value:
-            checklistItems?.length || 0,
+            formatTimestamp(
+              new Date()
+                .toISOString()
+            ),
+        },
+        {
+          field:
+            "Checklist Count",
+          value:
+            checklists.length,
+        },
+        {
+          field:
+            "PTS Activities per Checklist",
+          value:
+            CHECKLIST_ITEMS.length,
         },
       ]);
 
-      styleWorksheet(informationSheet);
+      styleWorksheet(
+        informationSheet
+      );
 
       const buffer =
-        await workbook.xlsx.writeBuffer();
+        await workbook.xlsx
+          .writeBuffer();
 
       const filename =
-        `SAA-GRU-Turnaround-Operations-${fromDate}-to-${toDate}.xlsx`;
+        `OPS-GRU-Turnaround-Report-${fromDate}-to-${toDate}.xlsx`;
 
       downloadWorkbook(
         buffer,
@@ -587,7 +1056,10 @@ export default function ChecklistExport({
       window.alert(
         "Excel report created successfully.\n\n" +
           `Checklists: ${checklists.length}\n` +
-          `Activities: ${checklistItems?.length || 0}`
+          `PTS rows: ${
+            checklists.length *
+            CHECKLIST_ITEMS.length
+          }`
       );
     } catch (error) {
       console.error(
@@ -618,17 +1090,21 @@ export default function ChecklistExport({
           </p>
 
           <h3>
-            Export checklist data
+            Export PTS checklist data
           </h3>
 
           <p>
             Select a flight-date range
             and download the authorised
-            records as an Excel workbook.
+            47-activity PTS report as an
+            Excel workbook.
           </p>
         </div>
 
-        <FileSpreadsheet size={28} />
+        <FileSpreadsheet
+          size={28}
+          aria-hidden="true"
+        />
       </div>
 
       <div className="export-controls">
@@ -672,9 +1148,13 @@ export default function ChecklistExport({
             <LoaderCircle
               size={17}
               className="spin"
+              aria-hidden="true"
             />
           ) : (
-            <CalendarRange size={17} />
+            <CalendarRange
+              size={17}
+              aria-hidden="true"
+            />
           )}
 
           {exporting
