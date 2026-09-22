@@ -1,8 +1,11 @@
 import {
   Check,
+  ChevronDown,
+  ChevronUp,
   Clock3,
   RotateCcw,
 } from "lucide-react";
+import { useState } from "react";
 
 import {
   formatDelay,
@@ -116,6 +119,11 @@ export default function ChecklistActivity({
   onMark,
   disabled = false,
 }) {
+  const [
+    expanded,
+    setExpanded,
+  ] = useState(false);
+
   const isCompleted =
     row.status !== "pending";
 
@@ -161,6 +169,9 @@ export default function ChecklistActivity({
 
   const rowClassName = [
     "pts-task-row",
+    expanded
+      ? "pts-task-row-expanded"
+      : "pts-task-row-collapsed",
     isOverdue
       ? "pts-task-row-overdue"
       : "",
@@ -194,6 +205,13 @@ export default function ChecklistActivity({
     onMark?.();
   }
 
+  function toggleExpanded() {
+    setExpanded(
+      (currentValue) =>
+        !currentValue
+    );
+  }
+
   return (
     <article
       id={`checklist-task-${item.itemNumber}`}
@@ -220,7 +238,7 @@ export default function ChecklistActivity({
         )}
       </div>
 
-      <div className="pts-task-time">
+      <div className="pts-task-time pts-task-planned">
         <span>
           Planned
         </span>
@@ -230,7 +248,7 @@ export default function ChecklistActivity({
         </strong>
       </div>
 
-      <div className="pts-task-time">
+      <div className="pts-task-time pts-task-actual">
         <span>
           Actual
         </span>
@@ -241,6 +259,10 @@ export default function ChecklistActivity({
       </div>
 
       <div className="pts-task-delay">
+        <span className="pts-mobile-label">
+          Delay
+        </span>
+
         {isCompleted
           ? formatDelay(
               row.delaySeconds
@@ -308,6 +330,136 @@ export default function ChecklistActivity({
             `Observation for ${item.activity}`
           }
         />
+      </div>
+
+      <button
+        type="button"
+        className="pts-task-expand-button"
+        onClick={toggleExpanded}
+        aria-expanded={expanded}
+        aria-controls={
+          `task-detail-${item.itemNumber}`
+        }
+      >
+        <span>
+          {expanded
+            ? "Hide details"
+            : "View details"}
+        </span>
+
+        {expanded ? (
+          <ChevronUp
+            size={18}
+            aria-hidden="true"
+          />
+        ) : (
+          <ChevronDown
+            size={18}
+            aria-hidden="true"
+          />
+        )}
+      </button>
+
+      <div
+        id={`task-detail-${item.itemNumber}`}
+        className="pts-mobile-details"
+      >
+        <div>
+          <span>
+            Reference
+          </span>
+
+          <strong>
+            {formatTaskReference(
+              item
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>
+            Planned
+          </span>
+
+          <strong>
+            {plannedDisplay}
+          </strong>
+        </div>
+
+        <div>
+          <span>
+            Actual
+          </span>
+
+          <strong>
+            {actualDisplay}
+          </strong>
+        </div>
+
+        <div>
+          <span>
+            Delay
+          </span>
+
+          <strong>
+            {isCompleted
+              ? formatDelay(
+                  row.delaySeconds
+                )
+              : "--"}
+          </strong>
+        </div>
+
+        <div className="pts-mobile-action">
+          <span>
+            Action
+          </span>
+
+          <button
+            type="button"
+            className={
+              isCompleted
+                ? "pts-done-button completed"
+                : "pts-done-button"
+            }
+            onClick={handleMark}
+            disabled={disabled}
+          >
+            {isCompleted ? (
+              <RotateCcw
+                size={17}
+                aria-hidden="true"
+              />
+            ) : (
+              <Check
+                size={17}
+                aria-hidden="true"
+              />
+            )}
+
+            {isCompleted
+              ? "Undo"
+              : "Done"}
+          </button>
+        </div>
+
+        <label className="pts-mobile-comment">
+          <span>
+            Comment
+          </span>
+
+          <input
+            type="text"
+            value={
+              row.observation || ""
+            }
+            onChange={
+              handleObservationChange
+            }
+            placeholder="Observation"
+            disabled={disabled}
+          />
+        </label>
       </div>
 
       <div className="pts-allocation-bar">

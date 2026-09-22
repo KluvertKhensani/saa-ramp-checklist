@@ -70,6 +70,7 @@ const EMPTY_FLIGHT = {
   ata: "",
   chocksOn: "",
   std: "",
+  definedPushTime: "",
   trcCoordinator: "",
 };
 
@@ -570,6 +571,21 @@ export default function DashboardPage() {
         ),
     });
   }
+
+  function markLandingRealNow() {
+  if (checklistReadOnly) {
+    window.alert(
+      "This checklist is read-only for your current role or has already been locked."
+    );
+
+    return;
+  }
+
+  updateFlight(
+    "ata",
+    currentTime()
+  );
+}
 
   function markChocksOnNow() {
     if (checklistReadOnly) {
@@ -1213,10 +1229,15 @@ export default function DashboardPage() {
           normalizeDatabaseTime(
             checklist.std
           ),
-        trcCoordinator:
-          checklist
-            .trc_coordinator ||
-          "",
+          definedPushTime:
+            normalizeDatabaseTime(
+              checklist.defined_push_time
+            ),
+       trcCoordinator:
+        profile?.full_name ||
+        user?.email ||
+        checklist.trc_coordinator ||
+        "",
       });
 
       const savedItemsByTaskCode =
@@ -1527,10 +1548,16 @@ setRows(
           flight.chocksOn ||
           null,
         std:
-          flight.std || null,
-        trc_coordinator:
-          flight.trcCoordinator
-            .trim() || null,
+  flight.std || null,
+defined_push_time:
+  flight.definedPushTime ||
+  null,
+trc_coordinator:
+  profile?.full_name ||
+  user?.email ||
+  flight.trcCoordinator
+    .trim() ||
+  null,
         checklist_status:
           metrics.done ===
           CHECKLIST_ITEMS.length
@@ -2072,29 +2099,39 @@ setRows(
 
             <div id="flight-information">
               <FlightInformation
-                flight={flight}
-                onChange={
-                  updateFlight
-                }
-                onChocksNow={
-                  markChocksOnNow
-                }
-                disabled={
-                  checklistReadOnly
-                }
-              />
+  flight={flight}
+  coordinatorName={
+    profile?.full_name ||
+    user?.email ||
+    ""
+  }
+  onChange={
+    updateFlight
+  }
+  onLandingNow={
+    markLandingRealNow
+  }
+  onChocksNow={
+    markChocksOnNow
+  }
+  disabled={
+    checklistReadOnly
+  }
+/>
             </div>
 
             <div id="pushback-countdown">
               <PushbackCountdown
-                chocksOn={
-                  flight.chocksOn
-                }
-                std={flight.std}
-                disabled={
-                  checklistReadOnly
-                }
-              />
+  chocksOn={
+    flight.chocksOn
+  }
+  definedPushTime={
+    flight.definedPushTime
+  }
+  disabled={
+    checklistReadOnly
+  }
+/>
             </div>
 
             <div id="performance-summary">

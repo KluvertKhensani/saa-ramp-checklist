@@ -5,17 +5,30 @@
 
 export default function FlightInformation({
   flight,
+  coordinatorName = "",
   onChange,
+  onLandingNow,
   onChocksNow,
   disabled = false,
 }) {
-  function change(field, value) {
+  function change(
+    field,
+    value
+  ) {
     if (disabled) {
       return;
     }
 
-    onChange(field, value);
+    onChange(
+      field,
+      value
+    );
   }
+
+  const lockedCoordinator =
+    coordinatorName ||
+    flight.trcCoordinator ||
+    "";
 
   return (
     <section className="ramp-card">
@@ -47,10 +60,11 @@ export default function FlightInformation({
             onChange={(event) =>
               change(
                 "flightIn",
-                event.target.value.toUpperCase()
+                event.target.value
+                  .toUpperCase()
               )
             }
-            placeholder="SA404"
+            placeholder="SA226"
             disabled={disabled}
           />
         </label>
@@ -65,17 +79,18 @@ export default function FlightInformation({
             onChange={(event) =>
               change(
                 "flightOut",
-                event.target.value.toUpperCase()
+                event.target.value
+                  .toUpperCase()
               )
             }
-            placeholder="SA405"
+            placeholder="SA227"
             disabled={disabled}
           />
         </label>
 
         <label>
           <span>
-            Date *
+            Flight Date *
           </span>
 
           <input
@@ -101,7 +116,8 @@ export default function FlightInformation({
             onChange={(event) =>
               change(
                 "bay",
-                event.target.value.toUpperCase()
+                event.target.value
+                  .toUpperCase()
               )
             }
             placeholder="C1"
@@ -115,7 +131,9 @@ export default function FlightInformation({
           </span>
 
           <select
-            value={flight.aircraftType}
+            value={
+              flight.aircraftType
+            }
             onChange={(event) =>
               change(
                 "aircraftType",
@@ -139,11 +157,6 @@ export default function FlightInformation({
             <option value="A340">
               A340
             </option>
-
-            <option value="B737">
-              B737
-            </option>
-
           </select>
         </label>
 
@@ -153,11 +166,14 @@ export default function FlightInformation({
           </span>
 
           <input
-            value={flight.registration}
+            value={
+              flight.registration
+            }
             onChange={(event) =>
               change(
                 "registration",
-                event.target.value.toUpperCase()
+                event.target.value
+                  .toUpperCase()
               )
             }
             placeholder="ZS-SZM"
@@ -167,7 +183,7 @@ export default function FlightInformation({
 
         <label>
           <span>
-            STA
+            STA Scheduled
           </span>
 
           <input
@@ -186,7 +202,7 @@ export default function FlightInformation({
 
         <label>
           <span>
-            ETA
+            ETA MVT
           </span>
 
           <input
@@ -205,65 +221,7 @@ export default function FlightInformation({
 
         <label>
           <span>
-            ATA
-          </span>
-
-          <input
-            type="time"
-            step="60"
-            value={flight.ata}
-            onChange={(event) =>
-              change(
-                "ata",
-                event.target.value
-              )
-            }
-            disabled={disabled}
-          />
-        </label>
-
-        <label>
-          <span>
-            Chocks On
-          </span>
-
-          <div className="field-with-button">
-            <input
-              type="time"
-              step="60"
-              value={flight.chocksOn}
-              onChange={(event) =>
-                change(
-                  "chocksOn",
-                  event.target.value
-                )
-              }
-              disabled={disabled}
-            />
-
-            <button
-              type="button"
-              className="time-now-button"
-              onClick={onChocksNow}
-              title={
-                disabled
-                  ? "This checklist is read-only"
-                  : "Record the current time"
-              }
-              aria-label="Record the current chocks-on time"
-              disabled={disabled}
-            >
-              <Clock3
-                size={17}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-        </label>
-
-        <label>
-          <span>
-            STD
+            STD Scheduled
           </span>
 
           <input
@@ -282,19 +240,126 @@ export default function FlightInformation({
 
         <label>
           <span>
+            Defined Push Time
+          </span>
+
+          <div className="time-select-field">
+            <Clock3
+              size={17}
+              aria-hidden="true"
+            />
+
+            <input
+              type="time"
+              step="60"
+              value={
+                flight
+                  .definedPushTime ||
+                ""
+              }
+              onChange={(event) =>
+                change(
+                  "definedPushTime",
+                  event.target.value
+                )
+              }
+              disabled={disabled}
+              aria-label="Select defined push time"
+            />
+          </div>
+        </label>
+
+        <label>
+          <span>
+            Landing Real
+          </span>
+
+          <div className="field-with-button">
+            <input
+              type="text"
+              value={
+                flight.ata ||
+                "Not recorded"
+              }
+              readOnly
+              disabled
+              aria-label="Recorded landing real time"
+            />
+
+            <button
+              type="button"
+              className="time-now-button"
+              onClick={
+                onLandingNow
+              }
+              title={
+                disabled
+                  ? "This checklist is read-only"
+                  : "Record Landing Real using the current time"
+              }
+              aria-label="Record Landing Real using the current time"
+              disabled={disabled}
+            >
+              <Clock3
+                size={17}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+        </label>
+
+        <label>
+          <span>
+            Chocks On Real
+          </span>
+
+          <div className="field-with-button">
+            <input
+              type="text"
+              value={
+                flight.chocksOn ||
+                "Not recorded"
+              }
+              readOnly
+              disabled
+              aria-label="Recorded chocks on real time"
+            />
+
+            <button
+              type="button"
+              className="time-now-button"
+              onClick={
+                onChocksNow
+              }
+              title={
+                disabled
+                  ? "This checklist is read-only"
+                  : "Record Chocks On Real using the current time"
+              }
+              aria-label="Record Chocks On Real using the current time"
+              disabled={disabled}
+            >
+              <Clock3
+                size={17}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+        </label>
+
+        <label>
+          <span>
             TRC Coordinator
           </span>
 
           <input
-            value={flight.trcCoordinator}
-            onChange={(event) =>
-              change(
-                "trcCoordinator",
-                event.target.value
-              )
+            className="locked-profile-field"
+            value={
+              lockedCoordinator
             }
-            placeholder="Coordinator name"
-            disabled={disabled}
+            readOnly
+            disabled
+            aria-label="Signed-in TRC Coordinator"
           />
         </label>
       </div>

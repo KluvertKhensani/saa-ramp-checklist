@@ -18,23 +18,28 @@ import {
 
 function formatTurnaroundWindow(
   chocksOn,
-  std
+  definedPushTime
 ) {
   const chocksSeconds =
-    timeToSeconds(chocksOn);
+    timeToSeconds(
+      chocksOn
+    );
 
-  const stdSeconds =
-    timeToSeconds(std);
+  const pushSeconds =
+    timeToSeconds(
+      definedPushTime
+    );
 
   if (
     chocksSeconds === null ||
-    stdSeconds === null
+    pushSeconds === null
   ) {
     return "Not configured";
   }
 
   let difference =
-    stdSeconds - chocksSeconds;
+    pushSeconds -
+    chocksSeconds;
 
   if (difference < 0) {
     difference += 86400;
@@ -45,37 +50,51 @@ function formatTurnaroundWindow(
       difference / 60
     );
 
-  return `${minutes} min turnaround window`;
+  return (
+    `${minutes} min ` +
+    "turnaround window"
+  );
 }
 
 function getCountdownState(
   remainingSeconds
 ) {
-  if (remainingSeconds === null) {
+  if (
+    remainingSeconds === null
+  ) {
     return {
       key: "not-configured",
-      label: "Not configured",
+      label:
+        "Not configured",
     };
   }
 
-  if (remainingSeconds <= 0) {
+  if (
+    remainingSeconds <= 0
+  ) {
     return {
       key: "past-target",
-      label: "Pushback due",
+      label:
+        "Defined push due",
     };
   }
 
-  if (remainingSeconds <= 300) {
+  if (
+    remainingSeconds <= 300
+  ) {
     return {
       key: "critical",
       label: "Critical",
     };
   }
 
-  if (remainingSeconds <= 900) {
+  if (
+    remainingSeconds <= 900
+  ) {
     return {
       key: "attention",
-      label: "Attention required",
+      label:
+        "Attention required",
     };
   }
 
@@ -87,7 +106,7 @@ function getCountdownState(
 
 export default function PushbackCountdown({
   chocksOn,
-  std,
+  definedPushTime,
   disabled = false,
 }) {
   const [
@@ -98,14 +117,19 @@ export default function PushbackCountdown({
   const [
     currentDate,
     setCurrentDate,
-  ] = useState(() => new Date());
+  ] = useState(
+    () => new Date()
+  );
 
   const configured =
-    Boolean(chocksOn && std);
+    Boolean(
+      chocksOn &&
+      definedPushTime
+    );
 
   const configurationKey =
     configured
-      ? `${chocksOn}-${std}`
+      ? `${chocksOn}-${definedPushTime}`
       : "";
 
   const started =
@@ -120,7 +144,9 @@ export default function PushbackCountdown({
 
     const intervalId =
       window.setInterval(() => {
-        setCurrentDate(new Date());
+        setCurrentDate(
+          new Date()
+        );
       }, 1000);
 
     return () => {
@@ -137,13 +163,13 @@ export default function PushbackCountdown({
       }
 
       return signedTimeDifference(
-        std,
+        definedPushTime,
         currentDate
       );
     }, [
       configured,
       currentDate,
-      std,
+      definedPushTime,
     ]);
 
   const countdownState =
@@ -151,51 +177,61 @@ export default function PushbackCountdown({
       remainingSeconds
     );
 
-  const progress = useMemo(() => {
-    const chocksSeconds =
-      timeToSeconds(chocksOn);
+  const progress =
+    useMemo(() => {
+      const chocksSeconds =
+        timeToSeconds(
+          chocksOn
+        );
 
-    const targetSeconds =
-      timeToSeconds(std);
+      const targetSeconds =
+        timeToSeconds(
+          definedPushTime
+        );
 
-    if (
-      chocksSeconds === null ||
-      targetSeconds === null
-    ) {
-      return 0;
-    }
+      if (
+        chocksSeconds === null ||
+        targetSeconds === null
+      ) {
+        return 0;
+      }
 
-    let totalDuration =
-      targetSeconds -
-      chocksSeconds;
+      let totalDuration =
+        targetSeconds -
+        chocksSeconds;
 
-    if (totalDuration <= 0) {
-      totalDuration += 86400;
-    }
+      if (
+        totalDuration <= 0
+      ) {
+        totalDuration +=
+          86400;
+      }
 
-    if (
-      remainingSeconds === null
-    ) {
-      return 0;
-    }
+      if (
+        remainingSeconds ===
+        null
+      ) {
+        return 0;
+      }
 
-    const elapsed =
-      totalDuration -
-      remainingSeconds;
+      const elapsed =
+        totalDuration -
+        remainingSeconds;
 
-    return Math.min(
-      100,
-      Math.max(
-        0,
-        (elapsed / totalDuration) *
-          100
-      )
-    );
-  }, [
-    chocksOn,
-    remainingSeconds,
-    std,
-  ]);
+      return Math.min(
+        100,
+        Math.max(
+          0,
+          elapsed /
+            totalDuration *
+            100
+        )
+      );
+    }, [
+      chocksOn,
+      definedPushTime,
+      remainingSeconds,
+    ]);
 
   function startCountdown() {
     if (
@@ -205,7 +241,9 @@ export default function PushbackCountdown({
       return;
     }
 
-    setCurrentDate(new Date());
+    setCurrentDate(
+      new Date()
+    );
 
     setStartedConfiguration(
       configurationKey
@@ -213,20 +251,26 @@ export default function PushbackCountdown({
   }
 
   function resetCountdown() {
-    setStartedConfiguration("");
-    setCurrentDate(new Date());
+    setStartedConfiguration(
+      ""
+    );
+
+    setCurrentDate(
+      new Date()
+    );
   }
 
   const countdownLabel =
     remainingSeconds !== null &&
     remainingSeconds >= 0
-      ? "Time to pushback"
-      : "Past pushback target";
+      ? "Time to defined push"
+      : "Past defined push target";
 
   return (
     <section
       className={
-        `pushback-panel pushback-${countdownState.key}`
+        `pushback-panel ` +
+        `pushback-${countdownState.key}`
       }
     >
       <div className="pushback-heading">
@@ -236,12 +280,12 @@ export default function PushbackCountdown({
           </p>
 
           <h2>
-            Pushback countdown
+            Defined push countdown
           </h2>
 
           <p>
             Countdown to the defined
-            STD pushback target.
+            operational push time.
           </p>
         </div>
 
@@ -253,16 +297,16 @@ export default function PushbackCountdown({
 
       {!configured ? (
         <div className="pushback-notice">
-          Enter Chocks On and STD to
-          configure the operational
-          pushback target.
+          Record Chocks On Real and
+          select Defined Push Time to
+          configure the countdown.
         </div>
       ) : (
         <>
           <div className="pushback-summary">
             <div>
               <span>
-                Chocks On
+                Chocks On Real
               </span>
 
               <strong>
@@ -272,11 +316,11 @@ export default function PushbackCountdown({
 
             <div>
               <span>
-                Target STD
+                Defined Push Time
               </span>
 
               <strong>
-                {std}
+                {definedPushTime}
               </strong>
             </div>
 
@@ -288,7 +332,7 @@ export default function PushbackCountdown({
               <strong>
                 {formatTurnaroundWindow(
                   chocksOn,
-                  std
+                  definedPushTime
                 )}
               </strong>
             </div>
@@ -297,9 +341,7 @@ export default function PushbackCountdown({
           {!started ? (
             <button
               type="button"
-              className={
-                "ramp-button ramp-button-green pushback-start"
-              }
+              className="ramp-button ramp-button-green pushback-start"
               onClick={
                 startCountdown
               }
@@ -338,27 +380,26 @@ export default function PushbackCountdown({
               <div
                 className="pushback-progress"
                 role="progressbar"
-                aria-label={
-                  "Turnaround progress toward pushback"
-                }
+                aria-label="Turnaround progress toward defined push"
                 aria-valuemin="0"
                 aria-valuemax="100"
                 aria-valuenow={
-                  Math.round(progress)
+                  Math.round(
+                    progress
+                  )
                 }
               >
                 <span
                   style={{
-                    width: `${progress}%`,
+                    width:
+                      `${progress}%`,
                   }}
                 />
               </div>
 
               <button
                 type="button"
-                className={
-                  "ramp-button ramp-button-light pushback-reset"
-                }
+                className="ramp-button ramp-button-light pushback-reset"
                 onClick={
                   resetCountdown
                 }
