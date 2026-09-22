@@ -10,6 +10,9 @@ export const ROLE_LABELS = {
   auditor: "Auditor",
   viewer: "Viewer",
   data_analyst: "Data Analyst",
+  duty_officer: "Duty Officer",
+  station_manager: "Station Manager",
+  senior_manager: "Senior Manager",
 };
 
 function normalizeRole(role) {
@@ -40,7 +43,9 @@ export function canCreateChecklist(role) {
     "trc_coordinator",
     "turnaround_coordinator",
     "ramp_agent",
-  ].includes(normalizeRole(role));
+  ].includes(
+    normalizeRole(role)
+  );
 }
 
 export function canOperateChecklist(role) {
@@ -51,7 +56,9 @@ export function canOperateChecklist(role) {
     "trc_coordinator",
     "turnaround_coordinator",
     "ramp_agent",
-  ].includes(normalizeRole(role));
+  ].includes(
+    normalizeRole(role)
+  );
 }
 
 export function canApproveChecklist(role) {
@@ -62,13 +69,18 @@ export function canApproveChecklist(role) {
     "qa_inspector",
     "trc_coordinator",
     "turnaround_coordinator",
-  ].includes(normalizeRole(role));
+  ].includes(
+    normalizeRole(role)
+  );
 }
 
 export function canExportReports(role) {
-  return (
-    normalizeRole(role) ===
-    "data_analyst"
+  return [
+    "data_analyst",
+    "station_manager",
+    "senior_manager",
+  ].includes(
+    normalizeRole(role)
   );
 }
 
@@ -82,7 +94,11 @@ export function canViewAuditHistory(role) {
     "turnaround_coordinator",
     "auditor",
     "data_analyst",
-  ].includes(normalizeRole(role));
+    "station_manager",
+    "senior_manager",
+  ].includes(
+    normalizeRole(role)
+  );
 }
 
 export function canViewOperationalHistory(role) {
@@ -93,10 +109,16 @@ export function canViewOperationalHistory(role) {
     "qa_inspector",
     "trc_coordinator",
     "turnaround_coordinator",
+    "ramp_agent",
     "auditor",
     "viewer",
     "data_analyst",
-  ].includes(normalizeRole(role));
+    "duty_officer",
+    "station_manager",
+    "senior_manager",
+  ].includes(
+    normalizeRole(role)
+  );
 }
 
 export function isReadOnlyRole(role) {
@@ -105,5 +127,10 @@ export function isReadOnlyRole(role) {
     "auditor",
     "viewer",
     "data_analyst",
-  ].includes(normalizeRole(role));
+    "duty_officer",
+    "station_manager",
+    "senior_manager",
+  ].includes(
+    normalizeRole(role)
+  );
 }

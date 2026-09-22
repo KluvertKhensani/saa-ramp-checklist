@@ -49,10 +49,21 @@ const LOGIN_ROLE_OPTIONS = [
     value: "viewer",
     label: "Viewer",
   },
-
   {
     value: "data_analyst",
     label: "Data Analyst",
+  },
+  {
+    value: "duty_officer",
+    label: "Duty Officer",
+  },
+  {
+    value: "station_manager",
+    label: "Station Manager",
+  },
+  {
+    value: "senior_manager",
+    label: "Senior Manager",
   },
 ];
 
