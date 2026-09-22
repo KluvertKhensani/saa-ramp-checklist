@@ -1,15 +1,11 @@
 import {
   Check,
-  ChevronDown,
-  ChevronUp,
   Clock3,
   RotateCcw,
 } from "lucide-react";
-import { useState } from "react";
 
 import {
   formatDelay,
-  formatDuration,
 } from "../../utils/checklistTime";
 
 const STATUS_LABELS = {
@@ -21,10 +17,92 @@ const STATUS_LABELS = {
 
 function displayTime(value) {
   if (!value) {
-    return "";
+    return "--";
   }
 
-  return String(value).slice(0, 5);
+  return String(value).slice(
+    0,
+    5
+  );
+}
+
+function formatTaskReference(
+  item
+) {
+  if (
+    item.offsetSec === null ||
+    item.offsetSec === undefined
+  ) {
+    return "Milestone";
+  }
+
+  if (item.offsetSec === 0) {
+    return "At Chocks On";
+  }
+
+  const absoluteMinutes =
+    Math.abs(
+      Math.round(
+        item.offsetSec / 60
+      )
+    );
+
+  if (item.offsetSec < 0) {
+    return (
+      `${absoluteMinutes} min ` +
+      "before Chocks On"
+    );
+  }
+
+  return (
+    `${absoluteMinutes} min ` +
+    "after Chocks On"
+  );
+}
+
+function calculateProgress(
+  item,
+  remainingSeconds,
+  overdue,
+  completed
+) {
+  if (completed || overdue) {
+    return 100;
+  }
+
+  if (
+    remainingSeconds === null ||
+    remainingSeconds === undefined
+  ) {
+    return 0;
+  }
+
+  const taskWindowSeconds =
+    Math.max(
+      Math.abs(
+        item.offsetSec || 0
+      ),
+      60
+    );
+
+  const elapsedSeconds =
+    Math.max(
+      0,
+      taskWindowSeconds -
+        remainingSeconds
+    );
+
+  return Math.min(
+    100,
+    Math.max(
+      0,
+      Math.round(
+        elapsedSeconds /
+          taskWindowSeconds *
+          100
+      )
+    )
+  );
 }
 
 export default function ChecklistActivity({
@@ -32,67 +110,69 @@ export default function ChecklistActivity({
   row,
   plannedTime,
   overdue = false,
-  overdueLabel = "",
-  forceExpanded = false,
-  onExpanded,
+  remainingSeconds = null,
+  timingLabel = "",
   onObservationChange,
   onMark,
   disabled = false,
 }) {
-  const [expanded, setExpanded] =
-    useState(false);
-
-  const isExpanded =
-    forceExpanded || expanded;
-
   const isCompleted =
     row.status !== "pending";
 
   const isOverdue =
-    overdue && !isCompleted;
+    overdue &&
+    !isCompleted;
 
   const plannedDisplay =
-    displayTime(plannedTime);
+    displayTime(
+      plannedTime
+    );
 
   const actualDisplay =
-    displayTime(row.actualTime);
+    displayTime(
+      row.actualTime
+    );
 
-  const visibleStatus =
+  const statusKey =
     isOverdue
       ? "overdue"
       : row.status;
 
-  const visibleStatusLabel =
+  const statusLabel =
     isOverdue
       ? "Overdue"
-      : STATUS_LABELS[row.status] ||
-        "Pending";
+      : STATUS_LABELS[
+          row.status
+        ] || "Pending";
+
+  const allocationLabel =
+    isCompleted
+      ? statusLabel
+      : timingLabel ||
+        "Awaiting Chocks On";
+
+  const progressPercent =
+    calculateProgress(
+      item,
+      remainingSeconds,
+      isOverdue,
+      isCompleted
+    );
 
   const rowClassName = [
-    "checklist-row",
-    disabled
-      ? "checklist-row-readonly"
-      : "",
+    "pts-task-row",
     isOverdue
-      ? "checklist-row-overdue"
+      ? "pts-task-row-overdue"
       : "",
-    isExpanded
-      ? "checklist-row-expanded"
-      : "checklist-row-collapsed",
+    isCompleted
+      ? `pts-task-row-${row.status}`
+      : "",
+    disabled
+      ? "pts-task-row-readonly"
+      : "",
   ]
     .filter(Boolean)
     .join(" ");
-
-  function toggleExpanded() {
-    if (isExpanded) {
-      setExpanded(false);
-      onExpanded?.(null);
-      return;
-    }
-
-    setExpanded(true);
-    onExpanded?.(item.itemNumber);
-  }
 
   function handleObservationChange(
     event
@@ -120,224 +200,148 @@ export default function ChecklistActivity({
       className={rowClassName}
       aria-readonly={disabled}
     >
-      <button
-        type="button"
-        className="checklist-row-toggle"
-        onClick={toggleExpanded}
-        aria-expanded={isExpanded}
-        aria-controls={
-          `task-details-${item.itemNumber}`
-        }
-        aria-label={
-          isExpanded
-            ? `Collapse ${item.activity}`
-            : `Expand ${item.activity}`
-        }
-      >
-        <span className="checklist-number">
-          {item.itemNumber}
+      <div className="pts-task-number">
+        {item.itemNumber}
+      </div>
+
+      <div className="pts-task-phase">
+        {item.phase}
+      </div>
+
+      <div className="pts-task-activity">
+        <strong>
+          {item.activity}
+        </strong>
+      </div>
+
+      <div className="pts-task-reference">
+        {formatTaskReference(
+          item
+        )}
+      </div>
+
+      <div className="pts-task-time">
+        <span>
+          Planned
         </span>
 
-        <span className="checklist-toggle-content">
-          <span className="checklist-phase">
-            {item.phase}
-          </span>
+        <strong>
+          {plannedDisplay}
+        </strong>
+      </div>
 
-          <strong className="checklist-task-name">
-            {item.activity}
-          </strong>
-
-          <span className="checklist-compact-time">
-            <Clock3
-              size={14}
-              aria-hidden="true"
-            />
-
-            {isCompleted
-              ? `Completed at ${
-                  actualDisplay ||
-                  "recorded time"
-                }`
-              : plannedDisplay
-                ? `Planned ${plannedDisplay}`
-                : "Awaiting Chocks On"}
-          </span>
-
-          <span className="checklist-allocation-summary">
-            {formatDuration(
-              item.allocationSec
-            )}
-          </span>
-
-          {isOverdue ? (
-            <span className="checklist-overdue-summary">
-              {overdueLabel ||
-                "Activity overdue"}
-            </span>
-          ) : null}
+      <div className="pts-task-time">
+        <span>
+          Actual
         </span>
 
-        <span className="checklist-toggle-status">
-          <span
-            className={
-              visibleStatus === "overdue"
-                ? "activity-status status-overdue"
-                : `activity-status status-${visibleStatus}`
-            }
-          >
-            {visibleStatusLabel}
-          </span>
+        <strong>
+          {actualDisplay}
+        </strong>
+      </div>
 
-          {isExpanded ? (
-            <ChevronUp
-              size={20}
+      <div className="pts-task-delay">
+        {isCompleted
+          ? formatDelay(
+              row.delaySeconds
+            )
+          : "--"}
+      </div>
+
+      <div className="pts-task-status">
+        <span
+          className={
+            `activity-status ` +
+            `status-${statusKey}`
+          }
+        >
+          {statusLabel}
+        </span>
+      </div>
+
+      <div className="pts-task-action">
+        <button
+          type="button"
+          className={
+            isCompleted
+              ? "pts-done-button completed"
+              : "pts-done-button"
+          }
+          onClick={handleMark}
+          disabled={disabled}
+          aria-label={
+            isCompleted
+              ? `Return ${item.activity} to pending`
+              : `Complete ${item.activity}`
+          }
+        >
+          {isCompleted ? (
+            <RotateCcw
+              size={17}
               aria-hidden="true"
             />
           ) : (
-            <ChevronDown
-              size={20}
+            <Check
+              size={17}
               aria-hidden="true"
             />
           )}
-        </span>
-      </button>
 
-      {isExpanded ? (
-        <div
-          id={`task-details-${item.itemNumber}`}
-          className="checklist-row-details"
-        >
-          {isOverdue ? (
-            <div
-              className="activity-overdue-alert"
-              role="alert"
-            >
-              {overdueLabel ||
-                "This activity is overdue."}
-            </div>
-          ) : null}
+          {isCompleted
+            ? "Undo"
+            : "Done"}
+        </button>
+      </div>
 
-          <div className="checklist-times checklist-times-display">
-            <div className="activity-time-display">
-              <span>
-                Planned
-              </span>
+      <div className="pts-task-observation">
+        <input
+          type="text"
+          value={
+            row.observation || ""
+          }
+          onChange={
+            handleObservationChange
+          }
+          placeholder="Observation"
+          disabled={disabled}
+          aria-label={
+            `Observation for ${item.activity}`
+          }
+        />
+      </div>
 
-              <strong>
-                {plannedDisplay ||
-                  "Awaiting Chocks On"}
-              </strong>
-            </div>
-
-            <div className="activity-time-display">
-              <span>
-                Actual
-              </span>
-
-              <strong>
-                {actualDisplay ||
-                  "Not completed"}
-              </strong>
-            </div>
-          </div>
-
-          <div className="activity-allocation">
-            <span>
-              Task allocation
-            </span>
-
-            <strong>
-              {formatDuration(
-                item.allocationSec
-              )}
-            </strong>
-          </div>
-
-          <label className="observation-field">
-            <span>
-              Observation
-            </span>
-
-            <input
-              type="text"
-              value={
-                row.observation || ""
-              }
-              onChange={
-                handleObservationChange
-              }
-              placeholder="Operational observation"
-              disabled={disabled}
-              aria-label={
-                `Observation for ${item.activity}`
-              }
+      <div className="pts-allocation-bar">
+        <div className="pts-allocation-heading">
+          <span>
+            <Clock3
+              size={13}
+              aria-hidden="true"
             />
-          </label>
 
-          <div className="checklist-result checklist-result-compact">
-            <div className="activity-delay-summary">
-              <span>
-                Performance status
-              </span>
+            Task allocation
+          </span>
 
-              <strong>
-                {isOverdue
-                  ? overdueLabel ||
-                    "Overdue"
-                  : isCompleted
-                    ? visibleStatusLabel
-                    : formatDelay(
-                        row.delaySeconds
-                      )}
-              </strong>
-            </div>
-
-            <button
-              type="button"
-              className={
-                isCompleted
-                  ? "mark-button completed"
-                  : "mark-button"
-              }
-              onClick={handleMark}
-              disabled={disabled}
-              title={
-                disabled
-                  ? "This checklist is read-only"
-                  : isCompleted
-                    ? "Return this activity to pending"
-                    : "Record the activity completion time"
-              }
-              aria-label={
-                disabled
-                  ? `${item.activity} is read-only`
-                  : isCompleted
-                    ? `Return ${item.activity} to pending`
-                    : `Complete ${item.activity} now`
-              }
-            >
-              {isCompleted ? (
-                <RotateCcw
-                  size={17}
-                  aria-hidden="true"
-                />
-              ) : (
-                <Check
-                  size={17}
-                  aria-hidden="true"
-                />
-              )}
-
-              {isCompleted
-                ? `Completed at ${
-                    actualDisplay ||
-                    "recorded time"
-                  }`
-                : "Mark Complete"}
-            </button>
-          </div>
+          <strong>
+            {allocationLabel}
+          </strong>
         </div>
-      ) : null}
+
+        <div className="pts-allocation-track">
+          <span
+            className={
+              isOverdue
+                ? "overdue"
+                : isCompleted
+                  ? "completed"
+                  : ""
+            }
+            style={{
+              width:
+                `${progressPercent}%`,
+            }}
+          />
+        </div>
+      </div>
     </article>
   );
 }

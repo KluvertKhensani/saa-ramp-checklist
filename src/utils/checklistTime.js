@@ -250,18 +250,22 @@ export function getPendingTaskTiming(
     return {
       overdue: false,
       overdueSeconds: null,
-      label: "Awaiting timing",
+      remainingSeconds: null,
+      progressPercent: 0,
+      label: "Awaiting Chocks On",
     };
   }
 
   const currentSeconds =
-    currentDate.getHours() * 3600 +
-    currentDate.getMinutes() * 60 +
+    currentDate.getHours() *
+      3600 +
+    currentDate.getMinutes() *
+      60 +
     currentDate.getSeconds();
 
   let difference =
-    currentSeconds -
-    plannedSeconds;
+    plannedSeconds -
+    currentSeconds;
 
   if (difference < -43200) {
     difference += 86400;
@@ -271,27 +275,54 @@ export function getPendingTaskTiming(
     difference -= 86400;
   }
 
-  if (difference <= 0) {
+  if (difference < 0) {
+    const overdueSeconds =
+      Math.abs(difference);
+
+    const overdueMinutes =
+      Math.max(
+        1,
+        Math.floor(
+          overdueSeconds / 60
+        )
+      );
+
     return {
-      overdue: false,
-      overdueSeconds: 0,
-      label: "Pending",
+      overdue: true,
+      overdueSeconds,
+      remainingSeconds: 0,
+      progressPercent: 100,
+      label:
+        `Overdue by ${overdueMinutes} min`,
     };
   }
 
-  const overdueMinutes =
+  const remainingMinutes =
     Math.max(
       1,
-      Math.floor(
+      Math.ceil(
         difference / 60
       )
     );
 
+  if (difference <= 30) {
+    return {
+      overdue: false,
+      overdueSeconds: 0,
+      remainingSeconds:
+        difference,
+      progressPercent: 98,
+      label: "Due now",
+    };
+  }
+
   return {
-    overdue: true,
-    overdueSeconds:
+    overdue: false,
+    overdueSeconds: 0,
+    remainingSeconds:
       difference,
+    progressPercent: 0,
     label:
-      `Overdue by ${overdueMinutes} min`,
+      `${remainingMinutes} min left`,
   };
 }

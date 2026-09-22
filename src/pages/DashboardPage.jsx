@@ -255,10 +255,8 @@ export default function DashboardPage() {
     setOperationalNow,
   ] = useState(() => new Date());
 
-  const [
-    focusedTaskNumber,
-    setFocusedTaskNumber,
-  ] = useState(null);
+  const [, setFocusedTaskNumber] =
+  useState(null);
 
   const [
     operationsMenuOpen,
@@ -302,7 +300,7 @@ export default function DashboardPage() {
         setOperationalNow(
           new Date()
         );
-      }, 15000);
+      }, 1000);
 
     return () => {
       window.clearInterval(
@@ -2178,7 +2176,27 @@ setRows(
               )}
             </section>
 
-            <section className="checklist-list">
+            <section
+  className="pts-task-table"
+  aria-label="PTS checklist activities"
+>
+  <div
+    className="pts-task-header"
+    role="row"
+  >
+    <span>#</span>
+    <span>Phase</span>
+    <span>Activity</span>
+    <span>Reference</span>
+    <span>Planned</span>
+    <span>Actual</span>
+    <span>Delay</span>
+    <span>Status</span>
+    <span>Action</span>
+    <span>Comment</span>
+  </div>
+
+  <div className="checklist-list">
               {visibleItems.map(
                 (item) => {
                   const index =
@@ -2198,73 +2216,59 @@ setRows(
                     );
 
                   const pendingTiming =
-                    row.status ===
-                    "pending"
-                      ? getPendingTaskTiming(
-                          plannedTime,
-                          operationalNow
-                        )
-                      : {
-                          overdue:
-                            false,
-                          overdueSeconds:
-                            null,
-                          label: "",
-                        };
+  row.status === "pending"
+    ? getPendingTaskTiming(
+        plannedTime,
+        operationalNow
+      )
+    : {
+        overdue: false,
+        overdueSeconds: 0,
+        remainingSeconds: 0,
+        progressPercent: 100,
+        label: "",
+      };
 
                   return (
                     <ChecklistActivity
-                      key={
-                        item.itemNumber
-                      }
-                      item={item}
-                      row={row}
-                      plannedTime={
-                        plannedTime
-                      }
-                      overdue={
-                        pendingTiming
-                          .overdue
-                      }
-                      overdueLabel={
-                        pendingTiming
-                          .label
-                      }
-                      forceExpanded={
-                        focusedTaskNumber ===
-                        item.itemNumber
-                      }
-                      onExpanded={(
-                        taskNumber
-                      ) => {
-                        setFocusedTaskNumber(
-                          taskNumber
-                        );
-                      }}
-                      onObservationChange={(
-                        value
-                      ) => {
-                        updateRow(
-                          item.itemNumber,
-                          {
-                            observation:
-                              value,
-                          }
-                        );
-                      }}
-                      onMark={() => {
-                        markActivity(
-                          item.itemNumber
-                        );
-                      }}
-                      disabled={
-                        checklistReadOnly
-                      }
-                    />
+  key={item.taskCode}
+  item={item}
+  row={row}
+  plannedTime={
+    plannedTime
+  }
+  overdue={
+    pendingTiming.overdue
+  }
+  remainingSeconds={
+    pendingTiming.remainingSeconds
+  }
+  timingLabel={
+    pendingTiming.label
+  }
+  onObservationChange={(value) => {
+    updateRow(
+      item.itemNumber,
+      {
+        observation:
+          value,
+      }
+    );
+  }}
+  onMark={() => {
+    markActivity(
+      item.itemNumber
+    );
+  }}
+  disabled={
+    checklistReadOnly
+  }
+/>
                   );
-                }
+                              }
               )}
-            </section>
+  </div>
+</section>
 
             <section className="bottom-actions">
               <button
