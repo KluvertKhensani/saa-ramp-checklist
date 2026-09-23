@@ -2647,3 +2647,23 @@ body:has(.operations-menu-layer) {
     display: block;
   }
 }
+
+.status-started {
+  color: #ffffff;
+  background: #1b4fa0;
+}
+
+.pts-task-row-started {
+  box-shadow:
+    inset 4px 0 0 #1b4fa0;
+}
+
+.pts-task-row-started
+.pts-allocation-heading strong {
+  color: #1b4fa0;
+}
+
+.pts-task-row-started
+.pts-allocation-track span {
+  background: #1b4fa0;
+}

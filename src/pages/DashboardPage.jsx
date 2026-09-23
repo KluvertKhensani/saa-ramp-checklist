@@ -41,10 +41,15 @@ import {
   timeToSeconds,
 } from "../utils/checklistTime";
 import {
+  canCompletePendingTask,
   canCreateChecklist,
+  canEditFlightInformation,
+  canEditObservations,
   canExportReports,
   canOperateChecklist,
+  canUndoCompletedTask,
   canViewAuditHistory,
+  canViewOperationalHistory,
   getRoleLabel,
   isReadOnlyRole,
 } from "../utils/roles";
@@ -274,6 +279,31 @@ export default function DashboardPage() {
       profile?.role
     );
 
+    const roleCanCompleteTask =
+  canCompletePendingTask(
+    profile?.role
+  );
+
+const roleCanUndoTask =
+  canUndoCompletedTask(
+    profile?.role
+  );
+
+const roleCanEditFlight =
+  canEditFlightInformation(
+    profile?.role
+  );
+
+const roleCanEditObservation =
+  canEditObservations(
+    profile?.role
+  );
+
+  const roleCanViewHistory =
+    canViewOperationalHistory(
+      profile?.role
+    );
+
   const roleCanViewAudit =
     canViewAuditHistory(
       profile?.role
@@ -294,6 +324,21 @@ export default function DashboardPage() {
     approving ||
     roleIsReadOnly ||
     !roleCanOperate;
+
+  const flightInformationDisabled =
+  recordLocked ||
+  approving ||
+  !roleCanEditFlight;
+
+  const observationsDisabled =
+    recordLocked ||
+    approving ||
+    !roleCanEditObservation;
+
+  const taskCompletionDisabled =
+    recordLocked ||
+    approving ||
+    !roleCanCompleteTask;
 
   useEffect(() => {
     const intervalId =
@@ -457,123 +502,413 @@ export default function DashboardPage() {
     );
 
   function updateFlight(
-    field,
-    value
+  field,
+  value
+) {
+  if (
+    flightInformationDisabled
   ) {
-    if (checklistReadOnly) {
-      return;
-    }
-
-    setFlight(
-      (currentFlight) => ({
-        ...currentFlight,
-        [field]: value,
-      })
-    );
-
-    setFocusedTaskNumber(null);
-    setStatusMessage("Not saved");
+    return;
   }
 
-  function updateRow(
+  setFlight(
+    (currentFlight) => ({
+      ...currentFlight,
+      [field]: value,
+    })
+  );
+
+  setFocusedTaskNumber(null);
+  setStatusMessage("Not saved");
+}
+
+function updateRowState(
+  itemNumber,
+  changes
+) {
+  const index =
+    itemNumber - 1;
+
+  setRows((currentRows) =>
+    currentRows.map(
+      (row, rowIndex) =>
+        rowIndex === index
+          ? {
+              ...row,
+              ...changes,
+            }
+          : row
+    )
+  );
+}
+
+function updateObservation(
+  itemNumber,
+  value
+) {
+  if (
+    observationsDisabled
+  ) {
+    return;
+  }
+
+  updateRowState(
     itemNumber,
-    changes
-  ) {
-    if (checklistReadOnly) {
-      return;
+    {
+      observation: value,
     }
+  );
 
-    const index =
-      itemNumber - 1;
+  setStatusMessage(
+    "Not saved"
+  );
+}
 
-    setRows((currentRows) =>
-      currentRows.map(
-        (row, rowIndex) =>
-          rowIndex === index
-            ? {
-                ...row,
-                ...changes,
-              }
-            : row
-      )
+async function startActivity(
+  itemNumber
+) {
+  if (
+    taskCompletionDisabled
+  ) {
+    window.alert(
+      "Your role cannot start this task, or the checklist is locked."
     );
 
-    setStatusMessage("Not saved");
+    return;
   }
 
-  function markActivity(
-    itemNumber
+  if (!checklistId) {
+    window.alert(
+      "Save the new checklist before starting tasks."
+    );
+
+    return;
+  }
+
+  if (!user?.id) {
+    window.alert(
+      "Your authenticated session could not be found. Please sign in again."
+    );
+
+    return;
+  }
+
+  const index =
+    itemNumber - 1;
+
+  const row =
+    rows[index];
+
+  const item =
+    CHECKLIST_ITEMS[index];
+
+  if (!row || !item) {
+    window.alert(
+      "The selected task could not be found."
+    );
+
+    return;
+  }
+
+  if (
+    row.status !== "pending"
   ) {
-    if (checklistReadOnly) {
+    window.alert(
+      "This task is already completed."
+    );
+
+    return;
+  }
+
+  if (row.startedAt) {
+    window.alert(
+      "This task has already been started."
+    );
+
+    return;
+  }
+
+  try {
+    setStatusMessage(
+      `Starting: ${item.activity}`
+    );
+
+    const {
+      data,
+      error,
+    } = await supabase.rpc(
+      "start_ramp_task_once",
+      {
+        target_checklist_id:
+          checklistId,
+        target_task_code:
+          item.taskCode,
+      }
+    );
+
+    if (error) {
+      throw error;
+    }
+
+    const startedItem =
+      Array.isArray(data)
+        ? data[0]
+        : data;
+
+    if (!startedItem) {
+      throw new Error(
+        "Supabase did not return the started task."
+      );
+    }
+
+    if (!startedItem.started_at) {
+      throw new Error(
+        "The task was not marked as started."
+      );
+    }
+
+    updateRowState(
+      itemNumber,
+      {
+        startedAt:
+          startedItem.started_at,
+        startedBy:
+          startedItem.started_by ||
+          user.id,
+      }
+    );
+
+    setStatusMessage(
+      `Started: ${item.activity}`
+    );
+  } catch (error) {
+    console.error(
+      "Task start failed:",
+      error
+    );
+
+    setStatusMessage(
+      "Task start failed"
+    );
+
+    window.alert(
+      "The task could not be started.\n\n" +
+        (error?.message ||
+          "Unknown error")
+    );
+  }
+}
+
+  async function markActivity(
+  itemNumber
+) {
+  if (
+    taskCompletionDisabled
+  ) {
+    window.alert(
+      "Your role cannot complete this task, or the checklist is locked."
+    );
+
+    return;
+  }
+
+  if (!checklistId) {
+    window.alert(
+      "Save the checklist before completing tasks."
+    );
+
+    return;
+  }
+
+  if (!user?.id) {
+    window.alert(
+      "Your authenticated session could not be found. Please sign in again."
+    );
+
+    return;
+  }
+
+  const index =
+    itemNumber - 1;
+
+  const row =
+    rows[index];
+
+  const item =
+    CHECKLIST_ITEMS[index];
+
+  if (!row || !item) {
+    window.alert(
+      "The selected task could not be found."
+    );
+
+    return;
+  }
+
+  if (
+    row.status !== "pending"
+  ) {
+    if (!roleCanUndoTask) {
       window.alert(
-        "This checklist is read-only for your current role or has already been locked."
+        "Your role cannot change a completed task."
       );
 
       return;
     }
 
-    const index =
-      itemNumber - 1;
-
-    const row =
-      rows[index];
-
-    if (!row) {
-      return;
-    }
-
-    if (
-      row.status !== "pending"
-    ) {
-      updateRow(itemNumber, {
+    updateRowState(
+      itemNumber,
+      {
         actualTime: "",
         status: "pending",
         delaySeconds: null,
-      });
+        startedAt: null,
+        startedBy: null,
+      }
+    );
 
-      return;
-    }
+    setStatusMessage(
+      "Task returned to pending"
+    );
 
-    const plannedTime =
-      plannedTimeFor(index);
-
-    if (!plannedTime) {
-      window.alert(
-        "Enter Chocks On and any required STD timing before completing this activity."
-      );
-
-      return;
-    }
-
-    const actualTime =
-      currentTime();
-
-    const delaySeconds =
-      calculateDelaySeconds(
-        actualTime,
-        plannedTime
-      );
-
-    if (delaySeconds === null) {
-      window.alert(
-        "The activity performance could not be calculated because its planned time is unavailable."
-      );
-
-      return;
-    }
-
-    updateRow(itemNumber, {
-      actualTime,
-      delaySeconds,
-      status:
-        classifyDelay(
-          delaySeconds
-        ),
-    });
+    return;
   }
 
+  if (!row.startedAt) {
+    window.alert(
+      "Start this task before completing it."
+    );
+
+    return;
+  }
+
+  const plannedTime =
+    plannedTimeFor(index);
+
+  if (!plannedTime) {
+    window.alert(
+      "Record Chocks On Real and any required STD timing before completing this task."
+    );
+
+    return;
+  }
+
+  const actualTime =
+    currentTime();
+
+  const delaySeconds =
+    calculateDelaySeconds(
+      actualTime,
+      plannedTime
+    );
+
+  if (
+    delaySeconds === null
+  ) {
+    window.alert(
+      "The task performance could not be calculated because its planned time is unavailable."
+    );
+
+    return;
+  }
+
+  const completedStatus =
+    classifyDelay(
+      delaySeconds
+    );
+
+  setStatusMessage(
+    `Completing: ${item.activity}`
+  );
+
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    "complete_ramp_task_once",
+    {
+      target_checklist_id:
+        checklistId,
+      target_task_code:
+        item.taskCode,
+      recorded_actual_time:
+        actualTime,
+      calculated_delay_seconds:
+        delaySeconds,
+      calculated_operational_status:
+        DATABASE_STATUS[
+          completedStatus
+        ] || "pending",
+    }
+  );
+
+  if (error) {
+    console.error(
+      "Task completion failed:",
+      error
+    );
+
+    setStatusMessage(
+      "Task completion failed"
+    );
+
+    window.alert(
+      "The task could not be completed.\n\n" +
+        (error.message ||
+          "Unknown error")
+    );
+
+    return;
+  }
+
+  const updatedCompletion =
+    Array.isArray(data)
+      ? data[0]
+      : data;
+
+  if (!updatedCompletion) {
+    setStatusMessage(
+      "Task completion failed"
+    );
+
+    window.alert(
+      "Supabase did not return the completed task."
+    );
+
+    return;
+  }
+
+  updateRowState(
+    itemNumber,
+    {
+      actualTime:
+        normalizeDatabaseTime(
+          updatedCompletion.actual_time
+        ) || actualTime,
+      delaySeconds:
+        updatedCompletion.delay_seconds ??
+        delaySeconds,
+      status:
+        APPLICATION_STATUS[
+          updatedCompletion
+            .operational_status
+        ] || completedStatus,
+      startedAt:
+        updatedCompletion.started_at ||
+        row.startedAt,
+      startedBy:
+        updatedCompletion.started_by ||
+        row.startedBy,
+    }
+  );
+
+  setStatusMessage(
+    `Completed and saved: ${item.activity}`
+  );
+}
+
   function markLandingRealNow() {
-  if (checklistReadOnly) {
+  if (flightInformationDisabled) {
     window.alert(
       "This checklist is read-only for your current role or has already been locked."
     );
@@ -588,7 +923,7 @@ export default function DashboardPage() {
 }
 
   function markChocksOnNow() {
-    if (checklistReadOnly) {
+    if (flightInformationDisabled) {
       window.alert(
         "This checklist is read-only for your current role or has already been locked."
       );
@@ -828,18 +1163,12 @@ export default function DashboardPage() {
         })
         .limit(100);
 
-      if (
-        !roleCanViewAudit &&
-        profile?.role !==
-          "turnaround_coordinator" &&
-        profile?.role !==
-          "trc_coordinator"
-      ) {
-        query = query.eq(
-          "owner_id",
-          user.id
-        );
-      }
+      if (!roleCanViewHistory) {
+  query = query.eq(
+    "owner_id",
+    user.id
+  );
+}
 
       if (
         historyStatus !== "all"
@@ -1300,6 +1629,8 @@ setRows(
           observation: "",
           status: "pending",
           delaySeconds: null,
+          startedAt: null,
+          startedBy: null,
         };
       }
 
@@ -1318,11 +1649,16 @@ setRows(
           ] || "pending",
         delaySeconds:
           savedItem.delay_seconds,
+        startedAt:
+          savedItem.started_at ||
+          null,
+        startedBy:
+          savedItem.started_by ||
+          null,
       };
     }
   )
 );
-
       setActiveView("checklist");
       setActivePhase("All");
 
@@ -1661,6 +1997,12 @@ trc_coordinator:
               observation:
                 row.observation
                   .trim() || null,
+              started_at:
+                row.startedAt ||
+                null,
+              started_by:
+                row.startedBy ||
+                null,
               completed_by:
                 row.status ===
                 "pending"
@@ -2115,7 +2457,7 @@ trc_coordinator:
     markChocksOnNow
   }
   disabled={
-    checklistReadOnly
+    flightInformationDisabled
   }
 />
             </div>
@@ -2284,12 +2626,14 @@ trc_coordinator:
     pendingTiming.label
   }
   onObservationChange={(value) => {
-    updateRow(
+    updateObservation(
       item.itemNumber,
-      {
-        observation:
-          value,
-      }
+      value
+    );
+  }}
+  onStart={() => {
+    startActivity(
+      item.itemNumber
     );
   }}
   onMark={() => {
@@ -2297,8 +2641,14 @@ trc_coordinator:
       item.itemNumber
     );
   }}
-  disabled={
-    checklistReadOnly
+  observationDisabled={
+    observationsDisabled
+  }
+  completeDisabled={
+    taskCompletionDisabled
+  }
+  canUndo={
+    roleCanUndoTask
   }
 />
                   );

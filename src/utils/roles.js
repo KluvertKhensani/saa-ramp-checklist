@@ -3,7 +3,8 @@ export const ROLE_LABELS = {
   occ_manager: "OCC Manager",
   controller: "Controller",
   qa_inspector: "QA Inspector",
-  trc_coordinator: "TRC Coordinator",
+  trc_coordinator:
+    "TRC Coordinator",
   turnaround_coordinator:
     "Turnaround Coordinator",
   ramp_agent: "Ramp Agent",
@@ -11,8 +12,10 @@ export const ROLE_LABELS = {
   viewer: "Viewer",
   data_analyst: "Data Analyst",
   duty_officer: "Duty Officer",
-  station_manager: "Station Manager",
-  senior_manager: "Senior Manager",
+  station_manager:
+    "Station Manager",
+  senior_manager:
+    "Senior Manager",
 };
 
 function normalizeRole(role) {
@@ -35,7 +38,60 @@ export function getRoleLabel(role) {
   );
 }
 
-export function canCreateChecklist(role) {
+export function canCreateChecklist(
+  role
+) {
+  return [
+    "administrator",
+    "occ_manager",
+    "controller",
+    "trc_coordinator",
+    "turnaround_coordinator",
+    "ramp_agent",
+    "duty_officer",
+    "station_manager",
+  ].includes(
+    normalizeRole(role)
+  );
+}
+
+export function canOperateChecklist(
+  role
+) {
+  return [
+    "administrator",
+    "occ_manager",
+    "controller",
+    "trc_coordinator",
+    "turnaround_coordinator",
+    "ramp_agent",
+    "duty_officer",
+    "station_manager",
+  ].includes(
+    normalizeRole(role)
+  );
+}
+
+export function canCompletePendingTask(
+  role
+) {
+  return [
+    "administrator",
+    "occ_manager",
+    "controller",
+    "trc_coordinator",
+    "turnaround_coordinator",
+    "ramp_agent",
+    "duty_officer",
+    "station_manager",
+  ].includes(
+    normalizeRole(role)
+  );
+}
+
+export function canUndoCompletedTask(
+  role
+) {
   return [
     "administrator",
     "occ_manager",
@@ -48,7 +104,9 @@ export function canCreateChecklist(role) {
   );
 }
 
-export function canOperateChecklist(role) {
+export function canEditFlightInformation(
+  role
+) {
   return [
     "administrator",
     "occ_manager",
@@ -56,12 +114,33 @@ export function canOperateChecklist(role) {
     "trc_coordinator",
     "turnaround_coordinator",
     "ramp_agent",
+    "duty_officer",
+    "station_manager",
   ].includes(
     normalizeRole(role)
   );
 }
 
-export function canApproveChecklist(role) {
+export function canEditObservations(
+  role
+) {
+  return [
+    "administrator",
+    "occ_manager",
+    "controller",
+    "trc_coordinator",
+    "turnaround_coordinator",
+    "ramp_agent",
+    "duty_officer",
+    "station_manager",
+  ].includes(
+    normalizeRole(role)
+  );
+}
+
+export function canApproveChecklist(
+  role
+) {
   return [
     "administrator",
     "occ_manager",
@@ -74,7 +153,9 @@ export function canApproveChecklist(role) {
   );
 }
 
-export function canExportReports(role) {
+export function canExportReports(
+  role
+) {
   return [
     "data_analyst",
     "station_manager",
@@ -84,7 +165,9 @@ export function canExportReports(role) {
   );
 }
 
-export function canViewAuditHistory(role) {
+export function canViewAuditHistory(
+  role
+) {
   return [
     "administrator",
     "occ_manager",
@@ -101,7 +184,9 @@ export function canViewAuditHistory(role) {
   );
 }
 
-export function canViewOperationalHistory(role) {
+export function canViewOperationalHistory(
+  role
+) {
   return [
     "administrator",
     "occ_manager",
@@ -121,16 +206,17 @@ export function canViewOperationalHistory(role) {
   );
 }
 
-export function isReadOnlyRole(role) {
+export function isReadOnlyRole(
+  role
+) {
   return [
     "qa_inspector",
     "auditor",
     "viewer",
     "data_analyst",
-    "duty_officer",
-    "station_manager",
     "senior_manager",
   ].includes(
     normalizeRole(role)
   );
 }
+

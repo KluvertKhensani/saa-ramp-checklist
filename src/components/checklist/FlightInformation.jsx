@@ -3,6 +3,39 @@
   Plane,
 } from "lucide-react";
 
+const AIRCRAFT_REGISTRATIONS = {
+  A320: [
+    "ZSSXD",
+    "ZSSXJ",
+    "ZSSZA",
+    "ZSSZB",
+    "ZSSZC",
+    "ZSSZD",
+    "ZSSZE",
+    "ZSSZF",
+    "ZSSZG",
+    "ZSSZH",
+    "ZSSZI",
+    "ZSSZJ",
+    "ZSSZK",
+    "ZSSZL",
+    "ZSSZM",
+    "ZSSZN",
+    "ZSSZO",
+  ],
+  A330: [
+    "ZSSXD",
+    "ZSSXF",
+    "ZSSXJ",
+    "ZSSXM",
+  ],
+  A340: [
+    "ZSSXD",
+    "ZSSXF",
+    "ZSSXM",
+  ],
+};
+
 export default function FlightInformation({
   flight,
   coordinatorName = "",
@@ -11,6 +44,16 @@ export default function FlightInformation({
   onChocksNow,
   disabled = false,
 }) {
+  const availableRegistrations =
+    AIRCRAFT_REGISTRATIONS[
+      flight.aircraftType
+    ] || [];
+
+  const lockedCoordinator =
+    coordinatorName ||
+    flight.trcCoordinator ||
+    "";
+
   function change(
     field,
     value
@@ -19,16 +62,41 @@ export default function FlightInformation({
       return;
     }
 
-    onChange(
+    onChange?.(
       field,
       value
     );
   }
 
-  const lockedCoordinator =
-    coordinatorName ||
-    flight.trcCoordinator ||
-    "";
+  function changeAircraftType(
+    nextAircraftType
+  ) {
+    if (disabled) {
+      return;
+    }
+
+    const nextRegistrations =
+      AIRCRAFT_REGISTRATIONS[
+        nextAircraftType
+      ] || [];
+
+    onChange?.(
+      "aircraftType",
+      nextAircraftType
+    );
+
+    if (
+      flight.registration &&
+      !nextRegistrations.includes(
+        flight.registration
+      )
+    ) {
+      onChange?.(
+        "registration",
+        ""
+      );
+    }
+  }
 
   return (
     <section className="ramp-card">
@@ -56,7 +124,10 @@ export default function FlightInformation({
           </span>
 
           <input
-            value={flight.flightIn}
+            type="text"
+            value={
+              flight.flightIn
+            }
             onChange={(event) =>
               change(
                 "flightIn",
@@ -66,6 +137,7 @@ export default function FlightInformation({
             }
             placeholder="SA226"
             disabled={disabled}
+            aria-label="Flight In"
           />
         </label>
 
@@ -75,7 +147,10 @@ export default function FlightInformation({
           </span>
 
           <input
-            value={flight.flightOut}
+            type="text"
+            value={
+              flight.flightOut
+            }
             onChange={(event) =>
               change(
                 "flightOut",
@@ -85,6 +160,8 @@ export default function FlightInformation({
             }
             placeholder="SA227"
             disabled={disabled}
+            required
+            aria-label="Flight Out"
           />
         </label>
 
@@ -95,7 +172,9 @@ export default function FlightInformation({
 
           <input
             type="date"
-            value={flight.flightDate}
+            value={
+              flight.flightDate
+            }
             onChange={(event) =>
               change(
                 "flightDate",
@@ -103,6 +182,8 @@ export default function FlightInformation({
               )
             }
             disabled={disabled}
+            required
+            aria-label="Flight Date"
           />
         </label>
 
@@ -112,7 +193,10 @@ export default function FlightInformation({
           </span>
 
           <input
-            value={flight.bay}
+            type="text"
+            value={
+              flight.bay
+            }
             onChange={(event) =>
               change(
                 "bay",
@@ -122,6 +206,7 @@ export default function FlightInformation({
             }
             placeholder="C1"
             disabled={disabled}
+            aria-label="Bay"
           />
         </label>
 
@@ -135,12 +220,12 @@ export default function FlightInformation({
               flight.aircraftType
             }
             onChange={(event) =>
-              change(
-                "aircraftType",
+              changeAircraftType(
                 event.target.value
               )
             }
             disabled={disabled}
+            aria-label="Aircraft Type"
           >
             <option value="">
               Select aircraft
@@ -165,7 +250,7 @@ export default function FlightInformation({
             Registration
           </span>
 
-          <input
+          <select
             value={
               flight.registration
             }
@@ -173,12 +258,31 @@ export default function FlightInformation({
               change(
                 "registration",
                 event.target.value
-                  .toUpperCase()
               )
             }
-            placeholder="ZS-SZM"
-            disabled={disabled}
-          />
+            disabled={
+              disabled ||
+              !flight.aircraftType
+            }
+            aria-label="Aircraft Registration"
+          >
+            <option value="">
+              {flight.aircraftType
+                ? "Select registration"
+                : "Select aircraft type first"}
+            </option>
+
+            {availableRegistrations.map(
+              (registration) => (
+                <option
+                  key={registration}
+                  value={registration}
+                >
+                  {registration}
+                </option>
+              )
+            )}
+          </select>
         </label>
 
         <label>
@@ -189,7 +293,9 @@ export default function FlightInformation({
           <input
             type="time"
             step="60"
-            value={flight.sta}
+            value={
+              flight.sta
+            }
             onChange={(event) =>
               change(
                 "sta",
@@ -197,6 +303,7 @@ export default function FlightInformation({
               )
             }
             disabled={disabled}
+            aria-label="STA Scheduled"
           />
         </label>
 
@@ -208,7 +315,9 @@ export default function FlightInformation({
           <input
             type="time"
             step="60"
-            value={flight.eta}
+            value={
+              flight.eta
+            }
             onChange={(event) =>
               change(
                 "eta",
@@ -216,6 +325,7 @@ export default function FlightInformation({
               )
             }
             disabled={disabled}
+            aria-label="ETA MVT"
           />
         </label>
 
@@ -227,7 +337,9 @@ export default function FlightInformation({
           <input
             type="time"
             step="60"
-            value={flight.std}
+            value={
+              flight.std
+            }
             onChange={(event) =>
               change(
                 "std",
@@ -235,6 +347,7 @@ export default function FlightInformation({
               )
             }
             disabled={disabled}
+            aria-label="STD Scheduled"
           />
         </label>
 
@@ -253,8 +366,7 @@ export default function FlightInformation({
               type="time"
               step="60"
               value={
-                flight
-                  .definedPushTime ||
+                flight.definedPushTime ||
                 ""
               }
               onChange={(event) =>
@@ -264,7 +376,7 @@ export default function FlightInformation({
                 )
               }
               disabled={disabled}
-              aria-label="Select defined push time"
+              aria-label="Defined Push Time"
             />
           </div>
         </label>
@@ -283,7 +395,7 @@ export default function FlightInformation({
               }
               readOnly
               disabled
-              aria-label="Recorded landing real time"
+              aria-label="Recorded Landing Real Time"
             />
 
             <button
@@ -322,7 +434,7 @@ export default function FlightInformation({
               }
               readOnly
               disabled
-              aria-label="Recorded chocks on real time"
+              aria-label="Recorded Chocks On Real Time"
             />
 
             <button
@@ -353,6 +465,7 @@ export default function FlightInformation({
           </span>
 
           <input
+            type="text"
             className="locked-profile-field"
             value={
               lockedCoordinator

@@ -116,20 +116,43 @@ export default function ChecklistActivity({
   remainingSeconds = null,
   timingLabel = "",
   onObservationChange,
+  onStart,
   onMark,
-  disabled = false,
+  observationDisabled = false,
+  completeDisabled = false,
+  canUndo = false,
 }) {
   const [
     expanded,
     setExpanded,
   ] = useState(false);
 
-  const isCompleted =
-    row.status !== "pending";
+const isCompleted =
+  row.status !== "pending";
 
-  const isOverdue =
-    overdue &&
-    !isCompleted;
+const isStarted =
+  Boolean(
+    row.startedAt
+  ) &&
+  !isCompleted;
+
+const markButtonDisabled =
+  isCompleted
+    ? !canUndo
+    : completeDisabled;
+
+const markButtonLabel =
+  isCompleted
+    ? canUndo
+      ? "Undo"
+      : "Completed"
+    : isStarted
+      ? "Complete"
+      : "Start";
+
+const isOverdue =
+  overdue &&
+  !isCompleted;
 
   const plannedDisplay =
     displayTime(
@@ -142,20 +165,27 @@ export default function ChecklistActivity({
     );
 
   const statusKey =
-    isOverdue
-      ? "overdue"
+  isOverdue
+    ? "overdue"
+    : isStarted
+      ? "started"
       : row.status;
 
-  const statusLabel =
-    isOverdue
-      ? "Overdue"
+const statusLabel =
+  isOverdue
+    ? "Overdue"
+    : isStarted
+      ? "Started"
       : STATUS_LABELS[
           row.status
         ] || "Pending";
 
   const allocationLabel =
-    isCompleted
-      ? statusLabel
+  isCompleted
+    ? statusLabel
+    : isStarted
+      ? timingLabel ||
+        "Task in progress"
       : timingLabel ||
         "Awaiting Chocks On";
 
@@ -175,10 +205,14 @@ export default function ChecklistActivity({
     isOverdue
       ? "pts-task-row-overdue"
       : "",
+    isStarted
+      ? "pts-task-row-started"
+      : "",
     isCompleted
       ? `pts-task-row-${row.status}`
       : "",
-    disabled
+    observationDisabled &&
+    completeDisabled
       ? "pts-task-row-readonly"
       : "",
   ]
@@ -186,24 +220,44 @@ export default function ChecklistActivity({
     .join(" ");
 
   function handleObservationChange(
-    event
+  event
+) {
+  if (
+    observationDisabled
   ) {
-    if (disabled) {
-      return;
-    }
-
-    onObservationChange?.(
-      event.target.value
-    );
+    return;
   }
+
+  onObservationChange?.(
+    event.target.value
+  );
+}
 
   function handleMark() {
-    if (disabled) {
-      return;
-    }
-
-    onMark?.();
+  if (
+    isCompleted &&
+    !canUndo
+  ) {
+    return;
   }
+
+  if (
+    !isCompleted &&
+    completeDisabled
+  ) {
+    return;
+  }
+
+  if (
+    !isCompleted &&
+    !isStarted
+  ) {
+    onStart?.();
+    return;
+  }
+
+  onMark?.();
+}
 
   function toggleExpanded() {
     setExpanded(
@@ -216,7 +270,7 @@ export default function ChecklistActivity({
     <article
       id={`checklist-task-${item.itemNumber}`}
       className={rowClassName}
-      aria-readonly={disabled}
+      aria-readonly={observationDisabled && completeDisabled}
     >
       <div className="pts-task-number">
         {item.itemNumber}
@@ -290,7 +344,7 @@ export default function ChecklistActivity({
               : "pts-done-button"
           }
           onClick={handleMark}
-          disabled={disabled}
+          disabled={markButtonDisabled}
           aria-label={
             isCompleted
               ? `Return ${item.activity} to pending`
@@ -298,39 +352,44 @@ export default function ChecklistActivity({
           }
         >
           {isCompleted ? (
-            <RotateCcw
-              size={17}
-              aria-hidden="true"
-            />
-          ) : (
-            <Check
-              size={17}
-              aria-hidden="true"
-            />
-          )}
+  <RotateCcw
+    size={17}
+    aria-hidden="true"
+  />
+) : isStarted ? (
+  <Check
+    size={17}
+    aria-hidden="true"
+  />
+) : (
+  <Clock3
+    size={17}
+    aria-hidden="true"
+  />
+)}
 
-          {isCompleted
-            ? "Undo"
-            : "Done"}
+          {markButtonLabel}
         </button>
       </div>
 
       <div className="pts-task-observation">
-        <input
-          type="text"
-          value={
-            row.observation || ""
-          }
-          onChange={
-            handleObservationChange
-          }
-          placeholder="Observation"
-          disabled={disabled}
-          aria-label={
-            `Observation for ${item.activity}`
-          }
-        />
-      </div>
+  <input
+    type="text"
+    value={
+      row.observation || ""
+    }
+    onChange={
+      handleObservationChange
+    }
+    placeholder="Observation"
+    disabled={
+      observationDisabled
+    }
+    aria-label={
+      `Observation for ${item.activity}`
+    }
+  />
+</div>
 
       <button
         type="button"
@@ -423,7 +482,7 @@ export default function ChecklistActivity({
                 : "pts-done-button"
             }
             onClick={handleMark}
-            disabled={disabled}
+            disabled={markButtonDisabled}
           >
             {isCompleted ? (
               <RotateCcw
@@ -437,9 +496,7 @@ export default function ChecklistActivity({
               />
             )}
 
-            {isCompleted
-              ? "Undo"
-              : "Done"}
+            {markButtonLabel}
           </button>
         </div>
 
@@ -457,7 +514,7 @@ export default function ChecklistActivity({
               handleObservationChange
             }
             placeholder="Observation"
-            disabled={disabled}
+            disabled={observationDisabled}
           />
         </label>
       </div>

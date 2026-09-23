@@ -389,6 +389,8 @@ export function createEmptyChecklistRows() {
       observation: "",
       status: "pending",
       delaySeconds: null,
+      startedAt: null,
+      startedBy: null,
     })
   );
 }
