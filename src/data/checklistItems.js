@@ -1,3 +1,13 @@
+const TURNAROUND_SECONDS = 5520;
+
+const DEFINED_PUSH_TASKS =
+  new Set([
+    "departure-doors-closed",
+    "departure-pushback-tug-on-stand",
+    "departure-bridge-removed",
+    "departure-aircraft-pushback",
+  ]);
+
 const RAW_CHECKLIST_ITEMS = [
   [
     "pre-arrival-departing-cargo-at-bay",
@@ -330,26 +340,76 @@ const RAW_CHECKLIST_ITEMS = [
   ],
 ];
 
+function getTaskBase(
+  taskCode,
+  phase
+) {
+  if (phase === "Pre-Arrival") {
+    return "arrival";
+  }
+
+  if (phase === "Arrival") {
+    return "chocks_on";
+  }
+
+  if (
+    DEFINED_PUSH_TASKS.has(
+      taskCode
+    )
+  ) {
+    return "defined_push";
+  }
+
+  return "std";
+}
+
+function getTaskOffset(
+  phase,
+  originalOffsetSec
+) {
+  if (phase !== "Departure") {
+    return originalOffsetSec;
+  }
+
+  return (
+    originalOffsetSec -
+    TURNAROUND_SECONDS
+  );
+}
+
 export const CHECKLIST_ITEMS =
-  RAW_CHECKLIST_ITEMS
-    .map(
-      (
-        [
+  RAW_CHECKLIST_ITEMS.map(
+    (
+      [
+        taskCode,
+        phase,
+        activity,
+        originalOffsetSec,
+        allocationMinutesBeforeDeparture,
+      ],
+      sourceIndex
+    ) => {
+      const base =
+        getTaskBase(
           taskCode,
+          phase
+        );
+
+      const offsetSec =
+        getTaskOffset(
           phase,
-          activity,
-          offsetSec,
-          allocationMinutesBeforeDeparture,
-        ],
-        sourceIndex
-      ) => ({
+          originalOffsetSec
+        );
+
+      return {
         taskCode,
         sourceSequence:
           sourceIndex + 1,
         phase,
         activity,
-        base: "chocks",
+        base,
         offsetSec,
+        originalOffsetSec,
         allocationMinutesBeforeDeparture,
         allocationSec:
           allocationMinutesBeforeDeparture ===
@@ -357,17 +417,16 @@ export const CHECKLIST_ITEMS =
             ? null
             : allocationMinutesBeforeDeparture *
               60,
-      })
-    )
+      };
+    }
+  )
     .sort(
       (
         firstItem,
         secondItem
       ) =>
-        firstItem.offsetSec -
-          secondItem.offsetSec ||
         firstItem.sourceSequence -
-          secondItem.sourceSequence
+        secondItem.sourceSequence
     )
     .map((item, index) => ({
       ...item,

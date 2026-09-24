@@ -29,18 +29,42 @@ function displayTime(value) {
   );
 }
 
+function getBaseLabel(base) {
+  switch (base) {
+    case "arrival":
+      return "ETA / STA";
+
+    case "chocks_on":
+      return "Chocks On";
+
+    case "std":
+      return "STD";
+
+    case "defined_push":
+      return "Defined Push";
+
+    default:
+      return "Milestone";
+  }
+}
+
 function formatTaskReference(
   item
 ) {
+  const baseLabel =
+    getBaseLabel(
+      item.base
+    );
+
   if (
     item.offsetSec === null ||
     item.offsetSec === undefined
   ) {
-    return "Milestone";
+    return baseLabel;
   }
 
   if (item.offsetSec === 0) {
-    return "At Chocks On";
+    return `At ${baseLabel}`;
   }
 
   const absoluteMinutes =
@@ -53,13 +77,13 @@ function formatTaskReference(
   if (item.offsetSec < 0) {
     return (
       `${absoluteMinutes} min ` +
-      "before Chocks On"
+      `before ${baseLabel}`
     );
   }
 
   return (
     `${absoluteMinutes} min ` +
-    "after Chocks On"
+    `after ${baseLabel}`
   );
 }
 

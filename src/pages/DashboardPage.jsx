@@ -355,46 +355,91 @@ const roleCanEditObservation =
     };
   }, []);
 
-  function plannedTimeFor(index) {
-    const item =
-      CHECKLIST_ITEMS[index];
-
-    if (!item) {
-      return "";
-    }
-
-    const chocksOnSeconds =
-      timeToSeconds(
-        flight.chocksOn
+  function baseTimeForItem(
+  item
+) {
+  switch (item?.base) {
+    case "arrival":
+      return (
+        flight.eta ||
+        flight.sta
       );
 
-    if (chocksOnSeconds === null) {
-      return "";
-    }
+    case "std":
+      return flight.std;
 
-    if (item.base === "std") {
-      const stdSeconds =
-        timeToSeconds(
-          flight.std
-        );
-
-      if (stdSeconds === null) {
-        return "";
-      }
-
-      return secondsToTime(
-        stdSeconds +
-          item.offsetSec
+    case "defined_push":
+      return (
+        flight.definedPushTime ||
+        flight.std
       );
-    }
 
-    return secondsToTime(
-      chocksOnSeconds +
-        item.offsetSec
-    );
+    case "chocks_on":
+      return flight.chocksOn;
+
+    default:
+      console.warn(
+        `Unknown timing base "${item?.base}" for task ${
+          item?.taskCode ||
+          item?.itemNumber ||
+          "unknown"
+        }.`
+      );
+
+      return "";
+  }
+}
+
+function plannedTimeFor(index) {
+  const item =
+    CHECKLIST_ITEMS[index];
+
+  if (!item) {
+    return "";
   }
 
-  const metrics = useMemo(() => {
+  const baseTime =
+    baseTimeForItem(
+      item
+    );
+
+  const baseSeconds =
+    timeToSeconds(
+      baseTime
+    );
+
+  if (baseSeconds === null) {
+    return "";
+  }
+
+  return secondsToTime(
+    baseSeconds +
+      item.offsetSec
+  );
+}
+
+function requiredTimeLabelFor(
+  item
+) {
+  switch (item?.base) {
+    case "arrival":
+      return "ETA MVT or STA Scheduled";
+
+    case "std":
+      return "STD Scheduled";
+
+    case "defined_push":
+      return "Defined Push Time or STD Scheduled";
+
+    case "chocks_on":
+      return "Chocks On Real";
+
+    default:
+      return "the required operational time";
+  }
+}
+
+const metrics = useMemo(() => {
     return rows.reduce(
       (totals, row) => {
         if (
@@ -459,7 +504,7 @@ const roleCanEditObservation =
               firstIndex
             )
           );
-
+        
         const secondTime =
           timeToSeconds(
             plannedTimeFor(
@@ -628,6 +673,19 @@ async function startActivity(
     return;
   }
 
+  const plannedTime =
+  plannedTimeFor(index);
+
+if (!plannedTime) {
+  window.alert(
+    `Record ${requiredTimeLabelFor(
+      item
+    )} before starting this task.`
+  );
+
+  return;
+}
+
   try {
     setStatusMessage(
       `Starting: ${item.activity}`
@@ -783,15 +841,17 @@ async function startActivity(
   }
 
   const plannedTime =
-    plannedTimeFor(index);
+  plannedTimeFor(index);
 
-  if (!plannedTime) {
-    window.alert(
-      "Record Chocks On Real and any required STD timing before completing this task."
-    );
+if (!plannedTime) {
+  window.alert(
+    `Record ${requiredTimeLabelFor(
+      item
+    )} before completing this task.`
+  );
 
-    return;
-  }
+  return;
+}
 
   const actualTime =
     currentTime();
