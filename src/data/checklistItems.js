@@ -13,42 +13,42 @@ const RAW_CHECKLIST_ITEMS = [
     "pre-arrival-departing-cargo-at-bay",
     "Pre-Arrival",
     "Departing Cargo at Parking Bay",
-    -3180,
+    -1800,
     100,
   ],
   [
     "pre-arrival-dispatcher-trc-position",
     "Pre-Arrival",
     "Dispatcher / TRC at Parking Position",
-    -2280,
+    -900,
     105,
   ],
   [
     "pre-arrival-confirm-cargo-secured",
     "Pre-Arrival",
     "Confirm Cargo Secured (Station Specific AVSEC Regulations)",
-    -2280,
+    -900,
     20,
   ],
   [
     "pre-arrival-staff-gse-catering-position",
     "Pre-Arrival",
     "Staff / All GSEs & Catering Truck at Parking Position",
-    -1980,
+    -600,
     95,
   ],
   [
     "pre-arrival-cargo-agent-position",
     "Pre-Arrival",
     "Cargo Agent at Parking Position",
-    -1980,
+    -600,
     120,
   ],
   [
     "pre-arrival-stand-cleared-fod",
     "Pre-Arrival",
     "Ensure Stand is Cleared / FOD Inspection",
-    -1980,
+    -600,
     3,
   ],
   [
@@ -413,10 +413,10 @@ export const CHECKLIST_ITEMS =
         allocationMinutesBeforeDeparture,
         allocationSec:
           allocationMinutesBeforeDeparture ===
-          null
+            null
             ? null
             : allocationMinutesBeforeDeparture *
-              60,
+            60,
       };
     }
   )
