@@ -1,10 +1,14 @@
 ﻿import {
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+
 import {
   ArrowLeft,
+  ClipboardCheck,
 } from "lucide-react";
 
 import AppLogo from "../components/AppLogo";
@@ -15,6 +19,7 @@ import ChecklistAuditHistory from "../components/checklist/ChecklistAuditHistory
 import ChecklistExport from "../components/checklist/ChecklistExport";
 import ChecklistHistory from "../components/checklist/ChecklistHistory";
 import ChecklistMetrics from "../components/checklist/ChecklistMetrics";
+import ChecklistPrintReport from "../components/checklist/ChecklistPrintReport";
 import FlightInformation from "../components/checklist/FlightInformation";
 import PushbackCountdown from "../components/checklist/PushbackCountdown";
 import { useAuth } from "../contexts/useAuth";
@@ -25,13 +30,15 @@ import {
 } from "../data/checklistItems";
 import { supabase } from "../lib/supabase";
 import {
-  calculateDelaySeconds,
+  addSecondsToDateTime,
+  alignDateTimeToReference,
+  calculateDateTimeDelaySeconds,
   classifyDelay,
+  combineDateAndTime,
   currentTime,
+  formatDateTimeAsTime,
   getPendingTaskTiming,
   normalizeDatabaseTime,
-  secondsToTime,
-  timeToSeconds,
 } from "../utils/checklistTime";
 import {
   canCompletePendingTask,
@@ -93,6 +100,8 @@ const APPLICATION_STATUS = {
   delay: "delay",
 };
 
+const AUTOSAVE_DELAY_MS = 1500;
+
 function createInitialFlight(
   coordinatorName = ""
 ) {
@@ -102,6 +111,22 @@ function createInitialFlight(
     trcCoordinator:
       coordinatorName,
   };
+}
+
+function isFlightInformationComplete(
+  flight
+) {
+  return Boolean(
+    flight.flightOut?.trim() &&
+    flight.flightDate &&
+    flight.aircraftType &&
+    flight.registration &&
+    (
+      flight.eta ||
+      flight.sta
+    ) &&
+    flight.std
+  );
 }
 
 function compareTaskCandidates(
@@ -118,14 +143,12 @@ function compareTaskCandidates(
   }
 
   const firstTime =
-    timeToSeconds(
-      firstCandidate.plannedTime
-    );
+    firstCandidate.plannedDateTime
+      ?.getTime() ?? null;
 
   const secondTime =
-    timeToSeconds(
-      secondCandidate.plannedTime
-    );
+    secondCandidate.plannedDateTime
+      ?.getTime() ?? null;
 
   if (
     firstTime === null &&
@@ -262,6 +285,32 @@ export default function DashboardPage() {
     setOperationsMenuOpen,
   ] = useState(false);
 
+  const [
+    autosaveReady,
+    setAutosaveReady,
+  ] = useState(false);
+
+  const saveInProgressRef =
+    useRef(false);
+
+  const pendingSaveRef =
+    useRef(false);
+
+  const checklistIdRef =
+    useRef(null);
+
+  const initialLoadRef =
+    useRef(true);
+
+  const skipNextAutosaveRef =
+    useRef(false);
+
+  const plannedTimeForRef =
+    useRef(null);
+
+  const loadAuditHistoryRef =
+    useRef(null);
+
   const roleCanCreate =
     canCreateChecklist(
       profile?.role
@@ -333,6 +382,15 @@ export default function DashboardPage() {
     approving ||
     !roleCanCompleteTask;
 
+  const flightInformationComplete =
+    isFlightInformationComplete(
+      flight
+    );
+
+  const checklistActivitiesDisabled =
+    taskCompletionDisabled ||
+    !flightInformationComplete;
+
   useEffect(() => {
     const intervalId =
       window.setInterval(() => {
@@ -348,88 +406,175 @@ export default function DashboardPage() {
     };
   }, []);
 
-  function baseTimeForItem(
+  useEffect(() => {
+    checklistIdRef.current =
+      checklistId;
+  }, [checklistId]);
+
+  useEffect(() => {
+    const readyTimer =
+      window.setTimeout(() => {
+        initialLoadRef.current =
+          false;
+
+        setAutosaveReady(true);
+      }, 500);
+
+    return () => {
+      window.clearTimeout(
+        readyTimer
+      );
+    };
+  }, []);
+
+  function arrivalReferenceDateTime() {
+    const arrivalTime =
+      flight.eta ||
+      flight.sta;
+
+    return combineDateAndTime(
+      flight.flightDate,
+      arrivalTime
+    );
+  }
+
+  function baseDateTimeForItem(
     item
   ) {
-    switch (item?.base) {
+    if (
+      !item ||
+      !flight.flightDate
+    ) {
+      return null;
+    }
+
+    const arrivalDateTime =
+      arrivalReferenceDateTime();
+
+    switch (item.base) {
       case "arrival":
-        return (
-          flight.eta ||
-          flight.sta
+        return arrivalDateTime;
+
+      case "chocks_on": {
+        const chocksDateTime =
+          combineDateAndTime(
+            flight.flightDate,
+            flight.chocksOn
+          );
+
+        return alignDateTimeToReference(
+          chocksDateTime,
+          arrivalDateTime
         );
+      }
 
-      case "std":
-        return flight.std;
+      case "std": {
+        const stdDateTime =
+          combineDateAndTime(
+            flight.flightDate,
+            flight.std
+          );
 
-      case "defined_push":
-        return (
+        return alignDateTimeToReference(
+          stdDateTime,
+          arrivalDateTime
+        );
+      }
+
+      case "defined_push": {
+        const pushTime =
           flight.definedPushTime ||
-          flight.std
-        );
+          flight.std;
 
-      case "chocks_on":
-        return flight.chocksOn;
+        const pushDateTime =
+          combineDateAndTime(
+            flight.flightDate,
+            pushTime
+          );
+
+        const stdDateTime =
+          alignDateTimeToReference(
+            combineDateAndTime(
+              flight.flightDate,
+              flight.std
+            ),
+            arrivalDateTime
+          );
+
+        return alignDateTimeToReference(
+          pushDateTime,
+          stdDateTime ||
+          arrivalDateTime
+        );
+      }
 
       default:
         console.warn(
-          `Unknown timing base "${item?.base}" for task ${item?.taskCode ||
-          item?.itemNumber ||
+          `Unknown timing base "${item.base}" for task ${item.taskCode ||
+          item.itemNumber ||
           "unknown"
           }.`
         );
 
-        return "";
+        return null;
     }
   }
 
-  function plannedTimeFor(index) {
+  function plannedDateTimeFor(index) {
     const item =
       CHECKLIST_ITEMS[index];
 
     if (!item) {
-      return "";
+      return null;
     }
 
-    const baseTime =
-      baseTimeForItem(
+    const baseDateTime =
+      baseDateTimeForItem(
         item
       );
 
-    const baseSeconds =
-      timeToSeconds(
-        baseTime
-      );
-
-    if (baseSeconds === null) {
-      return "";
+    if (!baseDateTime) {
+      return null;
     }
 
-    return secondsToTime(
-      baseSeconds +
+    return addSecondsToDateTime(
+      baseDateTime,
       item.offsetSec
     );
   }
+
+  function plannedTimeFor(index) {
+    return formatDateTimeAsTime(
+      plannedDateTimeFor(
+        index
+      )
+    );
+  }
+
+  plannedTimeForRef.current =
+    plannedTimeFor;
 
   function requiredTimeLabelFor(
     item
   ) {
     switch (item?.base) {
       case "arrival":
-        return "ETA MVT or STA Scheduled";
+        return "Flight Date and ETA MVT or STA Scheduled";
 
       case "std":
-        return "STD Scheduled";
+        return "Flight Date and STD Scheduled";
 
       case "defined_push":
-        return "Defined Push Time or STD Scheduled";
+        return "Flight Date and Defined Push Time or STD Scheduled";
 
       case "chocks_on":
-        return "Chocks On Real";
+        return "Flight Date and Chocks On Real";
 
       default:
         return "the required operational time";
     }
   }
+
 
   const metrics = useMemo(() => {
     return rows.reduce(
@@ -491,18 +636,14 @@ export default function DashboardPage() {
           secondItem.itemNumber - 1;
 
         const firstTime =
-          timeToSeconds(
-            plannedTimeFor(
-              firstIndex
-            )
-          );
+          plannedDateTimeFor(
+            firstIndex
+          )?.getTime() ?? null;
 
         const secondTime =
-          timeToSeconds(
-            plannedTimeFor(
-              secondIndex
-            )
-          );
+          plannedDateTimeFor(
+            secondIndex
+          )?.getTime() ?? null;
 
         if (
           firstTime === null &&
@@ -559,6 +700,7 @@ export default function DashboardPage() {
     setStatusMessage("Not saved");
   }
 
+
   function updateRowState(
     itemNumber,
     changes
@@ -609,6 +751,21 @@ export default function DashboardPage() {
     ) {
       window.alert(
         "Your role cannot start this task, or the checklist is locked."
+      );
+
+      return;
+    }
+
+    if (!flightInformationComplete) {
+      window.alert(
+        "Complete Flight Information before starting checklist activities.\n\n" +
+        "Required fields:\n" +
+        "- Flight Out\n" +
+        "- Flight Date\n" +
+        "- Aircraft Type\n" +
+        "- Registration\n" +
+        "- ETA MVT or STA Scheduled\n" +
+        "- STD Scheduled"
       );
 
       return;
@@ -717,6 +874,9 @@ export default function DashboardPage() {
         );
       }
 
+      skipNextAutosaveRef.current =
+        true;
+
       updateRowState(
         itemNumber,
         {
@@ -757,6 +917,14 @@ export default function DashboardPage() {
     ) {
       window.alert(
         "Your role cannot complete this task, or the checklist is locked."
+      );
+
+      return;
+    }
+
+    if (!flightInformationComplete) {
+      window.alert(
+        "Complete Flight Information before completing checklist activities."
       );
 
       return;
@@ -832,10 +1000,20 @@ export default function DashboardPage() {
       return;
     }
 
-    const plannedTime =
-      plannedTimeFor(index);
+    const plannedDateTime =
+      plannedDateTimeFor(
+        index
+      );
 
-    if (!plannedTime) {
+    const plannedTime =
+      formatDateTimeAsTime(
+        plannedDateTime
+      );
+
+    if (
+      !plannedDateTime ||
+      !plannedTime
+    ) {
       window.alert(
         `Record ${requiredTimeLabelFor(
           item
@@ -849,9 +1027,9 @@ export default function DashboardPage() {
       currentTime();
 
     const delaySeconds =
-      calculateDelaySeconds(
-        actualTime,
-        plannedTime
+      calculateDateTimeDelaySeconds(
+        new Date(),
+        plannedDateTime
       );
 
     if (
@@ -930,6 +1108,9 @@ export default function DashboardPage() {
       return;
     }
 
+    skipNextAutosaveRef.current =
+      true;
+
     updateRowState(
       itemNumber,
       {
@@ -996,19 +1177,30 @@ export default function DashboardPage() {
           const row =
             rows[index];
 
+          const plannedDateTime =
+            plannedDateTimeFor(
+              index
+            );
+
           const plannedTime =
-            plannedTimeFor(index);
+            formatDateTimeAsTime(
+              plannedDateTime
+            );
 
           const timing =
             getPendingTaskTiming(
-              plannedTime,
-              operationalNow
+              plannedDateTime,
+              operationalNow,
+              `Awaiting ${requiredTimeLabelFor(
+                item
+              )}`
             );
 
           return {
             item,
             row,
             plannedTime,
+            plannedDateTime,
             timing,
           };
         })
@@ -1141,6 +1333,13 @@ export default function DashboardPage() {
 
     setActivePhase("All");
     setChecklistId(null);
+
+    checklistIdRef.current =
+      null;
+
+    skipNextAutosaveRef.current =
+      true;
+
     setRecordLocked(false);
     setFocusedTaskNumber(null);
 
@@ -1451,6 +1650,9 @@ export default function DashboardPage() {
     }
   }
 
+  loadAuditHistoryRef.current =
+    loadAuditHistory;
+
   async function openChecklist(
     checklistIdentifier
   ) {
@@ -1511,6 +1713,12 @@ export default function DashboardPage() {
       if (itemsError) {
         throw itemsError;
       }
+
+      skipNextAutosaveRef.current =
+        true;
+
+      checklistIdRef.current =
+        checklist.id;
 
       setChecklistId(
         checklist.id
@@ -1866,280 +2074,508 @@ export default function DashboardPage() {
     }
   }
 
-  async function saveChecklist() {
-    try {
-      if (!roleCanOperate) {
-        throw new Error(
-          "Your role does not have permission to save operational checklists."
-        );
-      }
+  const persistChecklist =
+    useCallback(
+      async ({
+        silent = false,
+        reason = "manual",
+      } = {}) => {
+        if (
+          saveInProgressRef.current
+        ) {
+          pendingSaveRef.current =
+            true;
 
-      if (recordLocked) {
-        throw new Error(
-          "This checklist has been approved and locked. It cannot be edited."
-        );
-      }
-
-      if (!user?.id) {
-        throw new Error(
-          "Your authenticated user could not be found. Sign in again."
-        );
-      }
-
-      if (
-        !flight.flightOut.trim()
-      ) {
-        throw new Error(
-          "Flight Out is required."
-        );
-      }
-
-      if (!flight.flightDate) {
-        throw new Error(
-          "Flight Date is required."
-        );
-      }
-
-      setSaving(true);
-
-      setStatusMessage(
-        "Saving checklist..."
-      );
-
-      const checklistRecord = {
-        flight_in:
-          flight.flightIn.trim() ||
-          null,
-        flight_out:
-          flight.flightOut.trim(),
-        flight_date:
-          flight.flightDate,
-        bay:
-          flight.bay.trim() ||
-          null,
-        aircraft_type:
-          flight.aircraftType ||
-          null,
-        registration:
-          flight.registration
-            .trim() || null,
-        sta:
-          flight.sta || null,
-        eta:
-          flight.eta || null,
-        ata:
-          flight.ata || null,
-        chocks_on:
-          flight.chocksOn ||
-          null,
-        std:
-          flight.std || null,
-        defined_push_time:
-          flight.definedPushTime ||
-          null,
-        trc_coordinator:
-          profile?.full_name ||
-          user?.email ||
-          flight.trcCoordinator
-            .trim() ||
-          null,
-        checklist_status:
-          metrics.done ===
-            CHECKLIST_ITEMS.length
-            ? "completed"
-            : "in_progress",
-        owner_id:
-          user.id,
-      };
-
-      let activeChecklistId =
-        checklistId;
-
-      if (!activeChecklistId) {
-        const {
-          data,
-          error,
-        } = await supabase
-          .from(
-            "ramp_checklists"
-          )
-          .insert(
-            checklistRecord
-          )
-          .select()
-          .single();
-
-        if (error) {
-          throw error;
+          return {
+            saved: false,
+            queued: true,
+          };
         }
 
-        activeChecklistId =
-          data.id;
+        if (!roleCanOperate) {
+          if (!silent) {
+            window.alert(
+              "Your role does not have permission to save operational checklists."
+            );
+          }
 
-        setChecklistId(
-          data.id
+          return {
+            saved: false,
+            queued: false,
+          };
+        }
+
+        if (
+          recordLocked ||
+          approving
+        ) {
+          if (!silent) {
+            window.alert(
+              "This checklist is locked or is currently being approved."
+            );
+          }
+
+          return {
+            saved: false,
+            queued: false,
+          };
+        }
+
+        if (!user?.id) {
+          if (!silent) {
+            window.alert(
+              "Your authenticated user could not be found. Sign in again."
+            );
+          }
+
+          return {
+            saved: false,
+            queued: false,
+          };
+        }
+
+        if (
+          !isFlightInformationComplete(
+            flight
+          )
+        ) {
+          if (!silent) {
+            window.alert(
+              "Complete the required Flight Information before saving.\n\n" +
+              "Required fields:\n" +
+              "- Flight Out\n" +
+              "- Flight Date\n" +
+              "- Aircraft Type\n" +
+              "- Registration\n" +
+              "- ETA MVT or STA Scheduled\n" +
+              "- STD Scheduled"
+            );
+          }
+
+          return {
+            saved: false,
+            queued: false,
+          };
+        }
+
+        saveInProgressRef.current =
+          true;
+
+        pendingSaveRef.current =
+          false;
+
+        setSaving(true);
+
+        setStatusMessage(
+          silent
+            ? "Autosaving..."
+            : "Saving checklist..."
         );
-      } else {
-        const updateRecord = {
-          ...checklistRecord,
-        };
 
-        delete updateRecord
-          .owner_id;
+        try {
+          const checklistRecord = {
+            flight_in:
+              flight.flightIn
+                .trim() || null,
+            flight_out:
+              flight.flightOut
+                .trim(),
+            flight_date:
+              flight.flightDate,
+            bay:
+              flight.bay
+                .trim() || null,
+            aircraft_type:
+              flight.aircraftType ||
+              null,
+            registration:
+              flight.registration
+                .trim() || null,
+            sta:
+              flight.sta || null,
+            eta:
+              flight.eta || null,
+            ata:
+              flight.ata || null,
+            chocks_on:
+              flight.chocksOn ||
+              null,
+            std:
+              flight.std || null,
+            defined_push_time:
+              flight.definedPushTime ||
+              null,
+            trc_coordinator:
+              profile?.full_name ||
+              user?.email ||
+              flight.trcCoordinator
+                .trim() ||
+              null,
+            checklist_status:
+              metrics.done ===
+                CHECKLIST_ITEMS.length
+                ? "completed"
+                : "in_progress",
+            owner_id:
+              user.id,
+          };
 
-        const { error } =
-          await supabase
-            .from(
-              "ramp_checklists"
-            )
-            .update(
-              updateRecord
-            )
-            .eq(
-              "id",
-              activeChecklistId
-            )
-            .eq(
-              "owner_id",
-              user.id
+          let activeChecklistId =
+            checklistIdRef.current ||
+            checklistId;
+
+          if (!activeChecklistId) {
+            const {
+              data,
+              error,
+            } = await supabase
+              .from(
+                "ramp_checklists"
+              )
+              .insert(
+                checklistRecord
+              )
+              .select()
+              .single();
+
+            if (error) {
+              throw error;
+            }
+
+            activeChecklistId =
+              data.id;
+
+            checklistIdRef.current =
+              data.id;
+
+            setChecklistId(
+              data.id
+            );
+          } else {
+            const updateRecord = {
+              ...checklistRecord,
+            };
+
+            delete updateRecord
+              .owner_id;
+
+            const {
+              data: updatedChecklist,
+              error,
+            } = await supabase
+              .from(
+                "ramp_checklists"
+              )
+              .update(
+                updateRecord
+              )
+              .eq(
+                "id",
+                activeChecklistId
+              )
+              .select("id")
+              .maybeSingle();
+
+            if (error) {
+              throw error;
+            }
+
+            if (!updatedChecklist) {
+              throw new Error(
+                "The checklist was not updated. The database policy may not allow this account to update the selected checklist."
+              );
+            }
+          }
+
+          const itemRecords =
+            CHECKLIST_ITEMS.map(
+              (item, index) => {
+                const row =
+                  rows[index];
+
+                return {
+                  checklist_id:
+                    activeChecklistId,
+                  task_code:
+                    item.taskCode,
+                  item_number:
+                    item.itemNumber,
+                  phase:
+                    item.phase,
+                  activity:
+                    item.activity,
+                  base_time:
+                    item.base,
+                  planned_offset_seconds:
+                    item.offsetSec,
+                  planned_time:
+                    plannedTimeForRef
+                      .current?.(
+                        index
+                      ) || null,
+                  actual_time:
+                    row.actualTime ||
+                    null,
+                  delay_seconds:
+                    row.delaySeconds,
+                  operational_status:
+                    DATABASE_STATUS[
+                    row.status
+                    ] || "pending",
+                  observation:
+                    row.observation
+                      .trim() || null,
+                  started_at:
+                    row.startedAt ||
+                    null,
+                  started_by:
+                    row.startedBy ||
+                    null,
+                  completed_by:
+                    row.status ===
+                      "pending"
+                      ? null
+                      : user.id,
+                  completed_at:
+                    row.status ===
+                      "pending"
+                      ? null
+                      : new Date()
+                        .toISOString(),
+                };
+              }
             );
 
-        if (error) {
-          throw error;
-        }
-      }
+          const {
+            error: itemError,
+          } = await supabase
+            .from(
+              "ramp_checklist_items"
+            )
+            .upsert(
+              itemRecords,
+              {
+                onConflict:
+                  "checklist_id,item_number",
+              }
+            );
 
-      const itemRecords =
-        CHECKLIST_ITEMS.map(
-          (item, index) => {
-            const row =
-              rows[index];
+          if (itemError) {
+            throw itemError;
+          }
 
-            return {
-              checklist_id:
+          const {
+            count: savedItemCount,
+            error: itemCountError,
+          } = await supabase
+            .from(
+              "ramp_checklist_items"
+            )
+            .select(
+              "id",
+              {
+                count: "exact",
+                head: true,
+              }
+            )
+            .eq(
+              "checklist_id",
+              activeChecklistId
+            );
+
+          if (itemCountError) {
+            throw itemCountError;
+          }
+
+          if (
+            savedItemCount !==
+            CHECKLIST_ITEMS.length
+          ) {
+            throw new Error(
+              `Only ${savedItemCount ?? 0
+              } of ${CHECKLIST_ITEMS.length
+              } task records were saved.`
+            );
+          }
+
+          localStorage.setItem(
+            "saa_ramp_checklist_draft",
+            JSON.stringify({
+              checklistId:
                 activeChecklistId,
-              task_code:
-                item.taskCode,
-              item_number:
-                item.itemNumber,
-              phase:
-                item.phase,
-              activity:
-                item.activity,
-              base_time:
-                item.base,
-              planned_offset_seconds:
-                item.offsetSec,
-              planned_time:
-                plannedTimeFor(
-                  index
-                ) || null,
-              actual_time:
-                row.actualTime ||
-                null,
-              delay_seconds:
-                row.delaySeconds,
-              operational_status:
-                DATABASE_STATUS[
-                row.status
-                ] || "pending",
-              observation:
-                row.observation
-                  .trim() || null,
-              started_at:
-                row.startedAt ||
-                null,
-              started_by:
-                row.startedBy ||
-                null,
-              completed_by:
-                row.status ===
-                  "pending"
-                  ? null
-                  : user.id,
-              completed_at:
-                row.status ===
-                  "pending"
-                  ? null
-                  : new Date()
-                    .toISOString(),
-            };
-          }
-        );
-
-      const {
-        error: itemError,
-      } = await supabase
-        .from(
-          "ramp_checklist_items"
-        )
-        .upsert(
-          itemRecords,
-          {
-            onConflict:
-              "checklist_id,item_number",
-          }
-        );
-
-      if (itemError) {
-        throw itemError;
-      }
-
-      if (roleCanViewAudit) {
-        await loadAuditHistory(
-          activeChecklistId
-        );
-      }
-
-      localStorage.setItem(
-        "saa_ramp_checklist_draft",
-        JSON.stringify({
-          checklistId:
-            activeChecklistId,
-          flight,
-          rows,
-        })
-      );
-
-      const savedTime =
-        new Date()
-          .toLocaleTimeString(
-            "en-ZA",
-            {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false,
-            }
+              flight,
+              rows,
+            })
           );
 
-      setStatusMessage(
-        `Saved to Supabase at ${savedTime}`
-      );
+          const savedTime =
+            new Date()
+              .toLocaleTimeString(
+                "en-ZA",
+                {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                }
+              );
 
-      window.alert(
-        "OPS checklist saved successfully.\n\n" +
-        `Flight: ${flight.flightOut}\n` +
-        `Completed: ${metrics.done}/${CHECKLIST_ITEMS.length}`
-      );
-    } catch (error) {
-      console.error(
-        "Checklist save failed:",
-        error
-      );
+          setStatusMessage(
+            silent
+              ? `Autosaved at ${savedTime}`
+              : `Saved to Supabase at ${savedTime}`
+          );
 
-      setStatusMessage(
-        "Save failed"
-      );
+          if (
+            !silent &&
+            roleCanViewAudit &&
+            loadAuditHistoryRef.current
+          ) {
+            await loadAuditHistoryRef
+              .current(
+                activeChecklistId
+              );
+          }
 
-      window.alert(
-        "The checklist could not be saved.\n\n" +
-        (error?.message ||
-          "Unknown error")
-      );
-    } finally {
-      setSaving(false);
-    }
+          if (!silent) {
+            window.alert(
+              "OPS checklist saved successfully.\n\n" +
+              `Flight: ${flight.flightOut}\n` +
+              `Completed: ${metrics.done}/${CHECKLIST_ITEMS.length}`
+            );
+          }
+
+          return {
+            saved: true,
+            checklistId:
+              activeChecklistId,
+            reason,
+          };
+        } catch (error) {
+          console.error(
+            silent
+              ? "Checklist autosave failed:"
+              : "Checklist save failed:",
+            error
+          );
+
+          const saveErrorMessage =
+            error?.message ||
+            "Unknown database error";
+
+          setStatusMessage(
+            silent
+              ? `Autosave failed: ${saveErrorMessage}`
+              : "Save failed"
+          );
+
+          if (!silent) {
+            window.alert(
+              "The checklist could not be saved.\n\n" +
+              (error?.message ||
+                "Unknown error")
+            );
+          }
+
+          return {
+            saved: false,
+            error,
+            reason,
+          };
+        } finally {
+          saveInProgressRef.current =
+            false;
+
+          setSaving(false);
+
+          if (
+            pendingSaveRef.current
+          ) {
+            pendingSaveRef.current =
+              false;
+
+            setStatusMessage(
+              "Unsaved changes"
+            );
+          }
+        }
+      },
+      [
+        approving,
+        checklistId,
+        flight,
+        metrics.done,
+        profile?.full_name,
+        recordLocked,
+        roleCanOperate,
+        roleCanViewAudit,
+        rows,
+        user?.email,
+        user?.id,
+      ]
+    );
+
+  async function saveChecklist() {
+    await persistChecklist({
+      silent: false,
+      reason: "manual",
+    });
   }
+
+  useEffect(() => {
+    if (
+      !autosaveReady ||
+      initialLoadRef.current ||
+      loadingRecord ||
+      activeView !== "checklist" ||
+      !roleCanOperate ||
+      recordLocked ||
+      approving ||
+      !flightInformationComplete
+    ) {
+      return undefined;
+    }
+
+    if (
+      skipNextAutosaveRef.current
+    ) {
+      skipNextAutosaveRef.current =
+        false;
+
+      return undefined;
+    }
+
+    setStatusMessage(
+      "Unsaved changes"
+    );
+
+    const autosaveTimer =
+      window.setTimeout(
+        async () => {
+          await persistChecklist({
+            silent: true,
+            reason: "autosave",
+          });
+        },
+        AUTOSAVE_DELAY_MS
+      );
+
+    return () => {
+      window.clearTimeout(
+        autosaveTimer
+      );
+    };
+  }, [
+    activeView,
+    approving,
+    autosaveReady,
+    flight,
+    flightInformationComplete,
+    loadingRecord,
+    persistChecklist,
+    recordLocked,
+    roleCanOperate,
+    rows,
+  ]);
 
   const nextPendingCandidate =
     CHECKLIST_ITEMS
@@ -2147,19 +2583,30 @@ export default function DashboardPage() {
         const row =
           rows[index];
 
+        const plannedDateTime =
+          plannedDateTimeFor(
+            index
+          );
+
         const plannedTime =
-          plannedTimeFor(index);
+          formatDateTimeAsTime(
+            plannedDateTime
+          );
 
         const timing =
           getPendingTaskTiming(
-            plannedTime,
-            operationalNow
+            plannedDateTime,
+            operationalNow,
+            `Awaiting ${requiredTimeLabelFor(
+              item
+            )}`
           );
 
         return {
           item,
           row,
           plannedTime,
+          plannedDateTime,
           timing,
         };
       })
@@ -2180,6 +2627,15 @@ export default function DashboardPage() {
 
   return (
     <main className="ramp-page">
+      <ChecklistPrintReport
+        flight={flight}
+        rows={rows}
+        metrics={metrics}
+        plannedTimeFor={
+          plannedTimeFor
+        }
+        profile={profile}
+      />
       <OperationsMenu
         open={operationsMenuOpen}
         onClose={() =>
@@ -2304,7 +2760,10 @@ export default function DashboardPage() {
 
           {loadingRecord
             ? "Loading checklist..."
-            : statusMessage}
+            : !flightInformationComplete &&
+              activeView === "checklist"
+              ? "Complete the required Flight Information to enable the checklist and autosave."
+              : statusMessage}
         </div>
 
         {activeView ===
@@ -2546,16 +3005,24 @@ export default function DashboardPage() {
                       return null;
                     }
 
-                    const plannedTime =
-                      plannedTimeFor(
+                    const plannedDateTime =
+                      plannedDateTimeFor(
                         index
+                      );
+
+                    const plannedTime =
+                      formatDateTimeAsTime(
+                        plannedDateTime
                       );
 
                     const pendingTiming =
                       row.status === "pending"
                         ? getPendingTaskTiming(
-                          plannedTime,
-                          operationalNow
+                          plannedDateTime,
+                          operationalNow,
+                          `Awaiting ${requiredTimeLabelFor(
+                            item
+                          )}`
                         )
                         : {
                           overdue: false,
@@ -2602,7 +3069,7 @@ export default function DashboardPage() {
                           observationsDisabled
                         }
                         completeDisabled={
-                          taskCompletionDisabled
+                          checklistActivitiesDisabled
                         }
                         canUndo={
                           roleCanUndoTask
@@ -2618,6 +3085,34 @@ export default function DashboardPage() {
           </>
         ) : null}
       </section>
+
+      {activeView === "checklist" ? (
+        <button
+          type="button"
+          className="standalone-checklist-button"
+          onClick={
+            openNextPendingTask
+          }
+          disabled={
+            loadingRecord ||
+            historyLoading ||
+            !flightInformationComplete
+          }
+          aria-label="Open next checklist task"
+          title={
+            flightInformationComplete
+              ? "Open next checklist task"
+              : "Complete Flight Information first"
+          }
+        >
+          <ClipboardCheck
+            size={20}
+            aria-hidden="true"
+          />
+
+          <span>Checklist</span>
+        </button>
+      ) : null}
     </main>
   );
 }

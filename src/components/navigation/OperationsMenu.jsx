@@ -198,10 +198,13 @@ export default function OperationsMenu({
           </div>
 
           <div>
-            <span>Defined Push</span>
+            <span>
+              Defined Push
+            </span>
 
             <strong>
-              {flight.std ||
+              {flight.definedPushTime ||
+                flight.std ||
                 "Not specified"}
             </strong>
           </div>

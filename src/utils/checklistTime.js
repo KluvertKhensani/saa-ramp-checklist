@@ -1,3 +1,9 @@
+const SECONDS_PER_DAY = 86400;
+const MILLISECONDS_PER_SECOND = 1000;
+const MILLISECONDS_PER_DAY =
+  SECONDS_PER_DAY *
+  MILLISECONDS_PER_SECOND;
+
 export function timeToSeconds(value) {
   if (!value) {
     return null;
@@ -7,9 +13,14 @@ export function timeToSeconds(value) {
     .split(":")
     .map(Number);
 
-  const hours = parts[0] || 0;
-  const minutes = parts[1] || 0;
-  const seconds = parts[2] || 0;
+  const hours =
+    parts[0] || 0;
+
+  const minutes =
+    parts[1] || 0;
+
+  const seconds =
+    parts[2] || 0;
 
   return (
     hours * 3600 +
@@ -27,8 +38,9 @@ export function secondsToTime(value) {
   }
 
   const normalized =
-    ((value % 86400) + 86400) %
-    86400;
+    ((value % SECONDS_PER_DAY) +
+      SECONDS_PER_DAY) %
+    SECONDS_PER_DAY;
 
   const hours =
     Math.floor(
@@ -54,6 +66,162 @@ export function normalizeDatabaseTime(value) {
   return String(value).substring(0, 5);
 }
 
+export function combineDateAndTime(
+  dateValue,
+  timeValue
+) {
+  if (!dateValue || !timeValue) {
+    return null;
+  }
+
+  const [
+    year,
+    month,
+    day,
+  ] = String(dateValue)
+    .split("-")
+    .map(Number);
+
+  const [
+    hours = 0,
+    minutes = 0,
+    seconds = 0,
+  ] = String(timeValue)
+    .split(":")
+    .map(Number);
+
+  if (
+    !year ||
+    !month ||
+    !day
+  ) {
+    return null;
+  }
+
+  const dateTime =
+    new Date(
+      year,
+      month - 1,
+      day,
+      hours,
+      minutes,
+      seconds,
+      0
+    );
+
+  if (
+    Number.isNaN(
+      dateTime.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  return dateTime;
+}
+
+export function addSecondsToDateTime(
+  dateTime,
+  seconds
+) {
+  if (
+    !(dateTime instanceof Date) ||
+    Number.isNaN(
+      dateTime.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  return new Date(
+    dateTime.getTime() +
+    seconds *
+    MILLISECONDS_PER_SECOND
+  );
+}
+
+export function alignDateTimeToReference(
+  dateTime,
+  referenceDateTime
+) {
+  if (
+    !(dateTime instanceof Date) ||
+    Number.isNaN(
+      dateTime.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  if (
+    !(
+      referenceDateTime instanceof
+      Date
+    ) ||
+    Number.isNaN(
+      referenceDateTime.getTime()
+    )
+  ) {
+    return dateTime;
+  }
+
+  let alignedDateTime =
+    new Date(
+      dateTime.getTime()
+    );
+
+  const halfDayMilliseconds =
+    MILLISECONDS_PER_DAY / 2;
+
+  const difference =
+    alignedDateTime.getTime() -
+    referenceDateTime.getTime();
+
+  if (
+    difference <
+    -halfDayMilliseconds
+  ) {
+    alignedDateTime =
+      new Date(
+        alignedDateTime.getTime() +
+        MILLISECONDS_PER_DAY
+      );
+  } else if (
+    difference >
+    halfDayMilliseconds
+  ) {
+    alignedDateTime =
+      new Date(
+        alignedDateTime.getTime() -
+        MILLISECONDS_PER_DAY
+      );
+  }
+
+  return alignedDateTime;
+}
+
+export function formatDateTimeAsTime(
+  dateTime
+) {
+  if (
+    !(dateTime instanceof Date) ||
+    Number.isNaN(
+      dateTime.getTime()
+    )
+  ) {
+    return "";
+  }
+
+  return [
+    String(
+      dateTime.getHours()
+    ).padStart(2, "0"),
+    String(
+      dateTime.getMinutes()
+    ).padStart(2, "0"),
+  ].join(":");
+}
+
 export function calculateDelaySeconds(
   actualTime,
   plannedTime
@@ -71,17 +239,48 @@ export function calculateDelaySeconds(
     return null;
   }
 
-  let delay = actual - planned;
+  let delay =
+    actual - planned;
 
   if (delay < -43200) {
-    delay += 86400;
+    delay += SECONDS_PER_DAY;
   }
 
   if (delay > 43200) {
-    delay -= 86400;
+    delay -= SECONDS_PER_DAY;
   }
 
   return delay;
+}
+
+export function calculateDateTimeDelaySeconds(
+  actualDateTime,
+  plannedDateTime
+) {
+  if (
+    !(
+      actualDateTime instanceof Date
+    ) ||
+    !(
+      plannedDateTime instanceof Date
+    ) ||
+    Number.isNaN(
+      actualDateTime.getTime()
+    ) ||
+    Number.isNaN(
+      plannedDateTime.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  return Math.round(
+    (
+      actualDateTime.getTime() -
+      plannedDateTime.getTime()
+    ) /
+    MILLISECONDS_PER_SECOND
+  );
 }
 
 export function classifyDelay(
@@ -114,13 +313,17 @@ export function formatDelay(
   }
 
   const sign =
-    delaySeconds < 0 ? "-" : "+";
+    delaySeconds < 0
+      ? "-"
+      : "+";
 
   const absolute =
     Math.abs(delaySeconds);
 
   const minutes =
-    Math.floor(absolute / 60);
+    Math.floor(
+      absolute / 60
+    );
 
   if (minutes === 0) {
     return delaySeconds < 0
@@ -153,7 +356,8 @@ export function formatDuration(
 }
 
 export function currentTime() {
-  const now = new Date();
+  const now =
+    new Date();
 
   return [
     String(
@@ -170,26 +374,31 @@ export function signedTimeDifference(
   currentDate = new Date()
 ) {
   const targetSeconds =
-    timeToSeconds(targetTime);
+    timeToSeconds(
+      targetTime
+    );
 
   if (targetSeconds === null) {
     return null;
   }
 
   const currentSeconds =
-    currentDate.getHours() * 3600 +
-    currentDate.getMinutes() * 60 +
+    currentDate.getHours() *
+    3600 +
+    currentDate.getMinutes() *
+    60 +
     currentDate.getSeconds();
 
   let difference =
-    targetSeconds - currentSeconds;
+    targetSeconds -
+    currentSeconds;
 
   if (difference < -43200) {
-    difference += 86400;
+    difference += SECONDS_PER_DAY;
   }
 
   if (difference > 43200) {
-    difference -= 86400;
+    difference -= SECONDS_PER_DAY;
   }
 
   return difference;
@@ -219,7 +428,9 @@ export function formatCountdown(
     );
 
   const remainingSeconds =
-    absolute % 60;
+    Math.floor(
+      absolute % 60
+    );
 
   if (hours > 0) {
     return [
@@ -239,28 +450,116 @@ export function formatCountdown(
   ].join(":");
 }
 
-export function getPendingTaskTiming(
-  plannedTime,
-  currentDate = new Date()
+function createEmptyPendingTiming(
+  awaitingLabel
 ) {
-  const plannedSeconds =
-    timeToSeconds(plannedTime);
+  return {
+    overdue: false,
+    overdueSeconds: null,
+    remainingSeconds: null,
+    progressPercent: 0,
+    label:
+      awaitingLabel ||
+      "Awaiting required time",
+  };
+}
 
-  if (plannedSeconds === null) {
+export function getPendingTaskTiming(
+  plannedValue,
+  currentDate = new Date(),
+  awaitingLabel =
+    "Awaiting required time"
+) {
+  if (
+    plannedValue instanceof Date
+  ) {
+    if (
+      Number.isNaN(
+        plannedValue.getTime()
+      )
+    ) {
+      return createEmptyPendingTiming(
+        awaitingLabel
+      );
+    }
+
+    const difference =
+      Math.round(
+        (
+          plannedValue.getTime() -
+          currentDate.getTime()
+        ) /
+        MILLISECONDS_PER_SECOND
+      );
+
+    if (difference < 0) {
+      const overdueSeconds =
+        Math.abs(difference);
+
+      const overdueMinutes =
+        Math.max(
+          1,
+          Math.floor(
+            overdueSeconds / 60
+          )
+        );
+
+      return {
+        overdue: true,
+        overdueSeconds,
+        remainingSeconds: 0,
+        progressPercent: 100,
+        label:
+          `Overdue by ${overdueMinutes} min`,
+      };
+    }
+
+    const remainingMinutes =
+      Math.max(
+        1,
+        Math.ceil(
+          difference / 60
+        )
+      );
+
+    if (difference <= 30) {
+      return {
+        overdue: false,
+        overdueSeconds: 0,
+        remainingSeconds:
+          difference,
+        progressPercent: 98,
+        label: "Due now",
+      };
+    }
+
     return {
       overdue: false,
-      overdueSeconds: null,
-      remainingSeconds: null,
+      overdueSeconds: 0,
+      remainingSeconds:
+        difference,
       progressPercent: 0,
-      label: "Awaiting Chocks On",
+      label:
+        `${remainingMinutes} min left`,
     };
+  }
+
+  const plannedSeconds =
+    timeToSeconds(
+      plannedValue
+    );
+
+  if (plannedSeconds === null) {
+    return createEmptyPendingTiming(
+      awaitingLabel
+    );
   }
 
   const currentSeconds =
     currentDate.getHours() *
-      3600 +
+    3600 +
     currentDate.getMinutes() *
-      60 +
+    60 +
     currentDate.getSeconds();
 
   let difference =
@@ -268,11 +567,11 @@ export function getPendingTaskTiming(
     currentSeconds;
 
   if (difference < -43200) {
-    difference += 86400;
+    difference += SECONDS_PER_DAY;
   }
 
   if (difference > 43200) {
-    difference -= 86400;
+    difference -= SECONDS_PER_DAY;
   }
 
   if (difference < 0) {
