@@ -96,6 +96,9 @@ export default function ChecklistPrintReport({
   flight,
   rows,
   metrics,
+  operationalMetrics =
+  metrics,
+  preArrivalMetrics = null,
   plannedTimeFor,
   profile,
 }) {
@@ -104,12 +107,12 @@ export default function ChecklistPrintReport({
 
   const overallAssessment =
     getOverallAssessment(
-      metrics
+      operationalMetrics
     );
 
   const assessmentClass =
     getAssessmentClass(
-      metrics
+      operationalMetrics
     );
 
   return (
@@ -239,35 +242,95 @@ export default function ChecklistPrintReport({
         </div>
       </section>
 
+      {preArrivalMetrics ? (
+        <section className="print-report-section">
+          <h2>
+            PRE-ARRIVAL READINESS
+          </h2>
+
+          <div className="print-performance-grid">
+            <div className="print-metric print-metric-blue">
+              <span>
+                Completed / Total
+              </span>
+
+              <strong>
+                {preArrivalMetrics.done}/
+                {preArrivalMetrics.total}
+              </strong>
+            </div>
+
+            <div className="print-metric print-metric-green">
+              <span>
+                Ready on Time
+              </span>
+
+              <strong>
+                {preArrivalMetrics.ontime}
+              </strong>
+            </div>
+
+            <div className="print-metric print-metric-gold">
+              <span>
+                Slightly Delayed
+              </span>
+
+              <strong>
+                {preArrivalMetrics.light}
+              </strong>
+            </div>
+
+            <div className="print-metric print-metric-red">
+              <span>
+                Delayed
+              </span>
+
+              <strong>
+                {preArrivalMetrics.delay}
+              </strong>
+            </div>
+          </div>
+
+          <div className="print-readiness-note">
+            Pre-Arrival activities are planned
+            against STA and reported separately
+            from turnaround operational
+            performance.
+          </div>
+        </section>
+      ) : null}
+
       <section className="print-report-section">
         <h2>
-          OPERATION PERFORMANCE
+          TURNAROUND OPERATION PERFORMANCE
         </h2>
 
         <div className="print-performance-grid">
           <div className="print-metric print-metric-green">
             <span>On Time</span>
             <strong>
-              {metrics.ontime}
+              {operationalMetrics.ontime}
             </strong>
           </div>
 
           <div className="print-metric print-metric-gold">
             <span>Light Delay</span>
             <strong>
-              {metrics.light}
+              {operationalMetrics.light}
             </strong>
           </div>
 
           <div className="print-metric print-metric-red">
             <span>Delay</span>
             <strong>
-              {metrics.delay}
+              {operationalMetrics.delay}
             </strong>
           </div>
 
           <div className="print-metric print-metric-blue">
-            <span>Completed / Total</span>
+            <span>
+              Checklist Completed / Total
+            </span>
             <strong>
               {completedTotal}/
               {CHECKLIST_ITEMS.length}
@@ -299,12 +362,13 @@ export default function ChecklistPrintReport({
           </p>
 
           <p>
+            Operational activities only.
             On time:{" "}
-            {metrics.ontime}.
+            {operationalMetrics.ontime}.
             Light delay:{" "}
-            {metrics.light}.
+            {operationalMetrics.light}.
             Delay:{" "}
-            {metrics.delay}.
+            {operationalMetrics.delay}.
           </p>
         </div>
       </section>
@@ -356,18 +420,17 @@ export default function ChecklistPrintReport({
 
                     <td>
                       {row?.delaySeconds ===
-                      null
+                        null
                         ? "-"
                         : formatDelay(
-                            row.delaySeconds
-                          )}
+                          row.delaySeconds
+                        )}
                     </td>
 
                     <td
                       className={
-                        `print-status print-status-${
-                          row?.status ||
-                          "pending"
+                        `print-status print-status-${row?.status ||
+                        "pending"
                         }`
                       }
                     >

@@ -47,3 +47,4 @@ origina*-static-backup/
 dist/*
 # Dependencies
 node_modules/
+*.before-*

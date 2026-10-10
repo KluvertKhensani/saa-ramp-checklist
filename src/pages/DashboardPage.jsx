@@ -19,6 +19,7 @@ import ChecklistAuditHistory from "../components/checklist/ChecklistAuditHistory
 import ChecklistExport from "../components/checklist/ChecklistExport";
 import ChecklistHistory from "../components/checklist/ChecklistHistory";
 import ChecklistMetrics from "../components/checklist/ChecklistMetrics";
+import ChecklistPerformanceSummary from "../components/checklist/ChecklistPerformanceSummary";
 import ChecklistPrintReport from "../components/checklist/ChecklistPrintReport";
 import FlightInformation from "../components/checklist/FlightInformation";
 import PushbackCountdown from "../components/checklist/PushbackCountdown";
@@ -39,7 +40,18 @@ import {
   formatDateTimeAsTime,
   getPendingTaskTiming,
   normalizeDatabaseTime,
+  startOfMinute,
 } from "../utils/checklistTime";
+
+import {
+  exportPowerBiData,
+} from "../utils/powerBiExport";
+
+import {
+  getOfflineActionCount,
+  queueOfflineAction,
+} from "../utils/offlineQueue";
+
 import {
   canCompletePendingTask,
   canCreateChecklist,
@@ -102,6 +114,46 @@ const APPLICATION_STATUS = {
 
 const AUTOSAVE_DELAY_MS = 1500;
 
+const CONNECTION_LABELS = {
+  checking:
+    "Checking connection",
+  online:
+    "Online",
+  offline:
+    "Offline",
+  unreachable:
+    "Service unavailable",
+  syncing:
+    "Synchronising",
+  pending:
+    "Pending synchronisation",
+  conflict:
+    "Conflict requires review",
+};
+
+function getConnectionLabel(
+  connectionStatus,
+  pendingCount = 0
+) {
+  if (
+    pendingCount > 0 &&
+    connectionStatus !==
+    "syncing"
+  ) {
+    return `${pendingCount} pending synchronisation ${pendingCount === 1
+      ? "action"
+      : "actions"
+      }`;
+  }
+
+  return (
+    CONNECTION_LABELS[
+    connectionStatus
+    ] ||
+    "Connection unknown"
+  );
+}
+
 function createInitialFlight(
   coordinatorName = ""
 ) {
@@ -121,10 +173,7 @@ function isFlightInformationComplete(
     flight.flightDate &&
     flight.aircraftType &&
     flight.registration &&
-    (
-      flight.eta ||
-      flight.sta
-    ) &&
+    flight.sta &&
     flight.std
   );
 }
@@ -133,11 +182,55 @@ function compareTaskCandidates(
   firstCandidate,
   secondCandidate
 ) {
+  const firstStarted =
+    Boolean(
+      firstCandidate.row
+        ?.startedAt
+    );
+
+  const secondStarted =
+    Boolean(
+      secondCandidate.row
+        ?.startedAt
+    );
+
+  if (
+    firstStarted !==
+    secondStarted
+  ) {
+    return firstStarted
+      ? -1
+      : 1;
+  }
+
   if (
     firstCandidate.timing.overdue !==
     secondCandidate.timing.overdue
   ) {
     return firstCandidate.timing.overdue
+      ? -1
+      : 1;
+  }
+
+  const firstRemaining =
+    firstCandidate.timing
+      .remainingSeconds;
+
+  const secondRemaining =
+    secondCandidate.timing
+      .remainingSeconds;
+
+  const firstDueNow =
+    firstRemaining === 0;
+
+  const secondDueNow =
+    secondRemaining === 0;
+
+  if (
+    firstDueNow !==
+    secondDueNow
+  ) {
+    return firstDueNow
       ? -1
       : 1;
   }
@@ -168,7 +261,9 @@ function compareTaskCandidates(
     return -1;
   }
 
-  if (firstTime === secondTime) {
+  if (
+    firstTime === secondTime
+  ) {
     return (
       firstCandidate.item.itemNumber -
       secondCandidate.item.itemNumber
@@ -277,8 +372,10 @@ export default function DashboardPage() {
     setOperationalNow,
   ] = useState(() => new Date());
 
-  const [, setFocusedTaskNumber] =
-    useState(null);
+  const [
+    focusedTaskNumber,
+    setFocusedTaskNumber,
+  ] = useState(null);
 
   const [
     operationsMenuOpen,
@@ -289,6 +386,20 @@ export default function DashboardPage() {
     autosaveReady,
     setAutosaveReady,
   ] = useState(false);
+
+  const [
+    connectionStatus,
+    setConnectionStatus,
+  ] = useState(
+    navigator.onLine
+      ? "checking"
+      : "offline"
+  );
+
+  const [
+    pendingSyncCount,
+    setPendingSyncCount,
+  ] = useState(0);
 
   const saveInProgressRef =
     useRef(false);
@@ -309,6 +420,9 @@ export default function DashboardPage() {
     useRef(null);
 
   const loadAuditHistoryRef =
+    useRef(null);
+
+  const queueChecklistSnapshotRef =
     useRef(null);
 
   const roleCanCreate =
@@ -391,6 +505,30 @@ export default function DashboardPage() {
     taskCompletionDisabled ||
     !flightInformationComplete;
 
+  const refreshPendingSyncCount =
+    useCallback(
+      async () => {
+        try {
+          const actionCount =
+            await getOfflineActionCount();
+
+          setPendingSyncCount(
+            actionCount
+          );
+
+          return actionCount;
+        } catch (error) {
+          console.error(
+            "Offline queue count failed:",
+            error
+          );
+
+          return 0;
+        }
+      },
+      []
+    );
+
   useEffect(() => {
     const intervalId =
       window.setInterval(() => {
@@ -405,6 +543,121 @@ export default function DashboardPage() {
       );
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function checkConnection() {
+      if (!navigator.onLine) {
+        if (active) {
+          setConnectionStatus(
+            "offline"
+          );
+        }
+
+        return;
+      }
+
+      if (active) {
+        setConnectionStatus(
+          "checking"
+        );
+      }
+
+      try {
+        const {
+          error,
+        } = await supabase
+          .from("profiles")
+          .select("id")
+          .limit(1);
+
+        if (!active) {
+          return;
+        }
+
+        if (error) {
+          setConnectionStatus(
+            "unreachable"
+          );
+
+          return;
+        }
+
+        const actionCount =
+          await refreshPendingSyncCount();
+
+        if (!active) {
+          return;
+        }
+
+        setConnectionStatus(
+          actionCount > 0
+            ? "pending"
+            : "online"
+        );
+      } catch (error) {
+        console.error(
+          "Connectivity check failed:",
+          error
+        );
+
+        if (active) {
+          setConnectionStatus(
+            "unreachable"
+          );
+        }
+      }
+    }
+
+    function handleOnline() {
+      checkConnection();
+    }
+
+    function handleOffline() {
+      setConnectionStatus(
+        "offline"
+      );
+    }
+
+    window.addEventListener(
+      "online",
+      handleOnline
+    );
+
+    window.addEventListener(
+      "offline",
+      handleOffline
+    );
+
+    checkConnection();
+
+    const connectionTimer =
+      window.setInterval(
+        checkConnection,
+        60000
+      );
+
+    return () => {
+      active = false;
+
+      window.removeEventListener(
+        "online",
+        handleOnline
+      );
+
+      window.removeEventListener(
+        "offline",
+        handleOffline
+      );
+
+      window.clearInterval(
+        connectionTimer
+      );
+    };
+  }, [
+    refreshPendingSyncCount,
+  ]);
 
   useEffect(() => {
     checklistIdRef.current =
@@ -427,16 +680,13 @@ export default function DashboardPage() {
     };
   }, []);
 
-  function arrivalReferenceDateTime() {
-    const arrivalTime =
-      flight.eta ||
-      flight.sta;
-
+  function scheduledArrivalDateTime() {
     return combineDateAndTime(
       flight.flightDate,
-      arrivalTime
+      flight.sta
     );
   }
+
 
   function baseDateTimeForItem(
     item
@@ -448,12 +698,12 @@ export default function DashboardPage() {
       return null;
     }
 
-    const arrivalDateTime =
-      arrivalReferenceDateTime();
+    const scheduledArrival =
+      scheduledArrivalDateTime();
 
     switch (item.base) {
-      case "arrival":
-        return arrivalDateTime;
+      case "sta":
+        return scheduledArrival;
 
       case "chocks_on": {
         const chocksDateTime =
@@ -464,7 +714,7 @@ export default function DashboardPage() {
 
         return alignDateTimeToReference(
           chocksDateTime,
-          arrivalDateTime
+          scheduledArrival
         );
       }
 
@@ -477,7 +727,7 @@ export default function DashboardPage() {
 
         return alignDateTimeToReference(
           stdDateTime,
-          arrivalDateTime
+          scheduledArrival
         );
       }
 
@@ -498,13 +748,13 @@ export default function DashboardPage() {
               flight.flightDate,
               flight.std
             ),
-            arrivalDateTime
+            scheduledArrival
           );
 
         return alignDateTimeToReference(
           pushDateTime,
           stdDateTime ||
-          arrivalDateTime
+          scheduledArrival
         );
       }
 
@@ -558,8 +808,8 @@ export default function DashboardPage() {
     item
   ) {
     switch (item?.base) {
-      case "arrival":
-        return "Flight Date and ETA MVT or STA Scheduled";
+      case "sta":
+        return "Flight Date and STA Scheduled";
 
       case "std":
         return "Flight Date and STD Scheduled";
@@ -576,52 +826,159 @@ export default function DashboardPage() {
   }
 
 
-  const metrics = useMemo(() => {
-    return rows.reduce(
-      (totals, row) => {
-        if (
-          row.status !== "pending"
-        ) {
-          totals.done += 1;
+  const {
+    metrics,
+    operationalMetrics,
+    preArrivalMetrics,
+  } = useMemo(() => {
+    const createTotals = () => ({
+      total: 0,
+      pending: 0,
+      done: 0,
+      ontime: 0,
+      light: 0,
+      delay: 0,
+      highImpactDelay: 0,
+    });
+
+    const allTotals =
+      createTotals();
+
+    const operationalTotals =
+      createTotals();
+
+    const preArrivalTotals =
+      createTotals();
+
+    CHECKLIST_ITEMS.forEach(
+      (item, index) => {
+        const row =
+          rows[index];
+
+        if (!row) {
+          return;
         }
 
-        if (
-          row.status === "ontime"
-        ) {
-          totals.ontime += 1;
-        }
+        const targets = [
+          allTotals,
+          item.phase ===
+            "Pre-Arrival"
+            ? preArrivalTotals
+            : operationalTotals,
+        ];
 
-        if (
-          row.status === "light"
-        ) {
-          totals.light += 1;
-        }
+        targets.forEach(
+          (totals) => {
+            totals.total += 1;
 
-        if (
-          row.status === "delay"
-        ) {
-          totals.delay += 1;
-        }
+            if (
+              row.status ===
+              "pending"
+            ) {
+              totals.pending += 1;
+            } else {
+              totals.done += 1;
+            }
 
-        return totals;
-      },
-      {
-        done: 0,
-        ontime: 0,
-        light: 0,
-        delay: 0,
+            if (
+              row.status ===
+              "ontime"
+            ) {
+              totals.ontime += 1;
+            }
+
+            if (
+              row.status ===
+              "light"
+            ) {
+              totals.light += 1;
+            }
+
+            if (
+              row.status ===
+              "delay"
+            ) {
+              totals.delay += 1;
+            }
+
+            if (
+              item.impactCategory ===
+              "high" &&
+              (
+                row.status ===
+                "light" ||
+                row.status ===
+                "delay"
+              )
+            ) {
+              totals.highImpactDelay += 1;
+            }
+          }
+        );
       }
     );
+
+    return {
+      metrics:
+        allTotals,
+      operationalMetrics:
+        operationalTotals,
+      preArrivalMetrics:
+        preArrivalTotals,
+    };
   }, [rows]);
 
   const matchingItems =
-    activePhase === "All"
-      ? CHECKLIST_ITEMS
-      : CHECKLIST_ITEMS.filter(
-        (item) =>
+    CHECKLIST_ITEMS.filter(
+      (item) => {
+        const row =
+          rows[
+          item.itemNumber - 1
+          ];
+
+        const belongsToPhase =
+          activePhase === "All" ||
           item.phase ===
-          activePhase
-      );
+          activePhase;
+
+        const isIncomplete =
+          row?.status ===
+          "pending";
+
+        return (
+          belongsToPhase &&
+          isIncomplete
+        );
+      }
+    );
+
+  function getIncompletePhaseCount(
+    phase
+  ) {
+    return CHECKLIST_ITEMS.reduce(
+      (count, item) => {
+        const row =
+          rows[
+          item.itemNumber - 1
+          ];
+
+        const belongsToPhase =
+          phase === "All" ||
+          item.phase === phase;
+
+        if (
+          belongsToPhase &&
+          row?.status ===
+          "pending"
+        ) {
+          return count + 1;
+        }
+
+        return count;
+      },
+      0
+    );
+  }
 
   const visibleItems =
     [...matchingItems].sort(
@@ -756,6 +1113,18 @@ export default function DashboardPage() {
       return;
     }
 
+    if (
+      connectionStatus !==
+      "online"
+    ) {
+      window.alert(
+        "This task cannot be started while the database service is unavailable.\n\n" +
+        "Offline task actions will be enabled after the local action queue is complete."
+      );
+
+      return;
+    }
+
     if (!flightInformationComplete) {
       window.alert(
         "Complete Flight Information before starting checklist activities.\n\n" +
@@ -764,7 +1133,7 @@ export default function DashboardPage() {
         "- Flight Date\n" +
         "- Aircraft Type\n" +
         "- Registration\n" +
-        "- ETA MVT or STA Scheduled\n" +
+        "- STA Scheduled\n" +
         "- STD Scheduled"
       );
 
@@ -922,6 +1291,19 @@ export default function DashboardPage() {
       return;
     }
 
+    if (
+      connectionStatus !==
+      "online"
+    ) {
+      window.alert(
+        "This task cannot be completed while the database service is unavailable.\n\n" +
+        "Offline task actions will be enabled after the local action queue is complete."
+      );
+
+      return;
+    }
+
+
     if (!flightInformationComplete) {
       window.alert(
         "Complete Flight Information before completing checklist activities."
@@ -1026,10 +1408,20 @@ export default function DashboardPage() {
     const actualTime =
       currentTime();
 
+    const actualDateTime =
+      startOfMinute(
+        new Date()
+      );
+
+    const normalizedPlannedDateTime =
+      startOfMinute(
+        plannedDateTime
+      );
+
     const delaySeconds =
       calculateDateTimeDelaySeconds(
-        new Date(),
-        plannedDateTime
+        actualDateTime,
+        normalizedPlannedDateTime
       );
 
     if (
@@ -1046,6 +1438,76 @@ export default function DashboardPage() {
       classifyDelay(
         delaySeconds
       );
+
+    const requiresDelayComment =
+      item.impactCategory ===
+      "high" &&
+      delaySeconds > 0;
+
+    if (
+      requiresDelayComment &&
+      !row.observation.trim()
+    ) {
+      setStatusMessage(
+        "Comment required"
+      );
+
+      window.alert(
+        "A comment is required because this delayed activity has a high operational impact.\n\n" +
+        "Record the cause, operational constraint, or corrective action before completing the task."
+      );
+
+      window.setTimeout(() => {
+        document
+          .getElementById(
+            `checklist-task-${itemNumber}`
+          )
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+      }, 100);
+
+      return;
+    }
+    if (requiresDelayComment) {
+      const {
+        error:
+        observationSaveError,
+      } = await supabase
+        .from(
+          "ramp_checklist_items"
+        )
+        .update({
+          observation:
+            row.observation.trim(),
+          impact_category:
+            item.impactCategory,
+        })
+        .eq(
+          "checklist_id",
+          checklistId
+        )
+        .eq(
+          "task_code",
+          item.taskCode
+        );
+
+      if (
+        observationSaveError
+      ) {
+        setStatusMessage(
+          "Comment save failed"
+        );
+
+        window.alert(
+          "The required delay comment could not be saved.\n\n" +
+          observationSaveError.message
+        );
+
+        return;
+      }
+    }
 
     setStatusMessage(
       `Completing: ${item.activity}`
@@ -1108,36 +1570,62 @@ export default function DashboardPage() {
       return;
     }
 
+    const completedChanges = {
+      actualTime:
+        normalizeDatabaseTime(
+          updatedCompletion.actual_time
+        ) || actualTime,
+      delaySeconds:
+        updatedCompletion.delay_seconds ??
+        delaySeconds,
+      status:
+        APPLICATION_STATUS[
+        updatedCompletion
+          .operational_status
+        ] || completedStatus,
+      startedAt:
+        updatedCompletion.started_at ||
+        row.startedAt,
+      startedBy:
+        updatedCompletion.started_by ||
+        row.startedBy,
+    };
+
+    const updatedRows =
+      rows.map(
+        (
+          currentRow,
+          rowIndex
+        ) =>
+          rowIndex === index
+            ? {
+              ...currentRow,
+              ...completedChanges,
+            }
+            : currentRow
+      );
+
     skipNextAutosaveRef.current =
       true;
 
-    updateRowState(
-      itemNumber,
-      {
-        actualTime:
-          normalizeDatabaseTime(
-            updatedCompletion.actual_time
-          ) || actualTime,
-        delaySeconds:
-          updatedCompletion.delay_seconds ??
-          delaySeconds,
-        status:
-          APPLICATION_STATUS[
-          updatedCompletion
-            .operational_status
-          ] || completedStatus,
-        startedAt:
-          updatedCompletion.started_at ||
-          row.startedAt,
-        startedBy:
-          updatedCompletion.started_by ||
-          row.startedBy,
-      }
+    setRows(
+      updatedRows
+    );
+
+    setFocusedTaskNumber(
+      null
     );
 
     setStatusMessage(
       `Completed and saved: ${item.activity}`
     );
+
+    window.setTimeout(() => {
+      openNextPendingTask(
+        updatedRows,
+        itemNumber
+      );
+    }, 450);
   }
 
   function markLandingRealNow() {
@@ -1170,53 +1658,138 @@ export default function DashboardPage() {
     );
   }
 
-  function openNextPendingTask() {
-    const pendingCandidates =
-      CHECKLIST_ITEMS
-        .map((item, index) => {
-          const row =
-            rows[index];
+  function getPendingCandidates(
+    candidateRows = rows,
+    excludedItemNumber = null
+  ) {
+    return CHECKLIST_ITEMS
+      .map((item, index) => {
+        const row =
+          candidateRows[index];
 
-          const plannedDateTime =
-            plannedDateTimeFor(
-              index
-            );
+        const plannedDateTime =
+          plannedDateTimeFor(
+            index
+          );
 
-          const plannedTime =
-            formatDateTimeAsTime(
-              plannedDateTime
-            );
+        const plannedTime =
+          formatDateTimeAsTime(
+            plannedDateTime
+          );
 
-          const timing =
-            getPendingTaskTiming(
-              plannedDateTime,
-              operationalNow,
-              `Awaiting ${requiredTimeLabelFor(
-                item
-              )}`
-            );
-
-          return {
-            item,
-            row,
-            plannedTime,
+        const timing =
+          getPendingTaskTiming(
             plannedDateTime,
-            timing,
-          };
-        })
-        .filter(
-          ({ row }) =>
-            row?.status ===
-            "pending"
-        )
-        .sort(
-          compareTaskCandidates
+            operationalNow,
+            `Awaiting ${requiredTimeLabelFor(
+              item
+            )}`
+          );
+
+        return {
+          item,
+          row,
+          plannedTime,
+          plannedDateTime,
+          timing,
+        };
+      })
+      .filter(
+        ({ item, row }) =>
+          row?.status ===
+          "pending" &&
+          item.itemNumber !==
+          excludedItemNumber
+      )
+      .sort(
+        compareTaskCandidates
+      );
+  }
+
+  function focusPendingCandidate(
+    candidate
+  ) {
+    if (!candidate) {
+      setFocusedTaskNumber(
+        null
+      );
+
+      return;
+    }
+
+    const itemNumber =
+      candidate.item
+        .itemNumber;
+
+    setActiveView(
+      "checklist"
+    );
+
+    setActivePhase(
+      candidate.item.phase
+    );
+
+    setFocusedTaskNumber(
+      itemNumber
+    );
+
+    setStatusMessage(
+      candidate.row?.startedAt
+        ? `Continue started task: ${candidate.item.activity}`
+        : candidate.timing.overdue
+          ? `Next overdue task: ${candidate.item.activity}`
+          : `Next pending task: ${candidate.item.activity}`
+    );
+
+    window.setTimeout(() => {
+      const taskElement =
+        document.getElementById(
+          `checklist-task-${itemNumber}`
         );
+
+      if (!taskElement) {
+        return;
+      }
+
+      taskElement.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      taskElement.classList.add(
+        "task-focus-pulse"
+      );
+
+      window.setTimeout(() => {
+        taskElement.classList.remove(
+          "task-focus-pulse"
+        );
+      }, 1800);
+    }, 220);
+  }
+
+  function openNextPendingTask(
+    candidateRows = rows,
+    excludedItemNumber = null
+  ) {
+    const pendingCandidates =
+      getPendingCandidates(
+        candidateRows,
+        excludedItemNumber
+      );
 
     if (
       pendingCandidates.length ===
       0
     ) {
+      setFocusedTaskNumber(
+        null
+      );
+
+      setStatusMessage(
+        "All checklist activities are complete."
+      );
+
       window.alert(
         "All checklist activities are complete."
       );
@@ -1224,40 +1797,26 @@ export default function DashboardPage() {
       return;
     }
 
-    const nextCandidate =
-      pendingCandidates[0];
-
-    setActiveView("checklist");
-    setActivePhase("All");
-
-    setFocusedTaskNumber(
-      nextCandidate.item
-        .itemNumber
+    focusPendingCandidate(
+      pendingCandidates[0]
     );
-
-    setStatusMessage(
-      nextCandidate.timing
-        .overdue
-        ? `Next overdue task: ${nextCandidate.item.activity}`
-        : `Next pending task: ${nextCandidate.item.activity}`
-    );
-
-    window.setTimeout(() => {
-      document
-        .getElementById(
-          `checklist-task-${nextCandidate.item.itemNumber}`
-        )
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-    }, 150);
   }
 
   function navigateToSection(
     sectionId
   ) {
-    setActiveView("checklist");
+    if (
+      sectionId ===
+      "performance-summary"
+    ) {
+      showPerformanceSummary();
+
+      return;
+    }
+
+    setActiveView(
+      "checklist"
+    );
 
     window.setTimeout(() => {
       document
@@ -1288,6 +1847,24 @@ export default function DashboardPage() {
           block: "start",
         });
     }, 100);
+  }
+
+  function exportCurrentPowerBiData() {
+    exportPowerBiData({
+      checklistId,
+      flight,
+      rows,
+      checklistItems:
+        CHECKLIST_ITEMS,
+      plannedTimeFor,
+      metrics,
+      operationalMetrics,
+      preArrivalMetrics,
+    });
+
+    setStatusMessage(
+      "Power BI reporting data exported"
+    );
   }
 
   async function openExcelExport() {
@@ -1495,6 +2072,25 @@ export default function DashboardPage() {
     } finally {
       setHistoryLoading(false);
     }
+  }
+
+  function showPerformanceSummary() {
+    setFocusedTaskNumber(
+      null
+    );
+
+    setActiveView(
+      "performance"
+    );
+
+    setOperationsMenuOpen(
+      false
+    );
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }
 
   function returnToChecklist() {
@@ -2074,6 +2670,186 @@ export default function DashboardPage() {
     }
   }
 
+  function createOfflineChecklistPayload() {
+    const checklistRecord = {
+      id:
+        checklistIdRef.current ||
+        checklistId ||
+        null,
+      flight_in:
+        flight.flightIn
+          .trim() || null,
+      flight_out:
+        flight.flightOut
+          .trim(),
+      flight_date:
+        flight.flightDate,
+      bay:
+        flight.bay
+          .trim() || null,
+      aircraft_type:
+        flight.aircraftType ||
+        null,
+      registration:
+        flight.registration
+          .trim() || null,
+      sta:
+        flight.sta || null,
+      eta:
+        flight.eta || null,
+      ata:
+        flight.ata || null,
+      chocks_on:
+        flight.chocksOn ||
+        null,
+      std:
+        flight.std || null,
+      defined_push_time:
+        flight.definedPushTime ||
+        null,
+      trc_coordinator:
+        profile?.full_name ||
+        user?.email ||
+        flight.trcCoordinator
+          .trim() ||
+        null,
+      checklist_status:
+        metrics.done ===
+          CHECKLIST_ITEMS.length
+          ? "completed"
+          : "in_progress",
+    };
+
+    const itemRecords =
+      CHECKLIST_ITEMS.map(
+        (item, index) => {
+          const row =
+            rows[index];
+
+          return {
+            task_code:
+              item.taskCode,
+            item_number:
+              item.itemNumber,
+            phase:
+              item.phase,
+            activity:
+              item.activity,
+            impact_category:
+              item.impactCategory,
+            base_time:
+              item.base,
+            planned_offset_seconds:
+              item.offsetSec,
+            planned_time:
+              plannedTimeFor(
+                index
+              ) || null,
+            actual_time:
+              row?.actualTime ||
+              null,
+            delay_seconds:
+              row?.delaySeconds ??
+              null,
+            operational_status:
+              DATABASE_STATUS[
+              row?.status
+              ] || "pending",
+            observation:
+              row?.observation
+                ?.trim() ||
+              null,
+            started_at:
+              row?.startedAt ||
+              null,
+            started_by:
+              row?.startedBy ||
+              null,
+          };
+        }
+      );
+
+    return {
+      checklist:
+        checklistRecord,
+      items:
+        itemRecords,
+    };
+  }
+
+  async function queueChecklistSnapshot(
+    reason
+  ) {
+    const activeChecklistId =
+      checklistIdRef.current ||
+      checklistId ||
+      null;
+
+    const localChecklistKey =
+      activeChecklistId ||
+      [
+        flight.flightDate,
+        flight.flightOut
+          .trim()
+          .toUpperCase(),
+      ]
+        .filter(Boolean)
+        .join("-") ||
+      "new-checklist";
+
+    localStorage.setItem(
+      "saa_ramp_checklist_draft",
+      JSON.stringify({
+        checklistId:
+          activeChecklistId,
+        flight,
+        rows,
+      })
+    );
+
+    const queuedAction =
+      await queueOfflineAction({
+        checklistId:
+          activeChecklistId,
+        actionType:
+          "checklist_snapshot",
+        payload:
+          createOfflineChecklistPayload(),
+        userId:
+          user?.id || null,
+        deduplicationKey:
+          `checklist_snapshot:${localChecklistKey}`,
+      });
+
+    const actionCount =
+      await refreshPendingSyncCount();
+
+    setConnectionStatus(
+      "pending"
+    );
+
+    setStatusMessage(
+      `${actionCount} ${actionCount === 1
+        ? "change"
+        : "changes"
+      } pending synchronisation`
+    );
+
+    return {
+      saved: false,
+      queued: true,
+      offline: true,
+      actionId:
+        queuedAction.id,
+      reason,
+    };
+  }
+
+  useEffect(() => {
+    queueChecklistSnapshotRef.current =
+      queueChecklistSnapshot;
+  });
+
   const persistChecklist =
     useCallback(
       async ({
@@ -2091,6 +2867,7 @@ export default function DashboardPage() {
             queued: true,
           };
         }
+
 
         if (!roleCanOperate) {
           if (!silent) {
@@ -2147,7 +2924,7 @@ export default function DashboardPage() {
               "- Flight Date\n" +
               "- Aircraft Type\n" +
               "- Registration\n" +
-              "- ETA MVT or STA Scheduled\n" +
+              "- STA Scheduled\n" +
               "- STD Scheduled"
             );
           }
@@ -2156,6 +2933,60 @@ export default function DashboardPage() {
             saved: false,
             queued: false,
           };
+        }
+
+        if (
+          connectionStatus !==
+          "online"
+        ) {
+          try {
+            if (!queueChecklistSnapshotRef.current) {
+              throw new Error(
+                "The offline checklist queue is not ready."
+              );
+            }
+
+            const queuedResult =
+              await queueChecklistSnapshotRef.current(
+                reason
+              );
+
+            if (!silent) {
+              window.alert(
+                "The checklist could not be saved online, so the latest checklist snapshot was stored on this device.\n\n" +
+                "The snapshot is pending synchronisation."
+              );
+            }
+
+            return queuedResult;
+          } catch (error) {
+            console.error(
+              "Offline checklist queue failed:",
+              error
+            );
+
+            setStatusMessage(
+              "Offline storage failed"
+            );
+
+            if (!silent) {
+              window.alert(
+                "The checklist could not be saved online or stored in the offline queue.\n\n" +
+                (
+                  error?.message ||
+                  "Unknown offline storage error"
+                )
+              );
+            }
+
+            return {
+              saved: false,
+              queued: false,
+              offline: true,
+              error,
+              reason,
+            };
+          }
         }
 
         saveInProgressRef.current =
@@ -2304,6 +3135,8 @@ export default function DashboardPage() {
                     item.phase,
                   activity:
                     item.activity,
+                  impact_category:
+                    item.impactCategory,
                   base_time:
                     item.base,
                   planned_offset_seconds:
@@ -2356,13 +3189,19 @@ export default function DashboardPage() {
               itemRecords,
               {
                 onConflict:
-                  "checklist_id,item_number",
+                  "checklist_id,task_code",
               }
             );
 
           if (itemError) {
             throw itemError;
           }
+
+          const activeTaskCodes =
+            CHECKLIST_ITEMS.map(
+              (item) =>
+                item.taskCode
+            );
 
           const {
             count: savedItemCount,
@@ -2381,6 +3220,10 @@ export default function DashboardPage() {
             .eq(
               "checklist_id",
               activeChecklistId
+            )
+            .in(
+              "task_code",
+              activeTaskCodes
             );
 
           if (itemCountError) {
@@ -2502,6 +3345,7 @@ export default function DashboardPage() {
       [
         approving,
         checklistId,
+        connectionStatus,
         flight,
         metrics.done,
         profile?.full_name,
@@ -2631,11 +3475,18 @@ export default function DashboardPage() {
         flight={flight}
         rows={rows}
         metrics={metrics}
+        operationalMetrics={
+          operationalMetrics
+        }
+        preArrivalMetrics={
+          preArrivalMetrics
+        }
         plannedTimeFor={
           plannedTimeFor
         }
         profile={profile}
       />
+
       <OperationsMenu
         open={operationsMenuOpen}
         onClose={() =>
@@ -2691,7 +3542,8 @@ export default function DashboardPage() {
           roleCanOperate
         }
         canExport={
-          roleCanExport
+          roleCanExport &&
+          Boolean(checklistId)
         }
         saveDisabled={
           saving ||
@@ -2753,17 +3605,39 @@ export default function DashboardPage() {
 
       <section className="ramp-content">
         <div className="ramp-status-bar">
-          <span
-            className="status-online"
-            aria-hidden="true"
-          />
+          <div
+            className={
+              `connection-indicator connection-${connectionStatus}`
+            }
+            role="status"
+            aria-live="polite"
+          >
+            <span
+              className="connection-indicator-dot"
+              aria-hidden="true"
+            />
 
-          {loadingRecord
-            ? "Loading checklist..."
-            : !flightInformationComplete &&
-              activeView === "checklist"
-              ? "Complete the required Flight Information to enable the checklist and autosave."
-              : statusMessage}
+            <span>
+              {getConnectionLabel(
+                connectionStatus,
+                pendingSyncCount
+              )}
+            </span>
+          </div>
+
+          <span className="ramp-status-divider">
+            |
+          </span>
+
+          <span className="ramp-status-message">
+            {loadingRecord
+              ? "Loading checklist..."
+              : !flightInformationComplete &&
+                activeView ===
+                "checklist"
+                ? "Complete the required Flight Information to enable the checklist and autosave."
+                : statusMessage}
+          </span>
         </div>
 
         {activeView ===
@@ -2830,6 +3704,34 @@ export default function DashboardPage() {
         ) : null}
 
         {activeView ===
+          "performance" ? (
+          <ChecklistPerformanceSummary
+            flight={flight}
+            rows={rows}
+            metrics={metrics}
+            operationalMetrics={
+              operationalMetrics
+            }
+            preArrivalMetrics={
+              preArrivalMetrics
+            }
+            plannedTimeFor={
+              plannedTimeFor
+            }
+            canExport={
+              roleCanExport &&
+              Boolean(checklistId)
+            }
+            onBack={
+              returnToChecklist
+            }
+            onExport={
+              exportCurrentPowerBiData
+            }
+          />
+        ) : null}
+
+        {activeView ===
           "checklist" ? (
           <>
             {recordLocked ? (
@@ -2892,11 +3794,94 @@ export default function DashboardPage() {
               />
             </div>
 
+            <section className="pre-arrival-readiness-summary">
+              <div className="readiness-summary-heading">
+                <div>
+                  <span className="readiness-summary-eyebrow">
+                    Pre-Arrival
+                  </span>
+
+                  <h2>
+                    Readiness Summary
+                  </h2>
+                </div>
+
+                <strong>
+                  {preArrivalMetrics.done}/
+                  {preArrivalMetrics.total}
+                </strong>
+              </div>
+
+              <div className="readiness-summary-grid">
+                <div>
+                  <span>
+                    Pending
+                  </span>
+
+                  <strong>
+                    {preArrivalMetrics.pending}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Ready on Time
+                  </span>
+
+                  <strong>
+                    {preArrivalMetrics.ontime}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Slightly Delayed
+                  </span>
+
+                  <strong>
+                    {preArrivalMetrics.light}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Delayed
+                  </span>
+
+                  <strong>
+                    {preArrivalMetrics.delay}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    High-Impact Exceptions
+                  </span>
+
+                  <strong>
+                    {
+                      preArrivalMetrics
+                        .highImpactDelay
+                    }
+                  </strong>
+                </div>
+              </div>
+
+              <p className="readiness-summary-note">
+                Pre-Arrival activities are monitored
+                against STA for station readiness and
+                are reported separately from turnaround
+                operational performance.
+              </p>
+            </section>
+
             <div id="performance-summary">
               <ChecklistMetrics
-                metrics={metrics}
+                metrics={
+                  operationalMetrics
+                }
                 totalItems={
-                  CHECKLIST_ITEMS.length
+                  operationalMetrics.total
                 }
               />
             </div>
@@ -2965,7 +3950,15 @@ export default function DashboardPage() {
                       );
                     }}
                   >
-                    {phase}
+                    <span>
+                      {phase}
+                    </span>
+
+                    <span className="phase-tab-count">
+                      {getIncompletePhaseCount(
+                        phase
+                      )}
+                    </span>
                   </button>
                 )
               )}
@@ -2974,6 +3967,9 @@ export default function DashboardPage() {
             <section
               className="pts-task-table"
               aria-label="PTS checklist activities"
+              data-focused-task={
+                focusedTaskNumber || ""
+              }
             >
               <div
                 className="pts-task-header"
@@ -2992,6 +3988,23 @@ export default function DashboardPage() {
               </div>
 
               <div className="checklist-list">
+                {visibleItems.length === 0 ? (
+                  <div className="checklist-empty-state">
+                    <ClipboardCheck
+                      size={28}
+                      aria-hidden="true"
+                    />
+
+                    <strong>
+                      No outstanding activities
+                    </strong>
+
+                    <span>
+                      All activities in this phase
+                      have been completed.
+                    </span>
+                  </div>
+                ) : null}
                 {visibleItems.map(
                   (item) => {
                     const index =

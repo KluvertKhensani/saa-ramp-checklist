@@ -31,8 +31,8 @@ function displayTime(value) {
 
 function getBaseLabel(base) {
   switch (base) {
-    case "arrival":
-      return "ETA / STA";
+    case "sta":
+      return "STA";
 
     case "chocks_on":
       return "Chocks On";
@@ -45,6 +45,21 @@ function getBaseLabel(base) {
 
     default:
       return "Milestone";
+  }
+}
+
+function getImpactLabel(
+  impactCategory
+) {
+  switch (impactCategory) {
+    case "high":
+      return "High Impact";
+
+    case "low":
+      return "Low Impact";
+
+    default:
+      return "Medium Impact";
   }
 }
 
@@ -116,7 +131,7 @@ function calculateProgress(
     Math.max(
       0,
       taskWindowSeconds -
-        remainingSeconds
+      remainingSeconds
     );
 
   return Math.min(
@@ -125,8 +140,8 @@ function calculateProgress(
       0,
       Math.round(
         elapsedSeconds /
-          taskWindowSeconds *
-          100
+        taskWindowSeconds *
+        100
       )
     )
   );
@@ -151,32 +166,32 @@ export default function ChecklistActivity({
     setExpanded,
   ] = useState(false);
 
-const isCompleted =
-  row.status !== "pending";
+  const isCompleted =
+    row.status !== "pending";
 
-const isStarted =
-  Boolean(
-    row.startedAt
-  ) &&
-  !isCompleted;
+  const isStarted =
+    Boolean(
+      row.startedAt
+    ) &&
+    !isCompleted;
 
-const markButtonDisabled =
-  isCompleted
-    ? !canUndo
-    : completeDisabled;
+  const markButtonDisabled =
+    isCompleted
+      ? !canUndo
+      : completeDisabled;
 
-const markButtonLabel =
-  isCompleted
-    ? canUndo
-      ? "Undo"
-      : "Completed"
-    : isStarted
-      ? "Complete"
-      : "Start";
+  const markButtonLabel =
+    isCompleted
+      ? canUndo
+        ? "Undo"
+        : "Completed"
+      : isStarted
+        ? "Complete"
+        : "Start";
 
-const isOverdue =
-  overdue &&
-  !isCompleted;
+  const isOverdue =
+    overdue &&
+    !isCompleted;
 
   const plannedDisplay =
     displayTime(
@@ -189,29 +204,31 @@ const isOverdue =
     );
 
   const statusKey =
-  isOverdue
-    ? "overdue"
-    : isStarted
-      ? "started"
-      : row.status;
+    isOverdue
+      ? "overdue"
+      : isStarted
+        ? "started"
+        : row.status;
 
-const statusLabel =
-  isOverdue
-    ? "Overdue"
-    : isStarted
-      ? "Started"
-      : STATUS_LABELS[
-          row.status
+  const statusLabel =
+    isOverdue
+      ? "Overdue"
+      : isStarted
+        ? "Started"
+        : STATUS_LABELS[
+        row.status
         ] || "Pending";
 
   const allocationLabel =
-  isCompleted
-    ? statusLabel
-    : isStarted
-      ? timingLabel ||
+    isCompleted
+      ? statusLabel
+      : isStarted
+        ? timingLabel ||
         "Task in progress"
-      : timingLabel ||
-        "Awaiting Chocks On";
+        : timingLabel ||
+        `Awaiting ${getBaseLabel(
+          item.base
+        )}`;
 
   const progressPercent =
     calculateProgress(
@@ -236,7 +253,7 @@ const statusLabel =
       ? `pts-task-row-${row.status}`
       : "",
     observationDisabled &&
-    completeDisabled
+      completeDisabled
       ? "pts-task-row-readonly"
       : "",
   ]
@@ -244,44 +261,44 @@ const statusLabel =
     .join(" ");
 
   function handleObservationChange(
-  event
-) {
-  if (
-    observationDisabled
+    event
   ) {
-    return;
-  }
+    if (
+      observationDisabled
+    ) {
+      return;
+    }
 
-  onObservationChange?.(
-    event.target.value
-  );
-}
+    onObservationChange?.(
+      event.target.value
+    );
+  }
 
   function handleMark() {
-  if (
-    isCompleted &&
-    !canUndo
-  ) {
-    return;
-  }
+    if (
+      isCompleted &&
+      !canUndo
+    ) {
+      return;
+    }
 
-  if (
-    !isCompleted &&
-    completeDisabled
-  ) {
-    return;
-  }
+    if (
+      !isCompleted &&
+      completeDisabled
+    ) {
+      return;
+    }
 
-  if (
-    !isCompleted &&
-    !isStarted
-  ) {
-    onStart?.();
-    return;
-  }
+    if (
+      !isCompleted &&
+      !isStarted
+    ) {
+      onStart?.();
+      return;
+    }
 
-  onMark?.();
-}
+    onMark?.();
+  }
 
   function toggleExpanded() {
     setExpanded(
@@ -308,6 +325,16 @@ const statusLabel =
         <strong>
           {item.activity}
         </strong>
+
+        <span
+          className={
+            `task-impact-badge task-impact-${item.impactCategory}`
+          }
+        >
+          {getImpactLabel(
+            item.impactCategory
+          )}
+        </span>
       </div>
 
       <div className="pts-task-reference">
@@ -343,8 +370,8 @@ const statusLabel =
 
         {isCompleted
           ? formatDelay(
-              row.delaySeconds
-            )
+            row.delaySeconds
+          )
           : "--"}
       </div>
 
@@ -372,48 +399,50 @@ const statusLabel =
           aria-label={
             isCompleted
               ? `Return ${item.activity} to pending`
-              : `Complete ${item.activity}`
+              : isStarted
+                ? `Complete ${item.activity}`
+                : `Start ${item.activity}`
           }
         >
           {isCompleted ? (
-  <RotateCcw
-    size={17}
-    aria-hidden="true"
-  />
-) : isStarted ? (
-  <Check
-    size={17}
-    aria-hidden="true"
-  />
-) : (
-  <Clock3
-    size={17}
-    aria-hidden="true"
-  />
-)}
+            <RotateCcw
+              size={17}
+              aria-hidden="true"
+            />
+          ) : isStarted ? (
+            <Check
+              size={17}
+              aria-hidden="true"
+            />
+          ) : (
+            <Clock3
+              size={17}
+              aria-hidden="true"
+            />
+          )}
 
           {markButtonLabel}
         </button>
       </div>
 
       <div className="pts-task-observation">
-  <input
-    type="text"
-    value={
-      row.observation || ""
-    }
-    onChange={
-      handleObservationChange
-    }
-    placeholder="Observation"
-    disabled={
-      observationDisabled
-    }
-    aria-label={
-      `Observation for ${item.activity}`
-    }
-  />
-</div>
+        <input
+          type="text"
+          value={
+            row.observation || ""
+          }
+          onChange={
+            handleObservationChange
+          }
+          placeholder="Observation"
+          disabled={
+            observationDisabled
+          }
+          aria-label={
+            `Observation for ${item.activity}`
+          }
+        />
+      </div>
 
       <button
         type="button"
@@ -487,8 +516,8 @@ const statusLabel =
           <strong>
             {isCompleted
               ? formatDelay(
-                  row.delaySeconds
-                )
+                row.delaySeconds
+              )
               : "--"}
           </strong>
         </div>
@@ -507,14 +536,26 @@ const statusLabel =
             }
             onClick={handleMark}
             disabled={markButtonDisabled}
+            aria-label={
+              isCompleted
+                ? `Return ${item.activity} to pending`
+                : isStarted
+                  ? `Complete ${item.activity}`
+                  : `Start ${item.activity}`
+            }
           >
             {isCompleted ? (
               <RotateCcw
                 size={17}
                 aria-hidden="true"
               />
-            ) : (
+            ) : isStarted ? (
               <Check
+                size={17}
+                aria-hidden="true"
+              />
+            ) : (
+              <Clock3
                 size={17}
                 aria-hidden="true"
               />
@@ -538,7 +579,12 @@ const statusLabel =
               handleObservationChange
             }
             placeholder="Observation"
-            disabled={observationDisabled}
+            disabled={
+              observationDisabled
+            }
+            aria-label={
+              `Observation for ${item.activity}`
+            }
           />
         </label>
       </div>

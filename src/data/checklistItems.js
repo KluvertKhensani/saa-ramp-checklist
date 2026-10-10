@@ -8,6 +8,65 @@ const DEFINED_PUSH_TASKS =
     "departure-aircraft-pushback",
   ]);
 
+const HIGH_IMPACT_TASKS =
+  new Set([
+    "pre-arrival-dispatcher-trc-position",
+    "pre-arrival-confirm-cargo-uld-serviceability",
+    "pre-arrival-staff-gse-catering-position",
+    "pre-arrival-stand-cleared-fod",
+    "arrival-engines-off-chocks-cones",
+    "arrival-external-checks",
+    "arrival-bridge-or-stairs-on",
+    "arrival-cabin-doors-opened",
+    "arrival-cargo-holds-opened",
+    "arrival-start-fueling",
+    "arrival-first-bag-scanned-delivered",
+    "arrival-last-bag-scanned-delivered",
+    "departure-lir-received",
+    "departure-start-loading",
+    "departure-fueling-complete",
+    "departure-boarding-ended",
+    "departure-loading-complete",
+    "departure-ramp-clearance",
+    "departure-doors-closed",
+    "departure-load-sheet-acars",
+    "departure-pushback-tug-on-stand",
+    "departure-bridge-removed",
+    "departure-aircraft-pushback",
+  ]);
+
+const LOW_IMPACT_TASKS =
+  new Set([
+    "arrival-aircraft-landed-announcement",
+    "arrival-potable-water-truck-on",
+    "arrival-uld-check-serviceability",
+    "departure-countdown",
+    "departure-waste-truck-on",
+    "departure-print-pax-lists",
+  ]);
+
+function getImpactCategory(
+  taskCode
+) {
+  if (
+    HIGH_IMPACT_TASKS.has(
+      taskCode
+    )
+  ) {
+    return "high";
+  }
+
+  if (
+    LOW_IMPACT_TASKS.has(
+      taskCode
+    )
+  ) {
+    return "low";
+  }
+
+  return "medium";
+}
+
 const RAW_CHECKLIST_ITEMS = [
   [
     "pre-arrival-departing-cargo-at-bay",
@@ -22,6 +81,13 @@ const RAW_CHECKLIST_ITEMS = [
     "Dispatcher / TRC at Parking Position",
     -900,
     105,
+  ],
+  [
+    "pre-arrival-confirm-cargo-uld-serviceability",
+    "Pre-Arrival",
+    "Confirm Cargo ULDs Number and Serviceability",
+    -900,
+    null,
   ],
   [
     "pre-arrival-confirm-cargo-secured",
@@ -143,6 +209,13 @@ const RAW_CHECKLIST_ITEMS = [
     87,
   ],
   [
+    "arrival-first-bag-scanned-delivered",
+    "Arrival",
+    "First Bag Scanned and Delivered",
+    900,
+    null,
+  ],
+  [
     "arrival-crew-disembarkation",
     "Arrival",
     "Crew Disembarkation",
@@ -185,9 +258,23 @@ const RAW_CHECKLIST_ITEMS = [
     null,
   ],
   [
+    "arrival-last-bag-scanned-delivered",
+    "Arrival",
+    "Last Bag Scanned and Delivered",
+    2700,
+    null,
+  ],
+  [
     "departure-countdown",
     "Departure",
     "Departure Count Down",
+    120,
+    null,
+  ],
+  [
+    "departure-lir-received",
+    "Departure",
+    "Ensure LIR Departure Flight Has Been Received",
     120,
     null,
   ],
@@ -345,7 +432,7 @@ function getTaskBase(
   phase
 ) {
   if (phase === "Pre-Arrival") {
-    return "arrival";
+    return "sta";
   }
 
   if (phase === "Arrival") {
@@ -407,6 +494,10 @@ export const CHECKLIST_ITEMS =
           sourceIndex + 1,
         phase,
         activity,
+        impactCategory:
+          getImpactCategory(
+            taskCode
+          ),
         base,
         offsetSec,
         originalOffsetSec,

@@ -253,6 +253,31 @@ export function calculateDelaySeconds(
   return delay;
 }
 
+export function startOfMinute(
+  value
+) {
+  if (
+    !(value instanceof Date) ||
+    Number.isNaN(
+      value.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  const normalizedValue =
+    new Date(
+      value.getTime()
+    );
+
+  normalizedValue.setSeconds(
+    0,
+    0
+  );
+
+  return normalizedValue;
+}
+
 export function calculateDateTimeDelaySeconds(
   actualDateTime,
   plannedDateTime
@@ -483,11 +508,30 @@ export function getPendingTaskTiming(
       );
     }
 
+    const normalizedPlanned =
+      startOfMinute(
+        plannedValue
+      );
+
+    const normalizedCurrent =
+      startOfMinute(
+        currentDate
+      );
+
+    if (
+      !normalizedPlanned ||
+      !normalizedCurrent
+    ) {
+      return createEmptyPendingTiming(
+        awaitingLabel
+      );
+    }
+
     const difference =
       Math.round(
         (
-          plannedValue.getTime() -
-          currentDate.getTime()
+          normalizedPlanned.getTime() -
+          normalizedCurrent.getTime()
         ) /
         MILLISECONDS_PER_SECOND
       );
@@ -522,7 +566,7 @@ export function getPendingTaskTiming(
         )
       );
 
-    if (difference <= 30) {
+    if (difference === 0) {
       return {
         overdue: false,
         overdueSeconds: 0,
@@ -604,7 +648,7 @@ export function getPendingTaskTiming(
       )
     );
 
-  if (difference <= 30) {
+  if (difference === 0) {
     return {
       overdue: false,
       overdueSeconds: 0,
