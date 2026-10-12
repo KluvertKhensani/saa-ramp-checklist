@@ -851,15 +851,12 @@ export default function DashboardPage() {
         return;
       }
 
-      updateRowState(itemNumber, {
-        actualTime: "",
-        status: "pending",
-        delaySeconds: null,
-        startedAt: null,
-        startedBy: null,
-      });
+      setStatusMessage("Task undo is not yet available");
 
-      setStatusMessage("Task returned to pending");
+      window.alert(
+        "This completed task cannot yet be returned to pending.\n\n" +
+          "A controlled and audited database undo operation will be added in the next development phase.",
+      );
 
       return;
     }
@@ -1955,15 +1952,7 @@ export default function DashboardPage() {
             base_time: item.base,
             planned_offset_seconds: item.offsetSec,
             planned_time: plannedTimeForRef.current?.(index) || null,
-            actual_time: row.actualTime || null,
-            delay_seconds: row.delaySeconds,
-            operational_status: DATABASE_STATUS[row.status] || "pending",
-            observation: row.observation.trim() || null,
-            started_at: row.startedAt || null,
-            started_by: row.startedBy || null,
-            completed_by: row.status === "pending" ? null : user.id,
-            completed_at:
-              row.status === "pending" ? null : new Date().toISOString(),
+            observation: row.observation?.trim() || null,
           };
         });
 
