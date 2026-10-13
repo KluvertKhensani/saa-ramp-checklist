@@ -1547,10 +1547,9 @@ body:has(.operations-menu-layer) {
 .pts-task-header,
 .pts-task-row {
   display: grid;
-  grid-template-columns: 42px 90px minmax(
-      230px,
-      2fr
-    ) 135px 100px 100px 110px 130px 110px minmax(180px, 1.4fr);
+  grid-template-columns:
+    42px 90px minmax(230px, 2fr)
+    135px 100px 100px 110px 130px 110px minmax(180px, 1.4fr);
   align-items: center;
   min-width: 1210px;
 }
@@ -1822,10 +1821,9 @@ body:has(.operations-menu-layer) {
 
   .pts-task-header,
   .pts-task-row {
-    grid-template-columns: 34px 80px minmax(
-        210px,
-        2fr
-      ) 125px 90px 90px 105px 120px 100px 170px;
+    grid-template-columns:
+      34px 80px minmax(210px, 2fr)
+      125px 90px 90px 105px 120px 100px 170px;
     min-width: 1124px;
   }
 
@@ -1874,10 +1872,9 @@ body:has(.operations-menu-layer) {
 
   .pts-task-header,
   .pts-task-row {
-    grid-template-columns: 22px 58px minmax(
-        160px,
-        2fr
-      ) 82px 50px 50px 58px 72px 0 minmax(95px, 1fr);
+    grid-template-columns:
+      22px 58px minmax(160px, 2fr)
+      82px 50px 50px 58px 72px 0 minmax(95px, 1fr);
     width: 100%;
     min-width: 0;
   }
@@ -1961,13 +1958,13 @@ body:has(.operations-menu-layer) {
 .pts-task-header,
 .pts-task-row {
   display: grid;
-  grid-template-columns: 36px minmax(70px, 0.7fr) minmax(180px, 2.2fr) minmax(
-      110px,
-      1.2fr
-    ) minmax(70px, 0.75fr) minmax(70px, 0.75fr) minmax(75px, 0.8fr) minmax(
+  grid-template-columns:
+    36px minmax(70px, 0.7fr) minmax(180px, 2.2fr) minmax(110px, 1.2fr)
+    minmax(70px, 0.75fr) minmax(70px, 0.75fr) minmax(75px, 0.8fr) minmax(
       95px,
       1fr
-    ) minmax(90px, 0.9fr) minmax(130px, 1.4fr);
+    )
+    minmax(90px, 0.9fr) minmax(130px, 1.4fr);
   width: 100%;
   min-width: 0;
 }
@@ -2066,10 +2063,9 @@ body:has(.operations-menu-layer) {
   }
 
   .pts-task-row {
-    grid-template-columns: 34px minmax(70px, 0.8fr) minmax(180px, 2.2fr) minmax(
-        90px,
-        1fr
-      ) minmax(90px, 1fr);
+    grid-template-columns:
+      34px minmax(70px, 0.8fr) minmax(180px, 2.2fr) minmax(90px, 1fr)
+      minmax(90px, 1fr);
     grid-template-areas:
       "number phase activity status action"
       "reference planned actual delay comment";
@@ -2244,10 +2240,9 @@ body:has(.operations-menu-layer) {
   .pts-task-header,
   .pts-task-row {
     grid-template-areas: none;
-    grid-template-columns: 22px 58px minmax(
-        160px,
-        2fr
-      ) 82px 50px 50px 58px 72px 0 minmax(95px, 1fr);
+    grid-template-columns:
+      22px 58px minmax(160px, 2fr)
+      82px 50px 50px 58px 72px 0 minmax(95px, 1fr);
     width: 100%;
     min-width: 0;
   }
@@ -3825,6 +3820,55 @@ body:has(.operations-menu-layer) {
 
 @media print {
   .task-view-controls {
+    display: none !important;
+  }
+}
+
+/* Flight information guidance */
+
+.flight-information-guidance {
+  margin: -4px 0 16px;
+  padding: 11px 13px;
+  color: #536176;
+  background: #f6f8fb;
+  border-left: 3px solid #1261d6;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.flight-field-help {
+  display: block;
+  margin-top: 5px;
+  color: #68758a;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.time-now-button {
+  gap: 5px;
+  min-width: 62px;
+}
+
+.time-now-button-label {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+@media (max-width: 600px) {
+  .flight-information-guidance {
+    margin-bottom: 13px;
+    font-size: 11px;
+  }
+
+  .time-now-button {
+    min-width: 66px;
+  }
+}
+
+@media print {
+  .flight-information-guidance,
+  .flight-field-help {
     display: none !important;
   }
 }
