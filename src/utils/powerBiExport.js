@@ -1,106 +1,79 @@
-function escapeCsvValue(value) {
-  if (
-    value === null ||
-    value === undefined
-  ) {
+function normalizeText(value) {
+  return String(value || "").trim();
+}
+
+function normalizeTime(value) {
+  if (!value) {
     return "";
   }
 
-  const text =
-    String(value);
+  return String(value).slice(0, 5);
+}
+
+function calculatePercentage(completed, total) {
+  if (!total) {
+    return 0;
+  }
+
+  return Math.round((completed / total) * 100);
+}
+
+function escapeCsvValue(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  let text = String(value);
+
+  if (/^[=+\-@]/.test(text)) {
+    text = `'${text}`;
+  }
 
   if (
     text.includes(",") ||
     text.includes('"') ||
-    text.includes("\n")
+    text.includes("\n") ||
+    text.includes("\r")
   ) {
-    return `"${text.replace(
-      /"/g,
-      '""'
-    )}"`;
+    return `"${text.replace(/"/g, '""')}"`;
   }
 
   return text;
 }
 
-function createCsv(
-  headers,
-  records
-) {
-  const headerRow =
-    headers
-      .map(escapeCsvValue)
-      .join(",");
+function createCsv(headers, records) {
+  const headerRow = headers.map(escapeCsvValue).join(",");
 
-  const dataRows =
-    records.map((record) =>
-      headers
-        .map((header) =>
-          escapeCsvValue(
-            record[header]
-          )
-        )
-        .join(",")
-    );
+  const dataRows = records.map((record) =>
+    headers.map((header) => escapeCsvValue(record[header])).join(","),
+  );
 
-  return [
-    headerRow,
-    ...dataRows,
-  ].join("\n");
+  return [headerRow, ...dataRows].join("\n");
 }
 
-function downloadCsv(
-  fileName,
-  content
-) {
-  const blob =
-    new Blob(
-      [
-        "\uFEFF",
-        content,
-      ],
-      {
-        type:
-          "text/csv;charset=utf-8",
-      }
-    );
+function downloadCsv(fileName, content) {
+  const blob = new Blob(["\uFEFF", content], {
+    type: "text/csv;charset=utf-8",
+  });
 
-  const downloadUrl =
-    URL.createObjectURL(
-      blob
-    );
+  const downloadUrl = URL.createObjectURL(blob);
 
-  const link =
-    document.createElement(
-      "a"
-    );
+  const link = document.createElement("a");
 
-  link.href =
-    downloadUrl;
+  link.href = downloadUrl;
+  link.download = fileName;
 
-  link.download =
-    fileName;
-
-  document.body.appendChild(
-    link
-  );
+  document.body.appendChild(link);
 
   link.click();
-
-  document.body.removeChild(
-    link
-  );
+  link.remove();
 
   window.setTimeout(() => {
-    URL.revokeObjectURL(
-      downloadUrl
-    );
+    URL.revokeObjectURL(downloadUrl);
   }, 1000);
 }
 
-function getStatusLabel(
-  status
-) {
+function getStatusLabel(status) {
   switch (status) {
     case "ontime":
       return "On Time";
@@ -116,9 +89,7 @@ function getStatusLabel(
   }
 }
 
-function getImpactLabel(
-  impactCategory
-) {
+function getImpactLabel(impactCategory) {
   switch (impactCategory) {
     case "high":
       return "High Impact";
@@ -131,11 +102,8 @@ function getImpactLabel(
   }
 }
 
-function getTaskScope(
-  phase
-) {
-  return phase ===
-    "Pre-Arrival"
+function getTaskScope(phase) {
+  return phase === "Pre-Arrival"
     ? "Pre-Arrival Readiness"
     : "Turnaround Operation";
 }
@@ -150,207 +118,114 @@ export function exportPowerBiData({
   operationalMetrics,
   preArrivalMetrics,
 }) {
-  const exportedAt =
-    new Date()
-      .toISOString();
+  const exportedAt = new Date().toISOString();
 
-  const taskRecords =
-    checklistItems.map(
-      (item, index) => {
-        const row =
-          rows[index] || {};
+  const flightKey =
+    normalizeText(flight.flightOut).replace(/[^A-Z0-9_-]/gi, "-") ||
+    "Current-Flight";
 
-        const delayMinutes =
-          row.delaySeconds ===
-            null ||
-          row.delaySeconds ===
-            undefined
-            ? null
-            : row.delaySeconds /
-              60;
+  const dateKey = normalizeText(flight.flightDate) || "No-Date";
 
-        return {
-          checklist_id:
-            checklistId || "",
-          flight_date:
-            flight.flightDate ||
-            "",
-          flight_in:
-            flight.flightIn ||
-            "",
-          flight_out:
-            flight.flightOut ||
-            "",
-          aircraft_type:
-            flight.aircraftType ||
-            "",
-          registration:
-            flight.registration ||
-            "",
-          bay:
-            flight.bay ||
-            "",
-          task_code:
-            item.taskCode,
-          task_number:
-            item.itemNumber,
-          phase:
-            item.phase,
-          reporting_scope:
-            getTaskScope(
-              item.phase
-            ),
-          activity:
-            item.activity,
-          timing_base:
-            item.base,
-          planned_offset_seconds:
-            item.offsetSec,
-          planned_time:
-            plannedTimeFor(
-              index
-            ) || "",
-          actual_time:
-            row.actualTime ||
-            "",
-          delay_seconds:
-            row.delaySeconds ??
-            "",
-          delay_minutes:
-            delayMinutes ?? "",
-          timing_status:
-            getStatusLabel(
-              row.status
-            ),
-          impact_category:
-            getImpactLabel(
-              item.impactCategory
-            ),
-          observation:
-            row.observation ||
-            "",
-          started_at:
-            row.startedAt ||
-            "",
-          started_by:
-            row.startedBy ||
-            "",
-          exported_at:
-            exportedAt,
-        };
-      }
-    );
+  const taskRecords = checklistItems.map((item, index) => {
+    const row = rows[index] || {};
+
+    const delaySeconds =
+      row.delaySeconds === null || row.delaySeconds === undefined
+        ? null
+        : row.delaySeconds;
+
+    const delayMinutes = delaySeconds === null ? null : delaySeconds / 60;
+
+    return {
+      checklist_id: checklistId || "",
+      flight_date: normalizeText(flight.flightDate),
+      flight_in: normalizeText(flight.flightIn),
+      flight_out: normalizeText(flight.flightOut),
+      aircraft_type: normalizeText(flight.aircraftType),
+      registration: normalizeText(flight.registration),
+      bay: normalizeText(flight.bay),
+      task_code: item.taskCode,
+      task_number: item.itemNumber,
+      phase: item.phase,
+      reporting_scope: getTaskScope(item.phase),
+      pre_arrival_baseline: item.phase === "Pre-Arrival" ? "STA" : "",
+      activity: item.activity,
+      timing_base: item.base,
+      planned_offset_seconds: item.offsetSec,
+      planned_time: normalizeTime(plannedTimeFor(index)),
+      actual_time: normalizeTime(row.actualTime),
+      delay_seconds: delaySeconds ?? "",
+      delay_minutes: delayMinutes ?? "",
+      timing_status: getStatusLabel(row.status),
+      is_completed: row.status !== "pending" ? "Yes" : "No",
+      impact_category: getImpactLabel(item.impactCategory),
+      observation: normalizeText(row.observation),
+      started_at: row.startedAt || "",
+      started_by: row.startedBy || "",
+      exported_at: exportedAt,
+    };
+  });
 
   const turnaroundRecords = [
     {
-      checklist_id:
-        checklistId || "",
-      flight_date:
-        flight.flightDate ||
-        "",
-      flight_in:
-        flight.flightIn ||
-        "",
-      flight_out:
-        flight.flightOut ||
-        "",
-      bay:
-        flight.bay ||
-        "",
-      aircraft_type:
-        flight.aircraftType ||
-        "",
-      registration:
-        flight.registration ||
-        "",
-      sta:
-        flight.sta ||
-        "",
-      eta:
-        flight.eta ||
-        "",
-      ata:
-        flight.ata ||
-        "",
-      chocks_on:
-        flight.chocksOn ||
-        "",
-      std:
-        flight.std ||
-        "",
-      defined_push_time:
-        flight.definedPushTime ||
-        flight.std ||
-        "",
-      coordinator:
-        flight.trcCoordinator ||
-        "",
-      checklist_total:
-        metrics.total,
-      checklist_completed:
+      checklist_id: checklistId || "",
+      flight_date: normalizeText(flight.flightDate),
+      flight_in: normalizeText(flight.flightIn),
+      flight_out: normalizeText(flight.flightOut),
+      bay: normalizeText(flight.bay),
+      aircraft_type: normalizeText(flight.aircraftType),
+      registration: normalizeText(flight.registration),
+      sta: normalizeTime(flight.sta),
+      eta: normalizeTime(flight.eta),
+      ata: normalizeTime(flight.ata),
+      chocks_on: normalizeTime(flight.chocksOn),
+      std: normalizeTime(flight.std),
+      defined_push_time: normalizeTime(flight.definedPushTime || flight.std),
+      coordinator: normalizeText(flight.trcCoordinator),
+      checklist_total: metrics.total,
+      checklist_completed: metrics.done,
+      checklist_pending: metrics.pending,
+      checklist_completion_percentage: calculatePercentage(
         metrics.done,
-      checklist_pending:
-        metrics.pending,
-      operational_total:
-        operationalMetrics.total,
-      operational_completed:
+        metrics.total,
+      ),
+      operational_total: operationalMetrics.total,
+      operational_completed: operationalMetrics.done,
+      operational_pending: operationalMetrics.pending,
+      operational_completion_percentage: calculatePercentage(
         operationalMetrics.done,
-      operational_pending:
-        operationalMetrics.pending,
-      operational_on_time:
-        operationalMetrics.ontime,
-      operational_light_delay:
-        operationalMetrics.light,
-      operational_delay:
-        operationalMetrics.delay,
-      operational_high_impact_exceptions:
-        operationalMetrics
-          .highImpactDelay,
-      pre_arrival_total:
-        preArrivalMetrics.total,
-      pre_arrival_completed:
+        operationalMetrics.total,
+      ),
+      operational_on_time: operationalMetrics.ontime,
+      operational_light_delay: operationalMetrics.light,
+      operational_delay: operationalMetrics.delay,
+      operational_high_impact_exceptions: operationalMetrics.highImpactDelay,
+      pre_arrival_total: preArrivalMetrics.total,
+      pre_arrival_completed: preArrivalMetrics.done,
+      pre_arrival_pending: preArrivalMetrics.pending,
+      pre_arrival_completion_percentage: calculatePercentage(
         preArrivalMetrics.done,
-      pre_arrival_pending:
-        preArrivalMetrics.pending,
-      pre_arrival_on_time:
-        preArrivalMetrics.ontime,
-      pre_arrival_light_delay:
-        preArrivalMetrics.light,
-      pre_arrival_delay:
-        preArrivalMetrics.delay,
-      pre_arrival_high_impact_exceptions:
-        preArrivalMetrics
-          .highImpactDelay,
-      exported_at:
-        exportedAt,
+        preArrivalMetrics.total,
+      ),
+      pre_arrival_on_time: preArrivalMetrics.ontime,
+      pre_arrival_light_delay: preArrivalMetrics.light,
+      pre_arrival_delay: preArrivalMetrics.delay,
+      pre_arrival_high_impact_exceptions: preArrivalMetrics.highImpactDelay,
+      exported_at: exportedAt,
     },
   ];
 
-  const taskDimensionRecords =
-    checklistItems.map(
-      (item) => ({
-        task_code:
-          item.taskCode,
-        task_number:
-          item.itemNumber,
-        phase:
-          item.phase,
-        reporting_scope:
-          getTaskScope(
-            item.phase
-          ),
-        activity:
-          item.activity,
-        timing_base:
-          item.base,
-        planned_offset_seconds:
-          item.offsetSec,
-        impact_category:
-          getImpactLabel(
-            item.impactCategory
-          ),
-      })
-    );
+  const taskDimensionRecords = checklistItems.map((item) => ({
+    task_code: item.taskCode,
+    task_number: item.itemNumber,
+    phase: item.phase,
+    reporting_scope: getTaskScope(item.phase),
+    pre_arrival_baseline: item.phase === "Pre-Arrival" ? "STA" : "",
+    activity: item.activity,
+    timing_base: item.base,
+    planned_offset_seconds: item.offsetSec,
+    impact_category: getImpactLabel(item.impactCategory),
+  }));
 
   const taskHeaders = [
     "checklist_id",
@@ -364,6 +239,7 @@ export function exportPowerBiData({
     "task_number",
     "phase",
     "reporting_scope",
+    "pre_arrival_baseline",
     "activity",
     "timing_base",
     "planned_offset_seconds",
@@ -372,6 +248,7 @@ export function exportPowerBiData({
     "delay_seconds",
     "delay_minutes",
     "timing_status",
+    "is_completed",
     "impact_category",
     "observation",
     "started_at",
@@ -397,9 +274,11 @@ export function exportPowerBiData({
     "checklist_total",
     "checklist_completed",
     "checklist_pending",
+    "checklist_completion_percentage",
     "operational_total",
     "operational_completed",
     "operational_pending",
+    "operational_completion_percentage",
     "operational_on_time",
     "operational_light_delay",
     "operational_delay",
@@ -407,6 +286,7 @@ export function exportPowerBiData({
     "pre_arrival_total",
     "pre_arrival_completed",
     "pre_arrival_pending",
+    "pre_arrival_completion_percentage",
     "pre_arrival_on_time",
     "pre_arrival_light_delay",
     "pre_arrival_delay",
@@ -419,6 +299,7 @@ export function exportPowerBiData({
     "task_number",
     "phase",
     "reporting_scope",
+    "pre_arrival_baseline",
     "activity",
     "timing_base",
     "planned_offset_seconds",
@@ -426,30 +307,21 @@ export function exportPowerBiData({
   ];
 
   downloadCsv(
-    "PTS_FactTaskPerformance.csv",
-    createCsv(
-      taskHeaders,
-      taskRecords
-    )
+    `PTS_FactTaskPerformance_${dateKey}_${flightKey}.csv`,
+    createCsv(taskHeaders, taskRecords),
   );
 
   window.setTimeout(() => {
     downloadCsv(
-      "PTS_FactTurnaround.csv",
-      createCsv(
-        turnaroundHeaders,
-        turnaroundRecords
-      )
+      `PTS_FactTurnaround_${dateKey}_${flightKey}.csv`,
+      createCsv(turnaroundHeaders, turnaroundRecords),
     );
   }, 250);
 
   window.setTimeout(() => {
     downloadCsv(
-      "PTS_DimTask.csv",
-      createCsv(
-        taskDimensionHeaders,
-        taskDimensionRecords
-      )
+      `PTS_DimTask_${dateKey}_${flightKey}.csv`,
+      createCsv(taskDimensionHeaders, taskDimensionRecords),
     );
   }, 500);
 }
