@@ -233,6 +233,8 @@ export default function DashboardPage() {
 
   const [focusedTaskNumber, setFocusedTaskNumber] = useState(null);
 
+  const [processingTaskNumber, setProcessingTaskNumber] = useState(null);
+
   const [operationsMenuOpen, setOperationsMenuOpen] = useState(false);
 
   const [autosaveReady, setAutosaveReady] = useState(false);
@@ -295,6 +297,10 @@ export default function DashboardPage() {
 
   const checklistActivitiesDisabled =
     taskCompletionDisabled || !flightInformationComplete;
+
+  function isTaskProcessing(itemNumber) {
+    return processingTaskNumber === itemNumber;
+  }
 
   const refreshPendingSyncCount = useCallback(async () => {
     try {
@@ -670,6 +676,10 @@ export default function DashboardPage() {
   }
 
   async function startActivity(itemNumber) {
+    if (processingTaskNumber !== null) {
+      return;
+    }
+
     if (taskCompletionDisabled) {
       window.alert(
         "Your role cannot start this task, or the checklist is locked.",
@@ -717,9 +727,7 @@ export default function DashboardPage() {
     }
 
     const index = itemNumber - 1;
-
     const row = rows[index];
-
     const item = CHECKLIST_ITEMS[index];
 
     if (!row || !item) {
@@ -751,6 +759,7 @@ export default function DashboardPage() {
     }
 
     try {
+      setProcessingTaskNumber(itemNumber);
       setStatusMessage(`Starting: ${item.activity}`);
 
       const { data, error } = await supabase.rpc("start_ramp_task_once", {
@@ -789,10 +798,159 @@ export default function DashboardPage() {
         "The task could not be started.\n\n" +
           (error?.message || "Unknown error"),
       );
+    } finally {
+      setProcessingTaskNumber(null);
+    }
+  }
+
+  async function undoActivity(itemNumber) {
+    if (processingTaskNumber !== null) {
+      return;
+    }
+
+    if (recordLocked || approving) {
+      window.alert("This checklist is locked or is currently being approved.");
+
+      return;
+    }
+
+    if (!roleCanUndoTask) {
+      window.alert("Your role cannot return a completed task to pending.");
+
+      return;
+    }
+
+    if (connectionStatus !== "online") {
+      window.alert(
+        "A completed task cannot be returned to pending while the database service is unavailable.",
+      );
+
+      return;
+    }
+
+    if (!checklistId) {
+      window.alert("Save the checklist before changing completed tasks.");
+
+      return;
+    }
+
+    if (!user?.id) {
+      window.alert(
+        "Your authenticated session could not be found. Please sign in again.",
+      );
+
+      return;
+    }
+
+    const index = itemNumber - 1;
+    const row = rows[index];
+    const item = CHECKLIST_ITEMS[index];
+
+    if (!row || !item) {
+      window.alert("The selected task could not be found.");
+
+      return;
+    }
+
+    if (row.status === "pending") {
+      window.alert("This task is already pending.");
+
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Return this completed task to pending?\n\n" +
+        `Task: ${item.activity}\n\n` +
+        "The Start and Completion records will be cleared. " +
+        "The task must then be started and completed again. " +
+        "This action will be recorded in the audit history.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setProcessingTaskNumber(itemNumber);
+      setStatusMessage(`Returning to pending: ${item.activity}`);
+
+      const { data, error } = await supabase.rpc("undo_ramp_task_completion", {
+        target_checklist_id: checklistId,
+        target_task_code: item.taskCode,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const undoneItem = Array.isArray(data) ? data[0] : data;
+
+      if (!undoneItem) {
+        throw new Error("Supabase did not return the updated task.");
+      }
+
+      if (undoneItem.operational_status !== "pending") {
+        throw new Error("The database did not return the task to pending.");
+      }
+
+      skipNextAutosaveRef.current = true;
+
+      updateRowState(itemNumber, {
+        actualTime: normalizeDatabaseTime(undoneItem.actual_time) || "",
+        status: APPLICATION_STATUS[undoneItem.operational_status] || "pending",
+        delaySeconds: undoneItem.delay_seconds ?? null,
+        startedAt: undoneItem.started_at || null,
+        startedBy: undoneItem.started_by || null,
+      });
+
+      setActiveView("checklist");
+      setActivePhase(item.phase);
+      setFocusedTaskNumber(itemNumber);
+      setStatusMessage(`Returned to pending: ${item.activity}`);
+
+      if (roleCanViewAudit && loadAuditHistoryRef.current) {
+        await loadAuditHistoryRef.current(checklistId);
+      }
+
+      window.setTimeout(() => {
+        const taskElement = document.getElementById(
+          `checklist-task-${itemNumber}`,
+        );
+
+        if (!taskElement) {
+          return;
+        }
+
+        taskElement.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+
+        taskElement.classList.add("task-focus-pulse");
+
+        window.setTimeout(() => {
+          taskElement.classList.remove("task-focus-pulse");
+        }, 1800);
+      }, 150);
+    } catch (error) {
+      console.error("Task undo failed:", error);
+
+      setStatusMessage("Task undo failed");
+
+      window.alert(
+        "The completed task could not be returned to pending.\n\n" +
+          (error?.message || "Unknown error"),
+      );
+    } finally {
+      setProcessingTaskNumber(null);
     }
   }
 
   async function markActivity(itemNumber) {
+    if (processingTaskNumber !== null) {
+      return;
+    }
+
     if (taskCompletionDisabled) {
       window.alert(
         "Your role cannot complete this task, or the checklist is locked.",
@@ -833,9 +991,7 @@ export default function DashboardPage() {
     }
 
     const index = itemNumber - 1;
-
     const row = rows[index];
-
     const item = CHECKLIST_ITEMS[index];
 
     if (!row || !item) {
@@ -845,18 +1001,7 @@ export default function DashboardPage() {
     }
 
     if (row.status !== "pending") {
-      if (!roleCanUndoTask) {
-        window.alert("Your role cannot change a completed task.");
-
-        return;
-      }
-
-      setStatusMessage("Task undo is not yet available");
-
-      window.alert(
-        "This completed task cannot yet be returned to pending.\n\n" +
-          "A controlled and audited database undo operation will be added in the next development phase.",
-      );
+      await undoActivity(itemNumber);
 
       return;
     }
@@ -868,7 +1013,6 @@ export default function DashboardPage() {
     }
 
     const plannedDateTime = plannedDateTimeFor(index);
-
     const plannedTime = formatDateTimeAsTime(plannedDateTime);
 
     if (!plannedDateTime || !plannedTime) {
@@ -880,9 +1024,7 @@ export default function DashboardPage() {
     }
 
     const actualTime = currentTime();
-
     const actualDateTime = startOfMinute(new Date());
-
     const normalizedPlannedDateTime = startOfMinute(plannedDateTime);
 
     const delaySeconds = calculateDateTimeDelaySeconds(
@@ -899,94 +1041,90 @@ export default function DashboardPage() {
     }
 
     const completedStatus = classifyDelay(delaySeconds);
-
     const observationText = row.observation?.trim() || "";
 
-    if (observationText) {
-      const { error: observationSaveError } = await supabase
-        .from("ramp_checklist_items")
-        .update({
-          observation: observationText,
-          impact_category: item.impactCategory,
-        })
-        .eq("checklist_id", checklistId)
-        .eq("task_code", item.taskCode);
+    try {
+      setProcessingTaskNumber(itemNumber);
 
-      if (observationSaveError) {
-        setStatusMessage("Comment save failed");
+      if (observationText) {
+        const { error: observationSaveError } = await supabase
+          .from("ramp_checklist_items")
+          .update({
+            observation: observationText,
+            impact_category: item.impactCategory,
+          })
+          .eq("checklist_id", checklistId)
+          .eq("task_code", item.taskCode);
 
-        window.alert(
-          "The optional comment could not be saved.\n\n" +
-            observationSaveError.message,
-        );
-
-        return;
+        if (observationSaveError) {
+          throw new Error(
+            `The optional comment could not be saved. ${observationSaveError.message}`,
+          );
+        }
       }
-    }
 
-    const { data, error } = await supabase.rpc("complete_ramp_task_once", {
-      target_checklist_id: checklistId,
-      target_task_code: item.taskCode,
-      recorded_actual_time: actualTime,
-      calculated_delay_seconds: delaySeconds,
-      calculated_operational_status:
-        DATABASE_STATUS[completedStatus] || "pending",
-    });
+      setStatusMessage(`Completing: ${item.activity}`);
 
-    if (error) {
+      const { data, error } = await supabase.rpc("complete_ramp_task_once", {
+        target_checklist_id: checklistId,
+        target_task_code: item.taskCode,
+        recorded_actual_time: actualTime,
+        calculated_delay_seconds: delaySeconds,
+        calculated_operational_status:
+          DATABASE_STATUS[completedStatus] || "pending",
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const updatedCompletion = Array.isArray(data) ? data[0] : data;
+
+      if (!updatedCompletion) {
+        throw new Error("Supabase did not return the completed task.");
+      }
+
+      const completedChanges = {
+        actualTime:
+          normalizeDatabaseTime(updatedCompletion.actual_time) || actualTime,
+        delaySeconds: updatedCompletion.delay_seconds ?? delaySeconds,
+        status:
+          APPLICATION_STATUS[updatedCompletion.operational_status] ||
+          completedStatus,
+        startedAt: updatedCompletion.started_at || row.startedAt,
+        startedBy: updatedCompletion.started_by || row.startedBy,
+      };
+
+      const updatedRows = rows.map((currentRow, rowIndex) =>
+        rowIndex === index
+          ? {
+              ...currentRow,
+              ...completedChanges,
+            }
+          : currentRow,
+      );
+
+      skipNextAutosaveRef.current = true;
+
+      setRows(updatedRows);
+      setFocusedTaskNumber(null);
+      setStatusMessage(`Completed and saved: ${item.activity}`);
+
+      window.setTimeout(() => {
+        openNextPendingTask(updatedRows, itemNumber);
+      }, 450);
+    } catch (error) {
       console.error("Task completion failed:", error);
 
       setStatusMessage("Task completion failed");
 
       window.alert(
         "The task could not be completed.\n\n" +
-          (error.message || "Unknown error"),
+          (error?.message || "Unknown error"),
       );
-
-      return;
+    } finally {
+      setProcessingTaskNumber(null);
     }
-
-    const updatedCompletion = Array.isArray(data) ? data[0] : data;
-
-    if (!updatedCompletion) {
-      setStatusMessage("Task completion failed");
-
-      window.alert("Supabase did not return the completed task.");
-
-      return;
-    }
-
-    const completedChanges = {
-      actualTime:
-        normalizeDatabaseTime(updatedCompletion.actual_time) || actualTime,
-      delaySeconds: updatedCompletion.delay_seconds ?? delaySeconds,
-      status:
-        APPLICATION_STATUS[updatedCompletion.operational_status] ||
-        completedStatus,
-      startedAt: updatedCompletion.started_at || row.startedAt,
-      startedBy: updatedCompletion.started_by || row.startedBy,
-    };
-
-    const updatedRows = rows.map((currentRow, rowIndex) =>
-      rowIndex === index
-        ? {
-            ...currentRow,
-            ...completedChanges,
-          }
-        : currentRow,
-    );
-
-    skipNextAutosaveRef.current = true;
-
-    setRows(updatedRows);
-
-    setFocusedTaskNumber(null);
-
-    setStatusMessage(`Completed and saved: ${item.activity}`);
-
-    window.setTimeout(() => {
-      openNextPendingTask(updatedRows, itemNumber);
-    }, 450);
   }
 
   function markLandingRealNow() {
@@ -2505,18 +2643,15 @@ export default function DashboardPage() {
                       item={item}
                       row={row}
                       plannedTime={plannedTime}
+                      processing={isTaskProcessing(item.itemNumber)}
                       overdue={pendingTiming.overdue}
                       remainingSeconds={pendingTiming.remainingSeconds}
                       timingLabel={pendingTiming.label}
-                      onObservationChange={(value) => {
-                        updateObservation(item.itemNumber, value);
-                      }}
-                      onStart={() => {
-                        startActivity(item.itemNumber);
-                      }}
-                      onMark={() => {
-                        markActivity(item.itemNumber);
-                      }}
+                      onObservationChange={(value) =>
+                        updateObservation(item.itemNumber, value)
+                      }
+                      onStart={() => startActivity(item.itemNumber)}
+                      onMark={() => markActivity(item.itemNumber)}
                       observationDisabled={observationsDisabled}
                       completeDisabled={checklistActivitiesDisabled}
                       canUndo={roleCanUndoTask}

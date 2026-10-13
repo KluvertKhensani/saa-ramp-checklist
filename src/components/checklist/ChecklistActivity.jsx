@@ -1,15 +1,7 @@
-import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Clock3,
-  RotateCcw,
-} from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Clock3, RotateCcw } from "lucide-react";
 import { useState } from "react";
 
-import {
-  formatDelay,
-} from "../../utils/checklistTime";
+import { formatDelay } from "../../utils/checklistTime";
 
 const STATUS_LABELS = {
   pending: "Pending",
@@ -23,10 +15,7 @@ function displayTime(value) {
     return "--";
   }
 
-  return String(value).slice(
-    0,
-    5
-  );
+  return String(value).slice(0, 5);
 }
 
 function getBaseLabel(base) {
@@ -48,9 +37,7 @@ function getBaseLabel(base) {
   }
 }
 
-function getImpactLabel(
-  impactCategory
-) {
+function getImpactLabel(impactCategory) {
   switch (impactCategory) {
     case "high":
       return "High Impact";
@@ -63,18 +50,10 @@ function getImpactLabel(
   }
 }
 
-function formatTaskReference(
-  item
-) {
-  const baseLabel =
-    getBaseLabel(
-      item.base
-    );
+function formatTaskReference(item) {
+  const baseLabel = getBaseLabel(item.base);
 
-  if (
-    item.offsetSec === null ||
-    item.offsetSec === undefined
-  ) {
+  if (item.offsetSec === null || item.offsetSec === undefined) {
     return baseLabel;
   }
 
@@ -82,68 +61,31 @@ function formatTaskReference(
     return `At ${baseLabel}`;
   }
 
-  const absoluteMinutes =
-    Math.abs(
-      Math.round(
-        item.offsetSec / 60
-      )
-    );
+  const absoluteMinutes = Math.abs(Math.round(item.offsetSec / 60));
 
   if (item.offsetSec < 0) {
-    return (
-      `${absoluteMinutes} min ` +
-      `before ${baseLabel}`
-    );
+    return `${absoluteMinutes} min ` + `before ${baseLabel}`;
   }
 
-  return (
-    `${absoluteMinutes} min ` +
-    `after ${baseLabel}`
-  );
+  return `${absoluteMinutes} min ` + `after ${baseLabel}`;
 }
 
-function calculateProgress(
-  item,
-  remainingSeconds,
-  overdue,
-  completed
-) {
+function calculateProgress(item, remainingSeconds, overdue, completed) {
   if (completed || overdue) {
     return 100;
   }
 
-  if (
-    remainingSeconds === null ||
-    remainingSeconds === undefined
-  ) {
+  if (remainingSeconds === null || remainingSeconds === undefined) {
     return 0;
   }
 
-  const taskWindowSeconds =
-    Math.max(
-      Math.abs(
-        item.offsetSec || 0
-      ),
-      60
-    );
+  const taskWindowSeconds = Math.max(Math.abs(item.offsetSec || 0), 60);
 
-  const elapsedSeconds =
-    Math.max(
-      0,
-      taskWindowSeconds -
-      remainingSeconds
-    );
+  const elapsedSeconds = Math.max(0, taskWindowSeconds - remainingSeconds);
 
   return Math.min(
     100,
-    Math.max(
-      0,
-      Math.round(
-        elapsedSeconds /
-        taskWindowSeconds *
-        100
-      )
-    )
+    Math.max(0, Math.round((elapsedSeconds / taskWindowSeconds) * 100)),
   );
 }
 
@@ -160,140 +102,89 @@ export default function ChecklistActivity({
   observationDisabled = false,
   completeDisabled = false,
   canUndo = false,
+  processing = false,
 }) {
-  const [
-    expanded,
-    setExpanded,
-  ] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
-  const isCompleted =
-    row.status !== "pending";
+  const isCompleted = row.status !== "pending";
 
-  const isStarted =
-    Boolean(
-      row.startedAt
-    ) &&
-    !isCompleted;
+  const isStarted = Boolean(row.startedAt) && !isCompleted;
 
   const markButtonDisabled =
-    isCompleted
-      ? !canUndo
-      : completeDisabled;
+    processing || (isCompleted ? !canUndo : completeDisabled);
 
-  const markButtonLabel =
-    isCompleted
+  const markButtonLabel = processing
+    ? "Processing..."
+    : isCompleted
       ? canUndo
-        ? "Undo"
+        ? "Return to Pending"
         : "Completed"
       : isStarted
         ? "Complete"
         : "Start";
 
-  const isOverdue =
-    overdue &&
-    !isCompleted;
+  const isOverdue = overdue && !isCompleted;
 
-  const plannedDisplay =
-    displayTime(
-      plannedTime
-    );
+  const plannedDisplay = displayTime(plannedTime);
 
-  const actualDisplay =
-    displayTime(
-      row.actualTime
-    );
+  const actualDisplay = displayTime(row.actualTime);
 
-  const statusKey =
-    isOverdue
-      ? "overdue"
-      : isStarted
-        ? "started"
-        : row.status;
+  const statusKey = isOverdue ? "overdue" : isStarted ? "started" : row.status;
 
-  const statusLabel =
-    isOverdue
-      ? "Overdue"
-      : isStarted
-        ? "Started"
-        : STATUS_LABELS[
-        row.status
-        ] || "Pending";
+  const statusLabel = isOverdue
+    ? "Overdue"
+    : isStarted
+      ? "Started"
+      : STATUS_LABELS[row.status] || "Pending";
 
-  const allocationLabel =
-    isCompleted
-      ? statusLabel
-      : isStarted
-        ? timingLabel ||
-        "Task in progress"
-        : timingLabel ||
-        `Awaiting ${getBaseLabel(
-          item.base
-        )}`;
+  const allocationLabel = isCompleted
+    ? statusLabel
+    : isStarted
+      ? timingLabel || "Task in progress"
+      : timingLabel || `Awaiting ${getBaseLabel(item.base)}`;
 
-  const progressPercent =
-    calculateProgress(
-      item,
-      remainingSeconds,
-      isOverdue,
-      isCompleted
-    );
+  const progressPercent = calculateProgress(
+    item,
+    remainingSeconds,
+    isOverdue,
+    isCompleted,
+  );
 
   const rowClassName = [
     "pts-task-row",
-    expanded
-      ? "pts-task-row-expanded"
-      : "pts-task-row-collapsed",
-    isOverdue
-      ? "pts-task-row-overdue"
-      : "",
-    isStarted
-      ? "pts-task-row-started"
-      : "",
-    isCompleted
-      ? `pts-task-row-${row.status}`
-      : "",
-    observationDisabled &&
-      completeDisabled
-      ? "pts-task-row-readonly"
-      : "",
+    expanded ? "pts-task-row-expanded" : "pts-task-row-collapsed",
+    isOverdue ? "pts-task-row-overdue" : "",
+    isStarted ? "pts-task-row-started" : "",
+    isCompleted ? `pts-task-row-${row.status}` : "",
+    observationDisabled && completeDisabled ? "pts-task-row-readonly" : "",
   ]
     .filter(Boolean)
     .join(" ");
 
-  function handleObservationChange(
-    event
-  ) {
-    if (
-      observationDisabled
-    ) {
+  function handleObservationChange(event) {
+    if (processing || observationDisabled) {
       return;
     }
 
-    onObservationChange?.(
-      event.target.value
-    );
+    onObservationChange?.(event.target.value);
   }
 
   function handleMark() {
-    if (
-      isCompleted &&
-      !canUndo
-    ) {
+    if (processing) {
       return;
     }
 
-    if (
-      !isCompleted &&
-      completeDisabled
-    ) {
+    if (isCompleted && !canUndo) {
       return;
     }
 
-    if (
-      !isCompleted &&
-      !isStarted
-    ) {
+    if (!isCompleted && completeDisabled) {
+      return;
+    }
+
+    if (!isCompleted && !isStarted) {
       onStart?.();
+
       return;
     }
 
@@ -301,10 +192,7 @@ export default function ChecklistActivity({
   }
 
   function toggleExpanded() {
-    setExpanded(
-      (currentValue) =>
-        !currentValue
-    );
+    setExpanded((currentValue) => !currentValue);
   }
 
   return (
@@ -312,76 +200,45 @@ export default function ChecklistActivity({
       id={`checklist-task-${item.itemNumber}`}
       className={rowClassName}
       aria-readonly={observationDisabled && completeDisabled}
+      aria-busy={processing}
+      data-processing={processing ? "true" : "false"}
     >
-      <div className="pts-task-number">
-        {item.itemNumber}
-      </div>
+      <div className="pts-task-number">{item.itemNumber}</div>
 
-      <div className="pts-task-phase">
-        {item.phase}
-      </div>
+      <div className="pts-task-phase">{item.phase}</div>
 
       <div className="pts-task-activity">
-        <strong>
-          {item.activity}
-        </strong>
+        <strong>{item.activity}</strong>
 
         <span
-          className={
-            `task-impact-badge task-impact-${item.impactCategory}`
-          }
+          className={`task-impact-badge task-impact-${item.impactCategory}`}
         >
-          {getImpactLabel(
-            item.impactCategory
-          )}
+          {getImpactLabel(item.impactCategory)}
         </span>
       </div>
 
-      <div className="pts-task-reference">
-        {formatTaskReference(
-          item
-        )}
-      </div>
+      <div className="pts-task-reference">{formatTaskReference(item)}</div>
 
       <div className="pts-task-time pts-task-planned">
-        <span>
-          Planned
-        </span>
+        <span>Planned</span>
 
-        <strong>
-          {plannedDisplay}
-        </strong>
+        <strong>{plannedDisplay}</strong>
       </div>
 
       <div className="pts-task-time pts-task-actual">
-        <span>
-          Actual
-        </span>
+        <span>Actual</span>
 
-        <strong>
-          {actualDisplay}
-        </strong>
+        <strong>{actualDisplay}</strong>
       </div>
 
       <div className="pts-task-delay">
-        <span className="pts-mobile-label">
-          Delay
-        </span>
+        <span className="pts-mobile-label">Delay</span>
 
-        {isCompleted
-          ? formatDelay(
-            row.delaySeconds
-          )
-          : "--"}
+        {isCompleted ? formatDelay(row.delaySeconds) : "--"}
       </div>
 
       <div className="pts-task-status">
-        <span
-          className={
-            `activity-status ` +
-            `status-${statusKey}`
-          }
-        >
+        <span className={`activity-status ` + `status-${statusKey}`}>
           {statusLabel}
         </span>
       </div>
@@ -390,35 +247,28 @@ export default function ChecklistActivity({
         <button
           type="button"
           className={
-            isCompleted
-              ? "pts-done-button completed"
-              : "pts-done-button"
+            isCompleted ? "pts-done-button completed" : "pts-done-button"
           }
           onClick={handleMark}
           disabled={markButtonDisabled}
           aria-label={
-            isCompleted
-              ? `Return ${item.activity} to pending`
-              : isStarted
-                ? `Complete ${item.activity}`
-                : `Start ${item.activity}`
+            processing
+              ? `Processing ${item.activity}`
+              : isCompleted
+                ? `Return ${item.activity} to pending`
+                : isStarted
+                  ? `Complete ${item.activity}`
+                  : `Start ${item.activity}`
           }
+
+          aria-disabled={markButtonDisabled}
         >
           {isCompleted ? (
-            <RotateCcw
-              size={17}
-              aria-hidden="true"
-            />
+            <RotateCcw size={17} aria-hidden="true" />
           ) : isStarted ? (
-            <Check
-              size={17}
-              aria-hidden="true"
-            />
+            <Check size={17} aria-hidden="true" />
           ) : (
-            <Clock3
-              size={17}
-              aria-hidden="true"
-            />
+            <Clock3 size={17} aria-hidden="true" />
           )}
 
           {markButtonLabel}
@@ -428,19 +278,11 @@ export default function ChecklistActivity({
       <div className="pts-task-observation">
         <input
           type="text"
-          value={
-            row.observation || ""
-          }
-          onChange={
-            handleObservationChange
-          }
+          value={row.observation || ""}
+          onChange={handleObservationChange}
           placeholder="Observation"
-          disabled={
-            observationDisabled
-          }
-          aria-label={
-            `Observation for ${item.activity}`
-          }
+          disabled={processing || observationDisabled}
+          aria-label={`Observation for ${item.activity}`}
         />
       </div>
 
@@ -448,117 +290,72 @@ export default function ChecklistActivity({
         type="button"
         className="pts-task-expand-button"
         onClick={toggleExpanded}
+        disabled={processing}
+        aria-disabled={processing}
         aria-expanded={expanded}
-        aria-controls={
-          `task-detail-${item.itemNumber}`
-        }
+        aria-controls={`task-detail-${item.itemNumber}`}
       >
-        <span>
-          {expanded
-            ? "Hide details"
-            : "View details"}
-        </span>
+        <span>{expanded ? "Hide details" : "View details"}</span>
 
         {expanded ? (
-          <ChevronUp
-            size={18}
-            aria-hidden="true"
-          />
+          <ChevronUp size={18} aria-hidden="true" />
         ) : (
-          <ChevronDown
-            size={18}
-            aria-hidden="true"
-          />
+          <ChevronDown size={18} aria-hidden="true" />
         )}
       </button>
 
-      <div
-        id={`task-detail-${item.itemNumber}`}
-        className="pts-mobile-details"
-      >
+      <div id={`task-detail-${item.itemNumber}`} className="pts-mobile-details">
         <div>
-          <span>
-            Reference
-          </span>
+          <span>Reference</span>
 
-          <strong>
-            {formatTaskReference(
-              item
-            )}
-          </strong>
+          <strong>{formatTaskReference(item)}</strong>
         </div>
 
         <div>
-          <span>
-            Planned
-          </span>
+          <span>Planned</span>
 
-          <strong>
-            {plannedDisplay}
-          </strong>
+          <strong>{plannedDisplay}</strong>
         </div>
 
         <div>
-          <span>
-            Actual
-          </span>
+          <span>Actual</span>
 
-          <strong>
-            {actualDisplay}
-          </strong>
+          <strong>{actualDisplay}</strong>
         </div>
 
         <div>
-          <span>
-            Delay
-          </span>
+          <span>Delay</span>
 
-          <strong>
-            {isCompleted
-              ? formatDelay(
-                row.delaySeconds
-              )
-              : "--"}
-          </strong>
+          <strong>{isCompleted ? formatDelay(row.delaySeconds) : "--"}</strong>
         </div>
 
         <div className="pts-mobile-action">
-          <span>
-            Action
-          </span>
+          <span>Action</span>
 
           <button
             type="button"
             className={
-              isCompleted
-                ? "pts-done-button completed"
-                : "pts-done-button"
+              isCompleted ? "pts-done-button completed" : "pts-done-button"
             }
             onClick={handleMark}
             disabled={markButtonDisabled}
             aria-label={
-              isCompleted
-                ? `Return ${item.activity} to pending`
-                : isStarted
-                  ? `Complete ${item.activity}`
-                  : `Start ${item.activity}`
+              processing
+                ? `Processing ${item.activity}`
+                : isCompleted
+                  ? `Return ${item.activity} to pending`
+                  : isStarted
+                    ? `Complete ${item.activity}`
+                    : `Start ${item.activity}`
             }
+            aria-disabled={markButtonDisabled}
           >
             {isCompleted ? (
-              <RotateCcw
-                size={17}
-                aria-hidden="true"
-              />
+              <RotateCcw size={17} aria-hidden="true" />
             ) : isStarted ? (
-              <Check
-                size={17}
-                aria-hidden="true"
-              />
+              <Check size={17} aria-hidden="true" />
             ) : (
-              <Clock3
-                size={17}
-                aria-hidden="true"
-              />
+              <Clock3 size={17} aria-hidden="true" />
             )}
 
             {markButtonLabel}
@@ -566,25 +363,15 @@ export default function ChecklistActivity({
         </div>
 
         <label className="pts-mobile-comment">
-          <span>
-            Comment
-          </span>
+          <span>Comment</span>
 
           <input
             type="text"
-            value={
-              row.observation || ""
-            }
-            onChange={
-              handleObservationChange
-            }
+            value={row.observation || ""}
+            onChange={handleObservationChange}
             placeholder="Observation"
-            disabled={
-              observationDisabled
-            }
-            aria-label={
-              `Observation for ${item.activity}`
-            }
+            disabled={processing || observationDisabled}
+            aria-label={`Observation for ${item.activity}`}
           />
         </label>
       </div>
@@ -592,31 +379,18 @@ export default function ChecklistActivity({
       <div className="pts-allocation-bar">
         <div className="pts-allocation-heading">
           <span>
-            <Clock3
-              size={13}
-              aria-hidden="true"
-            />
-
+            <Clock3 size={13} aria-hidden="true" />
             Task allocation
           </span>
 
-          <strong>
-            {allocationLabel}
-          </strong>
+          <strong>{allocationLabel}</strong>
         </div>
 
         <div className="pts-allocation-track">
           <span
-            className={
-              isOverdue
-                ? "overdue"
-                : isCompleted
-                  ? "completed"
-                  : ""
-            }
+            className={isOverdue ? "overdue" : isCompleted ? "completed" : ""}
             style={{
-              width:
-                `${progressPercent}%`,
+              width: `${progressPercent}%`,
             }}
           />
         </div>
