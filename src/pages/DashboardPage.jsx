@@ -199,6 +199,8 @@ export default function DashboardPage() {
 
   const [activePhase, setActivePhase] = useState("All");
 
+  const [taskView, setTaskView] = useState("outstanding");
+
   const [checklistId, setChecklistId] = useState(null);
 
   const [saving, setSaving] = useState(false);
@@ -587,9 +589,12 @@ export default function DashboardPage() {
 
     const belongsToPhase = activePhase === "All" || item.phase === activePhase;
 
-    const isIncomplete = row?.status === "pending";
+    const matchesTaskView =
+      taskView === "all" ||
+      (taskView === "outstanding" && row?.status === "pending") ||
+      (taskView === "completed" && row?.status !== "pending");
 
-    return belongsToPhase && isIncomplete;
+    return belongsToPhase && matchesTaskView;
   });
 
   function getIncompletePhaseCount(phase) {
@@ -904,6 +909,7 @@ export default function DashboardPage() {
       });
 
       setActiveView("checklist");
+      setTaskView("outstanding");
       setActivePhase(item.phase);
       setFocusedTaskNumber(itemNumber);
       setStatusMessage(`Returned to pending: ${item.activity}`);
@@ -1194,6 +1200,8 @@ export default function DashboardPage() {
 
     setActiveView("checklist");
 
+    setTaskView("outstanding");
+
     setActivePhase(candidate.item.phase);
 
     setFocusedTaskNumber(itemNumber);
@@ -1269,6 +1277,7 @@ export default function DashboardPage() {
 
   function navigateToPhase(phase) {
     setActiveView("checklist");
+    setTaskView("outstanding");
     setActivePhase(phase);
     setFocusedTaskNumber(null);
 
@@ -1322,6 +1331,7 @@ export default function DashboardPage() {
     setRows(createEmptyChecklistRows());
 
     setActivePhase("All");
+    setTaskView("outstanding");
     setChecklistId(null);
 
     checklistIdRef.current = null;
@@ -1697,6 +1707,7 @@ export default function DashboardPage() {
       );
       setActiveView("checklist");
       setActivePhase("All");
+      setTaskView("outstanding");
 
       if (roleCanViewAudit) {
         await loadAuditHistory(checklist.id);
@@ -2553,6 +2564,76 @@ export default function DashboardPage() {
             ) : null}
 
             <section
+              className="task-view-controls"
+              aria-label="Checklist task view"
+            >
+              <div className="task-view-heading">
+                <div>
+                  <span>Activity View</span>
+
+                  <strong>Choose which checklist activities to display</strong>
+                </div>
+
+                <span className="task-view-result-count">
+                  {visibleItems.length} shown
+                </span>
+              </div>
+
+              <div className="task-view-buttons">
+                <button
+                  type="button"
+                  className={
+                    taskView === "outstanding"
+                      ? "task-view-button active"
+                      : "task-view-button"
+                  }
+                  onClick={() => {
+                    setTaskView("outstanding");
+                    setFocusedTaskNumber(null);
+                  }}
+                  aria-pressed={taskView === "outstanding"}
+                >
+                  Outstanding
+                  <span>{metrics.pending}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    taskView === "completed"
+                      ? "task-view-button active"
+                      : "task-view-button"
+                  }
+                  onClick={() => {
+                    setTaskView("completed");
+                    setFocusedTaskNumber(null);
+                  }}
+                  aria-pressed={taskView === "completed"}
+                >
+                  Completed
+                  <span>{metrics.done}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    taskView === "all"
+                      ? "task-view-button active"
+                      : "task-view-button"
+                  }
+                  onClick={() => {
+                    setTaskView("all");
+                    setFocusedTaskNumber(null);
+                  }}
+                  aria-pressed={taskView === "all"}
+                >
+                  All
+                  <span>{metrics.total}</span>
+                </button>
+              </div>
+            </section>
+
+            <section
               id="checklist-tasks"
               className="phase-tabs"
               aria-label="Checklist phases"
@@ -2602,10 +2683,20 @@ export default function DashboardPage() {
                   <div className="checklist-empty-state">
                     <ClipboardCheck size={28} aria-hidden="true" />
 
-                    <strong>No outstanding activities</strong>
+                    <strong>
+                      {taskView === "outstanding"
+                        ? "No outstanding activities"
+                        : taskView === "completed"
+                          ? "No completed activities"
+                          : "No activities available"}
+                    </strong>
 
                     <span>
-                      All activities in this phase have been completed.
+                      {taskView === "outstanding"
+                        ? "All activities in this phase have been completed."
+                        : taskView === "completed"
+                          ? "No activities in this phase have been completed yet."
+                          : "No checklist activities match the selected phase."}
                     </span>
                   </div>
                 ) : null}
