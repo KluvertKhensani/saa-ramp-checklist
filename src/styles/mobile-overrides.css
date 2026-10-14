@@ -3963,3 +3963,41 @@ body:has(.operations-menu-layer) {
     display: none !important;
   }
 }
+
+/* Local draft and connectivity notice */
+
+.local-draft-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 11px 13px;
+  color: #725900;
+  background: #fff8dd;
+  border: 1px solid #ead38a;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.local-draft-notice strong {
+  flex: 0 0 auto;
+  color: #624b00;
+}
+
+.local-draft-notice span {
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .local-draft-notice {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media print {
+  .local-draft-notice {
+    display: none !important;
+  }
+}

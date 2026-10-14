@@ -102,23 +102,21 @@ const APPLICATION_STATUS = {
 const AUTOSAVE_DELAY_MS = 1500;
 
 const CONNECTION_LABELS = {
-  checking: "Checking connection",
+  checking: "Checking service connection",
   online: "Online",
-  offline: "Offline",
-  unreachable: "Service unavailable",
-  syncing: "Synchronising",
-  pending: "Pending synchronisation",
-  conflict: "Conflict requires review",
+  offline: "Offline · local draft available",
+  unreachable: "Database service unavailable",
+  pending: "Local draft stored on this device",
 };
 
 function getConnectionLabel(connectionStatus, pendingCount = 0) {
-  if (pendingCount > 0 && connectionStatus !== "syncing") {
-    return `${pendingCount} pending synchronisation ${
-      pendingCount === 1 ? "action" : "actions"
-    }`;
+  if (pendingCount > 0) {
+    return `${pendingCount} local ${
+      pendingCount === 1 ? "draft" : "drafts"
+    } stored on this device`;
   }
 
-  return CONNECTION_LABELS[connectionStatus] || "Connection unknown";
+  return CONNECTION_LABELS[connectionStatus] || "Connection status unavailable";
 }
 
 function createInitialFlight(coordinatorName = "") {
@@ -696,7 +694,7 @@ export default function DashboardPage() {
     if (connectionStatus !== "online") {
       window.alert(
         "This task cannot be started while the database service is unavailable.\n\n" +
-          "Offline task actions will be enabled after the local action queue is complete.",
+          "Local draft storage protects entered information, but task lifecycle actions require an online database connection.",
       );
 
       return;
@@ -968,7 +966,7 @@ export default function DashboardPage() {
     if (connectionStatus !== "online") {
       window.alert(
         "This task cannot be completed while the database service is unavailable.\n\n" +
-          "Offline task actions will be enabled after the local action queue is complete.",
+          "Local draft storage protects entered information, but task lifecycle actions require an online database connection.",
       );
 
       return;
@@ -1854,6 +1852,10 @@ export default function DashboardPage() {
   }
 
   async function queueChecklistSnapshot(reason) {
+    if (!user?.id) {
+      throw new Error("A signed-in user is required to store a local draft.");
+    }
+
     const activeChecklistId = checklistIdRef.current || checklistId || null;
 
     const localChecklistKey =
@@ -1863,45 +1865,63 @@ export default function DashboardPage() {
         .join("-") ||
       "new-checklist";
 
+    const storedAt = new Date().toISOString();
+
+    const draftRecord = {
+      version: 1,
+      checklistId: activeChecklistId,
+      userId: user.id,
+      storedAt,
+      reason,
+      flight,
+      rows,
+    };
+
     localStorage.setItem(
       "saa_ramp_checklist_draft",
-      JSON.stringify({
-        checklistId: activeChecklistId,
-        flight,
-        rows,
-      }),
+      JSON.stringify(draftRecord),
     );
 
     const queuedAction = await queueOfflineAction({
       checklistId: activeChecklistId,
       actionType: "checklist_snapshot",
-      payload: createOfflineChecklistPayload(),
-      userId: user?.id || null,
-      deduplicationKey: `checklist_snapshot:${localChecklistKey}`,
+      payload: {
+        ...createOfflineChecklistPayload(),
+        metadata: {
+          version: 1,
+          stored_at: storedAt,
+          reason,
+          user_id: user.id,
+          local_checklist_key: localChecklistKey,
+          replay_supported: false,
+        },
+      },
+      userId: user.id,
+      baseVersion: activeChecklistId,
+      deduplicationKey: `checklist_snapshot:${user.id}:${localChecklistKey}`,
     });
 
-    const actionCount = await refreshPendingSyncCount();
+    const draftCount = await refreshPendingSyncCount();
 
     setConnectionStatus("pending");
 
     setStatusMessage(
-      `${actionCount} ${
-        actionCount === 1 ? "change" : "changes"
-      } pending synchronisation`,
+      `${draftCount} local ${
+        draftCount === 1 ? "draft" : "drafts"
+      } stored on this device`,
     );
 
     return {
       saved: false,
       queued: true,
       offline: true,
+      localDraft: true,
       actionId: queuedAction.id,
       reason,
     };
   }
 
-  useEffect(() => {
-    queueChecklistSnapshotRef.current = queueChecklistSnapshot;
-  });
+  queueChecklistSnapshotRef.current = queueChecklistSnapshot;
 
   const persistChecklist = useCallback(
     async ({ silent = false, reason = "manual" } = {}) => {
@@ -1983,8 +2003,9 @@ export default function DashboardPage() {
 
           if (!silent) {
             window.alert(
-              "The checklist could not be saved online, so the latest checklist snapshot was stored on this device.\n\n" +
-                "The snapshot is pending synchronisation.",
+              "The checklist could not be saved to Supabase.\n\n" +
+                "A local draft was stored on this device for recovery.\n\n" +
+                "Start, Complete, Undo, Approval, and automatic server synchronisation remain unavailable until the database service is reachable.",
             );
           }
 
@@ -2399,6 +2420,18 @@ export default function DashboardPage() {
                 : statusMessage}
           </span>
         </div>
+
+        {pendingSyncCount > 0 ? (
+          <div className="local-draft-notice" role="status">
+            <strong>Local draft protection active</strong>
+
+            <span>
+              The latest checklist data is stored on this device. Automatic
+              replay to Supabase is not enabled, so confirm an online save
+              before relying on another device.
+            </span>
+          </div>
+        ) : null}
 
         {activeView === "history" ? (
           <div className="history-view">

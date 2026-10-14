@@ -48,3 +48,4 @@ dist/*
 # Dependencies
 node_modules/
 *.before-*
+*.powershell-backup
