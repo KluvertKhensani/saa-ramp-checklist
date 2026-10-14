@@ -4272,3 +4272,213 @@ body,
     animation: none;
   }
 }
+
+/* Compact landscape print report */
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 6mm;
+  }
+
+  .checklist-print-report {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    color: #111827;
+    font-size: 7px;
+  }
+
+  .print-report-header {
+    min-height: 0;
+    margin-bottom: 4px;
+    padding: 5px 7px;
+  }
+
+  .print-report-logo {
+    width: 36px;
+    height: auto;
+  }
+
+  .print-report-title h1 {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.1;
+  }
+
+  .print-report-title p {
+    margin: 2px 0 0;
+    font-size: 6px;
+  }
+
+  .print-report-section {
+    margin: 0 0 4px;
+    padding: 0;
+  }
+
+  .print-report-section h2 {
+    margin: 0 0 2px;
+    font-size: 8px;
+    line-height: 1.1;
+  }
+
+  .print-flight-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 0;
+    margin-bottom: 4px;
+  }
+
+  .print-flight-grid > div {
+    min-height: 26px;
+    padding: 2px;
+  }
+
+  .print-flight-grid span {
+    font-size: 5px;
+    line-height: 1.05;
+  }
+
+  .print-flight-grid strong {
+    margin-top: 1px;
+    font-size: 6.5px;
+    line-height: 1.05;
+  }
+
+  .print-performance-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+  }
+
+  .print-metric {
+    min-height: 0;
+    padding: 2px 3px;
+  }
+
+  .print-metric span {
+    font-size: 5.5px;
+    line-height: 1.05;
+  }
+
+  .print-metric strong {
+    margin-top: 1px;
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .print-readiness-note {
+    margin-top: 2px;
+    padding: 2px 3px;
+    font-size: 5.5px;
+    line-height: 1.1;
+  }
+
+  .print-assessment {
+    padding: 3px 5px;
+  }
+
+  .print-assessment strong {
+    font-size: 7px;
+  }
+
+  .print-assessment p {
+    margin: 1px 0;
+    font-size: 5.5px;
+    line-height: 1.1;
+  }
+
+  .print-activity-section {
+    margin: 0;
+    padding: 0;
+    break-inside: auto;
+  }
+
+  .print-activity-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 5.5px;
+    line-height: 1.1;
+  }
+
+  .print-activity-table thead {
+    display: table-header-group;
+  }
+
+  .print-activity-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-activity-table th,
+  .print-activity-table td {
+    height: auto;
+    padding: 1.5px 2px;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .print-activity-table th:nth-child(1),
+  .print-activity-table td:nth-child(1) {
+    width: 3%;
+    text-align: center;
+  }
+
+  .print-activity-table th:nth-child(2),
+  .print-activity-table td:nth-child(2) {
+    width: 13%;
+    font-size: 4.8px;
+  }
+
+  .print-activity-table th:nth-child(3),
+  .print-activity-table td:nth-child(3) {
+    width: 8%;
+  }
+
+  .print-activity-table th:nth-child(4),
+  .print-activity-table td:nth-child(4) {
+    width: 7%;
+  }
+
+  .print-activity-table th:nth-child(5),
+  .print-activity-table td:nth-child(5) {
+    width: 31%;
+    font-size: 5.8px;
+    line-height: 1.15;
+  }
+
+  .print-activity-table th:nth-child(6),
+  .print-activity-table td:nth-child(6),
+  .print-activity-table th:nth-child(7),
+  .print-activity-table td:nth-child(7) {
+    width: 6%;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .print-activity-table th:nth-child(8),
+  .print-activity-table td:nth-child(8) {
+    width: 6%;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .print-activity-table th:nth-child(9),
+  .print-activity-table td:nth-child(9) {
+    width: 9%;
+    text-align: center;
+  }
+
+  .print-activity-table th:nth-child(10),
+  .print-activity-table td:nth-child(10) {
+    width: 11%;
+    font-size: 5px;
+  }
+
+  .print-report-footer {
+    margin-top: 3px;
+    padding-top: 2px;
+    font-size: 5px;
+    line-height: 1.1;
+  }
+}

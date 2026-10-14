@@ -147,6 +147,10 @@ function getConnectionLabel(connectionStatus, pendingCount = 0) {
   return CONNECTION_LABELS[connectionStatus] || "Connection status unavailable";
 }
 
+function databaseIsAvailable(connectionStatus) {
+  return connectionStatus === "online" || connectionStatus === "pending";
+}
+
 function createInitialFlight(coordinatorName = "") {
   return {
     ...EMPTY_FLIGHT,
@@ -366,7 +370,11 @@ export default function DashboardPage() {
         return;
       }
 
-      if (active) {
+      if (
+        active &&
+        connectionStatus !== "online" &&
+        connectionStatus !== "pending"
+      ) {
         setConnectionStatus("checking");
       }
 
@@ -424,7 +432,7 @@ export default function DashboardPage() {
 
       window.clearInterval(connectionTimer);
     };
-  }, [refreshPendingSyncCount]);
+  }, [connectionStatus, refreshPendingSyncCount]);
 
   useEffect(() => {
     checklistIdRef.current = checklistId;
@@ -719,7 +727,7 @@ export default function DashboardPage() {
       return;
     }
 
-    if (connectionStatus !== "online") {
+    if (!databaseIsAvailable(connectionStatus)) {
       window.alert(
         "This task cannot be started while the database service is unavailable.\n\n" +
           "Local draft storage protects entered information, but task lifecycle actions require an online database connection.",
@@ -851,7 +859,7 @@ export default function DashboardPage() {
       return;
     }
 
-    if (connectionStatus !== "online") {
+    if (!databaseIsAvailable(connectionStatus)) {
       window.alert(
         "A completed task cannot be returned to pending while the database service is unavailable.",
       );
@@ -991,7 +999,7 @@ export default function DashboardPage() {
       return;
     }
 
-    if (connectionStatus !== "online") {
+    if (!databaseIsAvailable(connectionStatus)) {
       window.alert(
         "This task cannot be completed while the database service is unavailable.\n\n" +
           "Local draft storage protects entered information, but task lifecycle actions require an online database connection.",
@@ -1187,8 +1195,11 @@ export default function DashboardPage() {
     candidateRows = rows,
     excludedItemNumber = null,
   ) {
+    const validCandidateRows = Array.isArray(candidateRows)
+      ? candidateRows
+      : rows;
     return CHECKLIST_ITEMS.map((item, index) => {
-      const row = candidateRows[index];
+      const row = validCandidateRows[index];
 
       const plannedDateTime = plannedDateTimeFor(index);
 
@@ -1210,7 +1221,8 @@ export default function DashboardPage() {
     })
       .filter(
         ({ item, row }) =>
-          row?.status === "pending" && item.itemNumber !== excludedItemNumber,
+          (!row || !row.status || row.status === "pending") &&
+          item.itemNumber !== excludedItemNumber,
       )
       .sort(compareTaskCandidates);
   }
@@ -1946,7 +1958,9 @@ export default function DashboardPage() {
 
     const draftCount = await refreshPendingSyncCount();
 
-    setConnectionStatus("pending");
+    if (!navigator.onLine) {
+      setConnectionStatus("offline");
+    }
 
     setStatusMessage(
       `${draftCount} local ${
@@ -2036,7 +2050,7 @@ export default function DashboardPage() {
         };
       }
 
-      if (connectionStatus !== "online") {
+      if (!databaseIsAvailable(connectionStatus)) {
         try {
           if (!queueChecklistSnapshotRef.current) {
             throw new Error("The offline checklist queue is not ready.");
@@ -2365,7 +2379,7 @@ export default function DashboardPage() {
       timing,
     };
   })
-    .filter(({ row }) => row?.status === "pending")
+    .filter(({ row }) => !row || !row.status || row.status === "pending")
     .sort(compareTaskCandidates)[0];
 
   const nextTaskLabel = nextPendingCandidate
@@ -2396,7 +2410,7 @@ export default function DashboardPage() {
         activePhase={activePhase}
         onPhaseChange={navigateToPhase}
         onNavigate={navigateToSection}
-        onNextTask={openNextPendingTask}
+        onNextTask={() => openNextPendingTask()}
         onHistory={showHistory}
         onSave={saveChecklist}
         onReset={resetChecklist}
@@ -2859,7 +2873,7 @@ export default function DashboardPage() {
         <button
           type="button"
           className="standalone-checklist-button"
-          onClick={openNextPendingTask}
+          onClick={() => openNextPendingTask()}
           disabled={
             loadingRecord || historyLoading || !flightInformationComplete
           }
