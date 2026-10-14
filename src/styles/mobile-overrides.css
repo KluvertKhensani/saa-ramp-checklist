@@ -4001,3 +4001,227 @@ body:has(.operations-menu-layer) {
     display: none !important;
   }
 }
+
+/* PWA update prompt and final mobile viewport safeguards */
+
+html {
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+body,
+#root {
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+.ramp-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.operations-menu-layer {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.operations-menu {
+  max-height: 100vh;
+  max-height: 100dvh;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+.pwa-update-prompt {
+  position: fixed;
+  right: 18px;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 1500;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  width: min(460px, calc(100vw - 36px));
+  padding: 15px;
+  color: #ffffff;
+  background: #0b2545;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  box-shadow: 0 16px 44px rgba(4, 17, 33, 0.34);
+}
+
+.pwa-update-prompt-ready {
+  background: #166534;
+}
+
+.pwa-update-prompt-error {
+  background: #7f1d1d;
+}
+
+.pwa-update-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 11px;
+}
+
+.pwa-update-content {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pwa-update-content strong {
+  color: inherit;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.pwa-update-content span {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.pwa-update-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.pwa-update-button,
+.pwa-update-close {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pwa-update-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 39px;
+  padding: 8px 13px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.pwa-update-button-primary {
+  color: #0b2545;
+  background: #ffffff;
+}
+
+.pwa-update-button-secondary {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.pwa-update-button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.pwa-update-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: #ffffff;
+  background: transparent;
+  border-radius: 8px;
+}
+
+.pwa-update-button:focus-visible,
+.pwa-update-close:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.42);
+  outline-offset: 2px;
+}
+
+.performance-table-wrapper,
+.print-activity-section,
+.export-panel,
+.history-panel,
+.audit-panel,
+.approval-panel {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.performance-table-wrapper {
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 760px) {
+  .ramp-page {
+    padding-bottom: max(104px, calc(88px + env(safe-area-inset-bottom)));
+  }
+
+  .phase-tabs {
+    bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .standalone-checklist-button {
+    bottom: max(88px, calc(72px + env(safe-area-inset-bottom)));
+  }
+
+  .pwa-update-prompt {
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    left: 10px;
+    width: auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .pwa-update-prompt {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .pwa-update-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .pwa-update-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pwa-update-button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .pwa-update-prompt {
+    display: none !important;
+  }
+}

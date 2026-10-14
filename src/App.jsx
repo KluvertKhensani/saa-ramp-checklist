@@ -1,26 +1,27 @@
-﻿import {
-  Navigate,
-  Route,
-  Routes,
-} from "react-router-dom";
+﻿import { Navigate, Route, Routes } from "react-router-dom";
+
+import PwaUpdatePrompt from "./components/PwaUpdatePrompt";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
+
 import "./styles/app.css";
 
 export default function App() {
   return (
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
+    <AuthProvider>
+      <PwaUpdatePrompt />
 
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<DashboardPage />} />
-          </Route>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AuthProvider>
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<DashboardPage />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AuthProvider>
   );
 }
