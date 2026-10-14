@@ -1,4 +1,12 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { ArrowLeft, ClipboardCheck } from "lucide-react";
 
@@ -6,11 +14,7 @@ import AppLogo from "../components/AppLogo";
 import LiveClock from "../components/LiveClock";
 import ChecklistActivity from "../components/checklist/ChecklistActivity";
 import ChecklistApproval from "../components/checklist/ChecklistApproval";
-import ChecklistAuditHistory from "../components/checklist/ChecklistAuditHistory";
-import ChecklistExport from "../components/checklist/ChecklistExport";
-import ChecklistHistory from "../components/checklist/ChecklistHistory";
 import ChecklistMetrics from "../components/checklist/ChecklistMetrics";
-import ChecklistPerformanceSummary from "../components/checklist/ChecklistPerformanceSummary";
 import ChecklistPrintReport from "../components/checklist/ChecklistPrintReport";
 import FlightInformation from "../components/checklist/FlightInformation";
 import PushbackCountdown from "../components/checklist/PushbackCountdown";
@@ -34,8 +38,6 @@ import {
   startOfMinute,
 } from "../utils/checklistTime";
 
-import { exportPowerBiData } from "../utils/powerBiExport";
-
 import {
   getOfflineActionCount,
   queueOfflineAction,
@@ -57,6 +59,32 @@ import {
 import OperationsMenu, {
   OperationsMenuButton,
 } from "../components/navigation/OperationsMenu";
+
+const ChecklistAuditHistory = lazy(
+  () => import("../components/checklist/ChecklistAuditHistory"),
+);
+
+const ChecklistExport = lazy(
+  () => import("../components/checklist/ChecklistExport"),
+);
+
+const ChecklistHistory = lazy(
+  () => import("../components/checklist/ChecklistHistory"),
+);
+
+const ChecklistPerformanceSummary = lazy(
+  () => import("../components/checklist/ChecklistPerformanceSummary"),
+);
+
+function SecondaryViewLoading({ label = "Loading view..." }) {
+  return (
+    <div className="secondary-view-loading" role="status" aria-live="polite">
+      <span className="secondary-view-loading-spinner" aria-hidden="true" />
+
+      <strong>{label}</strong>
+    </div>
+  );
+}
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
@@ -1287,19 +1315,34 @@ export default function DashboardPage() {
     }, 100);
   }
 
-  function exportCurrentPowerBiData() {
-    exportPowerBiData({
-      checklistId,
-      flight,
-      rows,
-      checklistItems: CHECKLIST_ITEMS,
-      plannedTimeFor,
-      metrics,
-      operationalMetrics,
-      preArrivalMetrics,
-    });
+  async function exportCurrentPowerBiData() {
+    try {
+      setStatusMessage("Preparing Power BI reporting data...");
 
-    setStatusMessage("Power BI reporting data exported");
+      const { exportPowerBiData } = await import("../utils/powerBiExport");
+
+      exportPowerBiData({
+        checklistId,
+        flight,
+        rows,
+        checklistItems: CHECKLIST_ITEMS,
+        plannedTimeFor,
+        metrics,
+        operationalMetrics,
+        preArrivalMetrics,
+      });
+
+      setStatusMessage("Power BI reporting data exported");
+    } catch (error) {
+      console.error("Power BI export failed:", error);
+
+      setStatusMessage("Power BI export failed");
+
+      window.alert(
+        "The Power BI reporting files could not be created.\n\n" +
+          (error?.message || "Unknown export error"),
+      );
+    }
   }
 
   async function openExcelExport() {
@@ -2448,37 +2491,55 @@ export default function DashboardPage() {
 
             {roleCanExport ? (
               <div id="excel-export">
-                <ChecklistExport profile={profile} />
+                <Suspense
+                  fallback={
+                    <SecondaryViewLoading label="Loading report export..." />
+                  }
+                >
+                  <ChecklistExport profile={profile} />
+                </Suspense>
               </div>
             ) : null}
 
-            <ChecklistHistory
-              records={historyRecords}
-              loading={historyLoading}
-              searchValue={historySearch}
-              statusValue={historyStatus}
-              onSearchChange={setHistorySearch}
-              onStatusChange={setHistoryStatus}
-              onRefresh={loadChecklistHistory}
-              onOpen={openChecklist}
-              onNew={createNewChecklist}
-              canCreate={roleCanCreate}
-            />
+            <Suspense
+              fallback={
+                <SecondaryViewLoading label="Loading checklist history..." />
+              }
+            >
+              <ChecklistHistory
+                records={historyRecords}
+                loading={historyLoading}
+                searchValue={historySearch}
+                statusValue={historyStatus}
+                onSearchChange={setHistorySearch}
+                onStatusChange={setHistoryStatus}
+                onRefresh={loadChecklistHistory}
+                onOpen={openChecklist}
+                onNew={createNewChecklist}
+                canCreate={roleCanCreate}
+              />
+            </Suspense>
           </div>
         ) : null}
 
         {activeView === "performance" ? (
-          <ChecklistPerformanceSummary
-            flight={flight}
-            rows={rows}
-            metrics={metrics}
-            operationalMetrics={operationalMetrics}
-            preArrivalMetrics={preArrivalMetrics}
-            plannedTimeFor={plannedTimeFor}
-            canExport={roleCanExport && Boolean(checklistId)}
-            onBack={returnToChecklist}
-            onExport={exportCurrentPowerBiData}
-          />
+          <Suspense
+            fallback={
+              <SecondaryViewLoading label="Loading performance summary..." />
+            }
+          >
+            <ChecklistPerformanceSummary
+              flight={flight}
+              rows={rows}
+              metrics={metrics}
+              operationalMetrics={operationalMetrics}
+              preArrivalMetrics={preArrivalMetrics}
+              plannedTimeFor={plannedTimeFor}
+              canExport={roleCanExport && Boolean(checklistId)}
+              onBack={returnToChecklist}
+              onExport={exportCurrentPowerBiData}
+            />
+          </Suspense>
         ) : null}
 
         {activeView === "checklist" ? (
@@ -2588,11 +2649,17 @@ export default function DashboardPage() {
 
             {checklistId && roleCanViewAudit ? (
               <div id="audit-history">
-                <ChecklistAuditHistory
-                  records={auditRecords}
-                  loading={auditLoading}
-                  onRefresh={() => loadAuditHistory(checklistId)}
-                />
+                <Suspense
+                  fallback={
+                    <SecondaryViewLoading label="Loading audit history..." />
+                  }
+                >
+                  <ChecklistAuditHistory
+                    records={auditRecords}
+                    loading={auditLoading}
+                    onRefresh={() => loadAuditHistory(checklistId)}
+                  />
+                </Suspense>
               </div>
             ) : null}
 

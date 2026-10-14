@@ -1,3 +1,5 @@
+/* global __APP_VERSION__ */
+
 import {
   CheckCircle2,
   DownloadCloud,
@@ -8,6 +10,9 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { registerSW } from "virtual:pwa-register";
+
+const APPLICATION_VERSION =
+  typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "1.0.0";
 
 export default function PwaUpdatePrompt() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -125,7 +130,8 @@ export default function PwaUpdatePrompt() {
           <strong id="pwa-update-title">New version available</strong>
 
           <span id="pwa-update-description">
-            Reload the application to open the newest deployed version.
+            Version {APPLICATION_VERSION} is ready. Reload the application to
+            open the newest deployed build.
           </span>
         </div>
 

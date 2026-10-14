@@ -1,9 +1,17 @@
+/* global process */
+
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+const applicationVersion = process.env.npm_package_version || "1.0.0";
+
 export default defineConfig({
   base: "/saa-ramp-checklist/",
+
+  define: {
+    __APP_VERSION__: JSON.stringify(applicationVersion),
+  },
 
   plugins: [
     react(),
