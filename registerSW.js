@@ -1,1 +1,0 @@
-if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/saa-ramp-checklist/sw.js', { scope: '/saa-ramp-checklist/' })})}
