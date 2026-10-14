@@ -383,13 +383,13 @@ export default function DashboardPage() {
           return;
         }
 
-        const actionCount = await refreshPendingSyncCount();
+        await refreshPendingSyncCount();
 
         if (!active) {
           return;
         }
 
-        setConnectionStatus(actionCount > 0 ? "pending" : "online");
+        setConnectionStatus("online");
       } catch (error) {
         console.error("Connectivity check failed:", error);
 
