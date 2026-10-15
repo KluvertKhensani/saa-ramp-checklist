@@ -26,6 +26,10 @@ import {
 } from "../data/checklistItems";
 import { supabase } from "../lib/supabase";
 import {
+  queueLifecycleAction,
+} from "../services/lifecycleService";
+
+import {
   addSecondsToDateTime,
   alignDateTimeToReference,
   calculateDateTimeDelaySeconds,
@@ -139,9 +143,8 @@ const CONNECTION_LABELS = {
 
 function getConnectionLabel(connectionStatus, pendingCount = 0) {
   if (pendingCount > 0) {
-    return `${pendingCount} local ${
-      pendingCount === 1 ? "draft" : "drafts"
-    } stored on this device`;
+    return `${pendingCount} local ${pendingCount === 1 ? "draft" : "drafts"
+      } stored on this device`;
   }
 
   return CONNECTION_LABELS[connectionStatus] || "Connection status unavailable";
@@ -439,6 +442,150 @@ export default function DashboardPage() {
   }, [checklistId]);
 
   useEffect(() => {
+    function handleLifecycleSynced(event) {
+      const detail = event.detail;
+
+      if (
+        !detail?.taskId ||
+        detail.checklistId !==
+        checklistIdRef.current
+      ) {
+        return;
+      }
+
+      skipNextAutosaveRef.current = true;
+
+      setRows(currentRows =>
+        currentRows.map(row =>
+          row.taskId === detail.taskId
+            ? {
+              ...row,
+              lifecycleVersion: Number(
+                detail.lifecycleVersion ??
+                row.lifecycleVersion ??
+                0,
+              ),
+              pendingUpload: false,
+              syncConflict: false,
+              syncError: null,
+            }
+            : row,
+        ),
+      );
+
+      setStatusMessage(
+        "Lifecycle change synchronized.",
+      );
+
+      if (
+        roleCanViewAudit &&
+        loadAuditHistoryRef.current &&
+        checklistIdRef.current
+      ) {
+        void loadAuditHistoryRef.current(
+          checklistIdRef.current,
+        );
+      }
+    }
+
+    function handleLifecycleConflict(event) {
+      const detail = event.detail;
+
+      if (
+        !detail?.taskId ||
+        detail.checklistId !==
+        checklistIdRef.current
+      ) {
+        return;
+      }
+
+      skipNextAutosaveRef.current = true;
+
+      setRows(currentRows =>
+        currentRows.map(row =>
+          row.taskId === detail.taskId
+            ? {
+              ...row,
+              pendingUpload: false,
+              syncConflict: true,
+              syncError:
+                detail.errorMessage ||
+                "Lifecycle conflict",
+            }
+            : row,
+        ),
+      );
+
+      setStatusMessage(
+        "A lifecycle change needs review.",
+      );
+    }
+
+    function handleLifecycleFailure(event) {
+      const detail = event.detail;
+
+      if (
+        !detail?.taskId ||
+        detail.checklistId !==
+        checklistIdRef.current
+      ) {
+        return;
+      }
+
+      setRows(currentRows =>
+        currentRows.map(row =>
+          row.taskId === detail.taskId
+            ? {
+              ...row,
+              pendingUpload: true,
+              syncConflict: false,
+              syncError:
+                detail.errorMessage ||
+                "Upload failed",
+            }
+            : row,
+        ),
+      );
+
+      setStatusMessage(
+        "A lifecycle upload failed and remains queued.",
+      );
+    }
+
+    window.addEventListener(
+      "lifecycle-operation-synced",
+      handleLifecycleSynced,
+    );
+
+    window.addEventListener(
+      "lifecycle-operation-conflict",
+      handleLifecycleConflict,
+    );
+
+    window.addEventListener(
+      "lifecycle-operation-failed",
+      handleLifecycleFailure,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "lifecycle-operation-synced",
+        handleLifecycleSynced,
+      );
+
+      window.removeEventListener(
+        "lifecycle-operation-conflict",
+        handleLifecycleConflict,
+      );
+
+      window.removeEventListener(
+        "lifecycle-operation-failed",
+        handleLifecycleFailure,
+      );
+    };
+  }, [roleCanViewAudit]);
+
+  useEffect(() => {
     const readyTimer = window.setTimeout(() => {
       initialLoadRef.current = false;
 
@@ -502,8 +649,7 @@ export default function DashboardPage() {
 
       default:
         console.warn(
-          `Unknown timing base "${item.base}" for task ${
-            item.taskCode || item.itemNumber || "unknown"
+          `Unknown timing base "${item.base}" for task ${item.taskCode || item.itemNumber || "unknown"
           }.`,
         );
 
@@ -694,9 +840,9 @@ export default function DashboardPage() {
       currentRows.map((row, rowIndex) =>
         rowIndex === index
           ? {
-              ...row,
-              ...changes,
-            }
+            ...row,
+            ...changes,
+          }
           : row,
       ),
     );
@@ -727,25 +873,16 @@ export default function DashboardPage() {
       return;
     }
 
-    if (!databaseIsAvailable(connectionStatus)) {
-      window.alert(
-        "This task cannot be started while the database service is unavailable.\n\n" +
-          "Local draft storage protects entered information, but task lifecycle actions require an online database connection.",
-      );
-
-      return;
-    }
-
     if (!flightInformationComplete) {
       window.alert(
         "Complete Flight Information before starting checklist activities.\n\n" +
-          "Required fields:\n" +
-          "- Flight Out\n" +
-          "- Flight Date\n" +
-          "- Aircraft Type\n" +
-          "- Registration\n" +
-          "- STA Scheduled\n" +
-          "- STD Scheduled",
+        "Required fields:\n" +
+        "- Flight Out\n" +
+        "- Flight Date\n" +
+        "- Aircraft Type\n" +
+        "- Registration\n" +
+        "- STA Scheduled\n" +
+        "- STD Scheduled",
       );
 
       return;
@@ -771,6 +908,23 @@ export default function DashboardPage() {
 
     if (!row || !item) {
       window.alert("The selected task could not be found.");
+
+      return;
+    }
+
+    if (!row.taskId) {
+      window.alert(
+        "This task does not have a database ID yet.\n\n" +
+        "Save the checklist once before starting lifecycle processing.",
+      );
+
+      return;
+    }
+
+    if (row.pendingUpload) {
+      window.alert(
+        "This task already has a lifecycle change waiting to upload.",
+      );
 
       return;
     }
@@ -801,33 +955,33 @@ export default function DashboardPage() {
       setProcessingTaskNumber(itemNumber);
       setStatusMessage(`Starting: ${item.activity}`);
 
-      const { data, error } = await supabase.rpc("start_ramp_task_once", {
-        target_checklist_id: checklistId,
-        target_task_code: item.taskCode,
+      const result = await queueLifecycleAction({
+        action: "start",
+        checklistId,
+        taskId: row.taskId,
+        lifecycleVersion:
+          row.lifecycleVersion ?? 0,
+        userId: user.id,
       });
-
-      if (error) {
-        throw error;
-      }
-
-      const startedItem = Array.isArray(data) ? data[0] : data;
-
-      if (!startedItem) {
-        throw new Error("Supabase did not return the started task.");
-      }
-
-      if (!startedItem.started_at) {
-        throw new Error("The task was not marked as started.");
-      }
 
       skipNextAutosaveRef.current = true;
 
       updateRowState(itemNumber, {
-        startedAt: startedItem.started_at,
-        startedBy: startedItem.started_by || user.id,
+        status: "pending",
+        startedAt: result.occurredAt,
+        startedBy: user.id,
+        completedAt: null,
+        completedBy: null,
+        lifecycleVersion:
+          result.nextLifecycleVersion,
+        pendingUpload: true,
       });
 
-      setStatusMessage(`Started: ${item.activity}`);
+      setStatusMessage(
+        window.navigator.onLine
+          ? `Started and queued for sync: ${item.activity}`
+          : `Started offline: ${item.activity}`,
+      );
     } catch (error) {
       console.error("Task start failed:", error);
 
@@ -835,7 +989,7 @@ export default function DashboardPage() {
 
       window.alert(
         "The task could not be started.\n\n" +
-          (error?.message || "Unknown error"),
+        (error?.message || "Unknown error"),
       );
     } finally {
       setProcessingTaskNumber(null);
@@ -848,27 +1002,25 @@ export default function DashboardPage() {
     }
 
     if (recordLocked || approving) {
-      window.alert("This checklist is locked or is currently being approved.");
+      window.alert(
+        "This checklist is locked or is currently being approved.",
+      );
 
       return;
     }
 
     if (!roleCanUndoTask) {
-      window.alert("Your role cannot return a completed task to pending.");
-
-      return;
-    }
-
-    if (!databaseIsAvailable(connectionStatus)) {
       window.alert(
-        "A completed task cannot be returned to pending while the database service is unavailable.",
+        "Your role cannot return a completed task to pending.",
       );
 
       return;
     }
 
     if (!checklistId) {
-      window.alert("Save the checklist before changing completed tasks.");
+      window.alert(
+        "Save the checklist before changing completed tasks.",
+      );
 
       return;
     }
@@ -891,6 +1043,23 @@ export default function DashboardPage() {
       return;
     }
 
+    if (!row.taskId) {
+      window.alert(
+        "This task does not have a database ID yet.\n\n" +
+        "Save the checklist once before changing its lifecycle.",
+      );
+
+      return;
+    }
+
+    if (row.pendingUpload) {
+      window.alert(
+        "This task already has a lifecycle change waiting to upload.",
+      );
+
+      return;
+    }
+
     if (row.status === "pending") {
       window.alert("This task is already pending.");
 
@@ -899,10 +1068,10 @@ export default function DashboardPage() {
 
     const confirmed = window.confirm(
       "Return this completed task to pending?\n\n" +
-        `Task: ${item.activity}\n\n` +
-        "The Start and Completion records will be cleared. " +
-        "The task must then be started and completed again. " +
-        "This action will be recorded in the audit history.",
+      `Task: ${item.activity}\n\n` +
+      "The Start and Completion records will be cleared. " +
+      "The task must then be started and completed again. " +
+      "This action will be recorded after synchronization.",
     );
 
     if (!confirmed) {
@@ -911,46 +1080,45 @@ export default function DashboardPage() {
 
     try {
       setProcessingTaskNumber(itemNumber);
-      setStatusMessage(`Returning to pending: ${item.activity}`);
 
-      const { data, error } = await supabase.rpc("undo_ramp_task_completion", {
-        target_checklist_id: checklistId,
-        target_task_code: item.taskCode,
+      setStatusMessage(
+        `Returning to pending: ${item.activity}`,
+      );
+
+      const result = await queueLifecycleAction({
+        action: "reopen",
+        checklistId,
+        taskId: row.taskId,
+        lifecycleVersion:
+          row.lifecycleVersion ?? 0,
+        userId: user.id,
       });
-
-      if (error) {
-        throw error;
-      }
-
-      const undoneItem = Array.isArray(data) ? data[0] : data;
-
-      if (!undoneItem) {
-        throw new Error("Supabase did not return the updated task.");
-      }
-
-      if (undoneItem.operational_status !== "pending") {
-        throw new Error("The database did not return the task to pending.");
-      }
 
       skipNextAutosaveRef.current = true;
 
       updateRowState(itemNumber, {
-        actualTime: normalizeDatabaseTime(undoneItem.actual_time) || "",
-        status: APPLICATION_STATUS[undoneItem.operational_status] || "pending",
-        delaySeconds: undoneItem.delay_seconds ?? null,
-        startedAt: undoneItem.started_at || null,
-        startedBy: undoneItem.started_by || null,
+        actualTime: "",
+        status: "pending",
+        delaySeconds: null,
+        startedAt: null,
+        startedBy: null,
+        completedAt: null,
+        completedBy: null,
+        lifecycleVersion:
+          result.nextLifecycleVersion,
+        pendingUpload: true,
       });
 
       setActiveView("checklist");
       setTaskView("outstanding");
       setActivePhase(item.phase);
       setFocusedTaskNumber(itemNumber);
-      setStatusMessage(`Returned to pending: ${item.activity}`);
 
-      if (roleCanViewAudit && loadAuditHistoryRef.current) {
-        await loadAuditHistoryRef.current(checklistId);
-      }
+      setStatusMessage(
+        window.navigator.onLine
+          ? `Return to pending queued: ${item.activity}`
+          : `Returned to pending offline: ${item.activity}`,
+      );
 
       window.setTimeout(() => {
         const taskElement = document.getElementById(
@@ -966,10 +1134,14 @@ export default function DashboardPage() {
           block: "center",
         });
 
-        taskElement.classList.add("task-focus-pulse");
+        taskElement.classList.add(
+          "task-focus-pulse",
+        );
 
         window.setTimeout(() => {
-          taskElement.classList.remove("task-focus-pulse");
+          taskElement.classList.remove(
+            "task-focus-pulse",
+          );
         }, 1800);
       }, 150);
     } catch (error) {
@@ -979,13 +1151,12 @@ export default function DashboardPage() {
 
       window.alert(
         "The completed task could not be returned to pending.\n\n" +
-          (error?.message || "Unknown error"),
+        (error?.message || "Unknown error"),
       );
     } finally {
       setProcessingTaskNumber(null);
     }
   }
-
   async function markActivity(itemNumber) {
     if (processingTaskNumber !== null) {
       return;
@@ -994,15 +1165,6 @@ export default function DashboardPage() {
     if (taskCompletionDisabled) {
       window.alert(
         "Your role cannot complete this task, or the checklist is locked.",
-      );
-
-      return;
-    }
-
-    if (!databaseIsAvailable(connectionStatus)) {
-      window.alert(
-        "This task cannot be completed while the database service is unavailable.\n\n" +
-          "Local draft storage protects entered information, but task lifecycle actions require an online database connection.",
       );
 
       return;
@@ -1017,7 +1179,9 @@ export default function DashboardPage() {
     }
 
     if (!checklistId) {
-      window.alert("Save the checklist before completing tasks.");
+      window.alert(
+        "Save the checklist before completing tasks.",
+      );
 
       return;
     }
@@ -1035,7 +1199,27 @@ export default function DashboardPage() {
     const item = CHECKLIST_ITEMS[index];
 
     if (!row || !item) {
-      window.alert("The selected task could not be found.");
+      window.alert(
+        "The selected task could not be found.",
+      );
+
+      return;
+    }
+
+    if (!row.taskId) {
+      window.alert(
+        "This task does not have a database ID yet.\n\n" +
+        "Save the checklist once before completing lifecycle processing.",
+      );
+
+      return;
+    }
+
+    if (row.pendingUpload) {
+      window.alert(
+        "This task has a lifecycle change waiting to upload.\n\n" +
+        "Allow it to synchronize before performing another lifecycle action.",
+      );
 
       return;
     }
@@ -1047,13 +1231,18 @@ export default function DashboardPage() {
     }
 
     if (!row.startedAt) {
-      window.alert("Start this task before completing it.");
+      window.alert(
+        "Start this task before completing it.",
+      );
 
       return;
     }
 
-    const plannedDateTime = plannedDateTimeFor(index);
-    const plannedTime = formatDateTimeAsTime(plannedDateTime);
+    const plannedDateTime =
+      plannedDateTimeFor(index);
+
+    const plannedTime =
+      formatDateTimeAsTime(plannedDateTime);
 
     if (!plannedDateTime || !plannedTime) {
       window.alert(
@@ -1064,13 +1253,18 @@ export default function DashboardPage() {
     }
 
     const actualTime = currentTime();
-    const actualDateTime = startOfMinute(new Date());
-    const normalizedPlannedDateTime = startOfMinute(plannedDateTime);
 
-    const delaySeconds = calculateDateTimeDelaySeconds(
-      actualDateTime,
-      normalizedPlannedDateTime,
-    );
+    const actualDateTime =
+      startOfMinute(new Date());
+
+    const normalizedPlannedDateTime =
+      startOfMinute(plannedDateTime);
+
+    const delaySeconds =
+      calculateDateTimeDelaySeconds(
+        actualDateTime,
+        normalizedPlannedDateTime,
+      );
 
     if (delaySeconds === null) {
       window.alert(
@@ -1080,87 +1274,106 @@ export default function DashboardPage() {
       return;
     }
 
-    const completedStatus = classifyDelay(delaySeconds);
-    const observationText = row.observation?.trim() || "";
+    const completedStatus =
+      classifyDelay(delaySeconds);
+
+    const databaseOperationalStatus =
+      DATABASE_STATUS[completedStatus];
+
+    if (
+      ![
+        "on_time",
+        "light_delay",
+        "delay",
+      ].includes(databaseOperationalStatus)
+    ) {
+      window.alert(
+        "The calculated operational status is invalid.",
+      );
+
+      return;
+    }
+
+    const observationText =
+      row.observation?.trim() || "";
 
     try {
       setProcessingTaskNumber(itemNumber);
 
-      if (observationText) {
-        const { error: observationSaveError } = await supabase
-          .from("ramp_checklist_items")
-          .update({
-            observation: observationText,
-            impact_category: item.impactCategory,
-          })
-          .eq("checklist_id", checklistId)
-          .eq("task_code", item.taskCode);
+      setStatusMessage(
+        `Completing: ${item.activity}`,
+      );
 
-        if (observationSaveError) {
-          throw new Error(
-            `The optional comment could not be saved. ${observationSaveError.message}`,
-          );
-        }
-      }
-
-      setStatusMessage(`Completing: ${item.activity}`);
-
-      const { data, error } = await supabase.rpc("complete_ramp_task_once", {
-        target_checklist_id: checklistId,
-        target_task_code: item.taskCode,
-        recorded_actual_time: actualTime,
-        calculated_delay_seconds: delaySeconds,
-        calculated_operational_status:
-          DATABASE_STATUS[completedStatus] || "pending",
+      const result = await queueLifecycleAction({
+        action: "complete",
+        checklistId,
+        taskId: row.taskId,
+        lifecycleVersion:
+          row.lifecycleVersion ?? 0,
+        userId: user.id,
+        actualTime,
+        delaySeconds,
+        operationalStatus:
+          databaseOperationalStatus,
+        observation: observationText,
       });
 
-      if (error) {
-        throw error;
-      }
-
-      const updatedCompletion = Array.isArray(data) ? data[0] : data;
-
-      if (!updatedCompletion) {
-        throw new Error("Supabase did not return the completed task.");
-      }
-
       const completedChanges = {
-        actualTime:
-          normalizeDatabaseTime(updatedCompletion.actual_time) || actualTime,
-        delaySeconds: updatedCompletion.delay_seconds ?? delaySeconds,
-        status:
-          APPLICATION_STATUS[updatedCompletion.operational_status] ||
-          completedStatus,
-        startedAt: updatedCompletion.started_at || row.startedAt,
-        startedBy: updatedCompletion.started_by || row.startedBy,
+        actualTime,
+        delaySeconds,
+        status: completedStatus,
+        observation: observationText,
+        startedAt: row.startedAt,
+        startedBy: row.startedBy,
+        completedAt: result.occurredAt,
+        completedBy: user.id,
+        lifecycleVersion:
+          result.nextLifecycleVersion,
+        pendingUpload: true,
+        syncConflict: false,
+        syncError: null,
       };
 
-      const updatedRows = rows.map((currentRow, rowIndex) =>
-        rowIndex === index
-          ? {
+      const updatedRows = rows.map(
+        (currentRow, rowIndex) =>
+          rowIndex === index
+            ? {
               ...currentRow,
               ...completedChanges,
             }
-          : currentRow,
+            : currentRow,
       );
 
       skipNextAutosaveRef.current = true;
 
       setRows(updatedRows);
       setFocusedTaskNumber(null);
-      setStatusMessage(`Completed and saved: ${item.activity}`);
+
+      setStatusMessage(
+        window.navigator.onLine
+          ? `Completed and queued for sync: ${item.activity}`
+          : `Completed offline: ${item.activity}`,
+      );
 
       window.setTimeout(() => {
-        openNextPendingTask(updatedRows, itemNumber);
+        openNextPendingTask(
+          updatedRows,
+          itemNumber,
+        );
       }, 450);
     } catch (error) {
-      console.error("Task completion failed:", error);
+      console.error(
+        "Task completion failed:",
+        error,
+      );
 
-      setStatusMessage("Task completion failed");
+      setStatusMessage(
+        "Task completion failed",
+      );
 
       window.alert(
         "The task could not be completed.\n\n" +
-          (error?.message || "Unknown error"),
+        (error?.message || "Unknown error"),
       );
     } finally {
       setProcessingTaskNumber(null);
@@ -1352,7 +1565,7 @@ export default function DashboardPage() {
 
       window.alert(
         "The Power BI reporting files could not be created.\n\n" +
-          (error?.message || "Unknown export error"),
+        (error?.message || "Unknown export error"),
       );
     }
   }
@@ -1472,20 +1685,20 @@ export default function DashboardPage() {
 
       const filteredRecords = normalizedSearch
         ? (data || []).filter((record) => {
-            const values = [
-              record.flight_in,
-              record.flight_out,
-              record.bay,
-              record.aircraft_type,
-              record.registration,
-            ];
+          const values = [
+            record.flight_in,
+            record.flight_out,
+            record.bay,
+            record.aircraft_type,
+            record.registration,
+          ];
 
-            return values.some((value) =>
-              String(value || "")
-                .toLowerCase()
-                .includes(normalizedSearch),
-            );
-          })
+          return values.some((value) =>
+            String(value || "")
+              .toLowerCase()
+              .includes(normalizedSearch),
+          );
+        })
         : data || [];
 
       setHistoryRecords(filteredRecords);
@@ -1498,7 +1711,7 @@ export default function DashboardPage() {
 
       window.alert(
         "Checklist history could not be loaded.\n\n" +
-          (error?.message || "Unknown error"),
+        (error?.message || "Unknown error"),
       );
     } finally {
       setHistoryLoading(false);
@@ -1619,7 +1832,7 @@ export default function DashboardPage() {
 
       window.alert(
         "Audit history could not be loaded.\n\n" +
-          (error?.message || "Unknown error"),
+        (error?.message || "Unknown error"),
       );
     } finally {
       setAuditLoading(false);
@@ -1738,23 +1951,43 @@ export default function DashboardPage() {
 
           if (!savedItem) {
             return {
+              taskId: null,
+              lifecycleVersion: 0,
               actualTime: "",
               observation: "",
               status: "pending",
               delaySeconds: null,
               startedAt: null,
               startedBy: null,
+              completedAt: null,
+              completedBy: null,
+              pendingUpload: false,
             };
           }
 
           return {
-            actualTime: normalizeDatabaseTime(savedItem.actual_time),
+            taskId: savedItem.id,
+            lifecycleVersion: Number(
+              savedItem.lifecycle_version ?? 0
+            ),
+            actualTime:
+              normalizeDatabaseTime(savedItem.actual_time),
             observation: savedItem.observation || "",
             status:
-              APPLICATION_STATUS[savedItem.operational_status] || "pending",
-            delaySeconds: savedItem.delay_seconds,
-            startedAt: savedItem.started_at || null,
-            startedBy: savedItem.started_by || null,
+              APPLICATION_STATUS[
+              savedItem.operational_status
+              ] || "pending",
+            delaySeconds:
+              savedItem.delay_seconds ?? null,
+            startedAt:
+              savedItem.started_at || null,
+            startedBy:
+              savedItem.started_by || null,
+            completedAt:
+              savedItem.completed_at || null,
+            completedBy:
+              savedItem.completed_by || null,
+            pendingUpload: false,
           };
         }),
       );
@@ -1776,7 +2009,7 @@ export default function DashboardPage() {
 
       window.alert(
         "The checklist could not be opened.\n\n" +
-          (error?.message || "Unknown error"),
+        (error?.message || "Unknown error"),
       );
     } finally {
       setLoadingRecord(false);
@@ -1837,9 +2070,9 @@ export default function DashboardPage() {
 
       window.alert(
         "Checklist approved successfully.\n\n" +
-          `Flight: ${flight.flightOut}\n` +
-          "Status: Completed\n" +
-          "Editing: Locked",
+        `Flight: ${flight.flightOut}\n` +
+        "Status: Completed\n" +
+        "Editing: Locked",
       );
     } catch (error) {
       console.error("Checklist approval failed:", error);
@@ -1848,7 +2081,7 @@ export default function DashboardPage() {
 
       window.alert(
         "The checklist could not be approved.\n\n" +
-          (error?.message || "Unknown error"),
+        (error?.message || "Unknown error"),
       );
     } finally {
       setApproving(false);
@@ -1963,8 +2196,7 @@ export default function DashboardPage() {
     }
 
     setStatusMessage(
-      `${draftCount} local ${
-        draftCount === 1 ? "draft" : "drafts"
+      `${draftCount} local ${draftCount === 1 ? "draft" : "drafts"
       } stored on this device`,
     );
 
@@ -2034,13 +2266,13 @@ export default function DashboardPage() {
         if (!silent) {
           window.alert(
             "Complete the required Flight Information before saving.\n\n" +
-              "Required fields:\n" +
-              "- Flight Out\n" +
-              "- Flight Date\n" +
-              "- Aircraft Type\n" +
-              "- Registration\n" +
-              "- STA Scheduled\n" +
-              "- STD Scheduled",
+            "Required fields:\n" +
+            "- Flight Out\n" +
+            "- Flight Date\n" +
+            "- Aircraft Type\n" +
+            "- Registration\n" +
+            "- STA Scheduled\n" +
+            "- STD Scheduled",
           );
         }
 
@@ -2061,8 +2293,8 @@ export default function DashboardPage() {
           if (!silent) {
             window.alert(
               "The checklist could not be saved to Supabase.\n\n" +
-                "A local draft was stored on this device for recovery.\n\n" +
-                "Start, Complete, Undo, Approval, and automatic server synchronisation remain unavailable until the database service is reachable.",
+              "A local draft was stored on this device for recovery.\n\n" +
+              "Lifecycle changes for existing saved tasks can be queued offline. Approval and new checklist creation still require the database service.",
             );
           }
 
@@ -2075,7 +2307,7 @@ export default function DashboardPage() {
           if (!silent) {
             window.alert(
               "The checklist could not be saved online or stored in the offline queue.\n\n" +
-                (error?.message || "Unknown offline storage error"),
+              (error?.message || "Unknown offline storage error"),
             );
           }
 
@@ -2183,15 +2415,89 @@ export default function DashboardPage() {
           };
         });
 
-        const { error: itemError } = await supabase
+        const {
+          data: savedTaskItems,
+          error: itemError,
+        } = await supabase
           .from("ramp_checklist_items")
           .upsert(itemRecords, {
             onConflict: "checklist_id,task_code",
-          });
+          })
+          .select(
+            [
+              "id",
+              "task_code",
+              "lifecycle_version",
+              "started_at",
+              "started_by",
+              "completed_at",
+              "completed_by",
+              "actual_time",
+              "delay_seconds",
+              "operational_status",
+            ].join(",")
+          );
 
         if (itemError) {
           throw itemError;
         }
+
+        const savedTaskItemsByCode = new Map(
+          (savedTaskItems || []).map(savedItem => [
+            savedItem.task_code,
+            savedItem,
+          ])
+        );
+
+        skipNextAutosaveRef.current = true;
+
+        setRows(currentRows =>
+          currentRows.map((currentRow, index) => {
+            const checklistItem = CHECKLIST_ITEMS[index];
+
+            if (!checklistItem) {
+              return currentRow;
+            }
+
+            const savedItem = savedTaskItemsByCode.get(
+              checklistItem.taskCode
+            );
+
+            if (!savedItem) {
+              return currentRow;
+            }
+
+            return {
+              ...currentRow,
+              taskId: savedItem.id,
+              lifecycleVersion: Number(
+                savedItem.lifecycle_version ?? 0
+              ),
+              startedAt:
+                savedItem.started_at ??
+                currentRow.startedAt ??
+                null,
+              startedBy:
+                savedItem.started_by ??
+                currentRow.startedBy ??
+                null,
+              completedAt:
+                savedItem.completed_at ??
+                currentRow.completedAt ??
+                null,
+              completedBy:
+                savedItem.completed_by ??
+                currentRow.completedBy ??
+                null,
+              pendingUpload:
+                currentRow.pendingUpload ?? false,
+              syncConflict:
+                currentRow.syncConflict ?? false,
+              syncError:
+                currentRow.syncError ?? null,
+            };
+          })
+        );
 
         const activeTaskCodes = CHECKLIST_ITEMS.map((item) => item.taskCode);
 
@@ -2210,8 +2516,7 @@ export default function DashboardPage() {
 
         if (savedItemCount !== CHECKLIST_ITEMS.length) {
           throw new Error(
-            `Only ${savedItemCount ?? 0} of ${
-              CHECKLIST_ITEMS.length
+            `Only ${savedItemCount ?? 0} of ${CHECKLIST_ITEMS.length
             } task records were saved.`,
           );
         }
@@ -2244,8 +2549,8 @@ export default function DashboardPage() {
         if (!silent) {
           window.alert(
             "OPS checklist saved successfully.\n\n" +
-              `Flight: ${flight.flightOut}\n` +
-              `Completed: ${metrics.done}/${CHECKLIST_ITEMS.length}`,
+            `Flight: ${flight.flightOut}\n` +
+            `Completed: ${metrics.done}/${CHECKLIST_ITEMS.length}`,
           );
         }
 
@@ -2269,7 +2574,7 @@ export default function DashboardPage() {
         if (!silent) {
           window.alert(
             "The checklist could not be saved.\n\n" +
-              (error?.message || "Unknown error"),
+            (error?.message || "Unknown error"),
           );
         }
 
@@ -2483,9 +2788,9 @@ export default function DashboardPage() {
             <strong>Local draft protection active</strong>
 
             <span>
-              The latest checklist data is stored on this device. Automatic
-              replay to Supabase is not enabled, so confirm an online save
-              before relying on another device.
+              The latest checklist draft is stored on this device.
+              Lifecycle changes for existing saved tasks use the
+              synchronization queue and retry when connectivity returns.
             </span>
           </div>
         ) : null}
@@ -2830,17 +3135,17 @@ export default function DashboardPage() {
                   const pendingTiming =
                     row.status === "pending"
                       ? getPendingTaskTiming(
-                          plannedDateTime,
-                          operationalNow,
-                          `Awaiting ${requiredTimeLabelFor(item)}`,
-                        )
+                        plannedDateTime,
+                        operationalNow,
+                        `Awaiting ${requiredTimeLabelFor(item)}`,
+                      )
                       : {
-                          overdue: false,
-                          overdueSeconds: 0,
-                          remainingSeconds: 0,
-                          progressPercent: 100,
-                          label: "",
-                        };
+                        overdue: false,
+                        overdueSeconds: 0,
+                        remainingSeconds: 0,
+                        progressPercent: 100,
+                        label: "",
+                      };
 
                   return (
                     <ChecklistActivity
