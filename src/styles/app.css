@@ -1860,3 +1860,86 @@
   border-color: #1b4fa0;
   box-shadow: 0 0 0 3px rgba(27, 79, 160, 0.12);
 }
+
+.global-sync-status {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.global-sync-status .sync-status {
+  pointer-events: auto;
+  box-shadow: 0 0.25rem 0.75rem rgb(15 23 42 / 15%);
+}
+
+.sync-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+button.sync-status {
+  cursor: pointer;
+}
+
+button.sync-status:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.sync-status-synced {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.sync-status-pending {
+  color: #854d0e;
+  background: #fef9c3;
+  border-color: #fde047;
+}
+
+.sync-status-uploading {
+  color: #1e40af;
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.sync-status-offline {
+  color: #374151;
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.sync-status-failed,
+.sync-status-conflict {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+@media (max-width: 640px) {
+  .global-sync-status {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+
+  .sync-status {
+    min-height: 1.75rem;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.72rem;
+  }
+}
