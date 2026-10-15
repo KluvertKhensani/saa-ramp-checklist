@@ -921,14 +921,6 @@ export default function DashboardPage() {
       return;
     }
 
-    if (row.pendingUpload) {
-      window.alert(
-        "This task already has a lifecycle change waiting to upload.",
-      );
-
-      return;
-    }
-
     if (row.status !== "pending") {
       window.alert("This task is already completed.");
 
@@ -1047,14 +1039,6 @@ export default function DashboardPage() {
       window.alert(
         "This task does not have a database ID yet.\n\n" +
         "Save the checklist once before changing its lifecycle.",
-      );
-
-      return;
-    }
-
-    if (row.pendingUpload) {
-      window.alert(
-        "This task already has a lifecycle change waiting to upload.",
       );
 
       return;
@@ -1215,15 +1199,6 @@ export default function DashboardPage() {
       return;
     }
 
-    if (row.pendingUpload) {
-      window.alert(
-        "This task has a lifecycle change waiting to upload.\n\n" +
-        "Allow it to synchronize before performing another lifecycle action.",
-      );
-
-      return;
-    }
-
     if (row.status !== "pending") {
       await undoActivity(itemNumber);
 
@@ -1379,7 +1354,6 @@ export default function DashboardPage() {
       setProcessingTaskNumber(null);
     }
   }
-
   function markLandingRealNow() {
     if (flightInformationDisabled) {
       window.alert(
