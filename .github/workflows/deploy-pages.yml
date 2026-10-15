@@ -35,11 +35,57 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate Supabase configuration
+        shell: bash
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_PROJECT_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLIC_KEY }}
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ]; then
+            echo "ERROR: VITE_SUPABASE_PROJECT_URL secret is missing or empty."
+            exit 1
+          fi
+
+          if [ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "ERROR: VITE_SUPABASE_PUBLIC_KEY secret is missing or empty."
+            exit 1
+          fi
+
+          case "$VITE_SUPABASE_URL" in
+            https://*.supabase.co)
+              echo "Supabase URL format is valid."
+              ;;
+            *)
+              echo "ERROR: Supabase URL must resemble https://project-reference.supabase.co"
+              exit 1
+              ;;
+          esac
+
+          case "$VITE_SUPABASE_PUBLISHABLE_KEY" in
+            sb_publishable_*|eyJ*)
+              echo "Supabase publishable key format is recognised."
+              ;;
+            *)
+              echo "ERROR: The Supabase public key does not look valid."
+              exit 1
+              ;;
+          esac
+
+          echo "Supabase build configuration is present."
+
       - name: Build application
         run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_PROJECT_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLIC_KEY }}
+
+      - name: Verify deployment output
+        shell: bash
+        run: |
+          test -f dist/index.html
+          test -f dist/404.html
+          test -f dist/manifest.webmanifest
+          echo "GitHub Pages deployment files are present."
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
