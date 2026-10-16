@@ -302,12 +302,6 @@ export function registerLifecycleSync(): () => void {
 
   window.addEventListener("online", handleOnline);
 
-  /*
-   * Check the queue once when lifecycle
-   * synchronization is registered.
-   */
-  void processLifecycleQueue();
-
   return () => {
     window.removeEventListener("online", handleOnline);
   };
