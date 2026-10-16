@@ -25,9 +25,7 @@ import {
   createEmptyChecklistRows,
 } from "../data/checklistItems";
 import { supabase } from "../lib/supabase";
-import {
-  queueLifecycleAction,
-} from "../services/lifecycleService";
+import { queueLifecycleAction } from "../services/lifecycleService";
 
 import {
   addSecondsToDateTime,
@@ -131,6 +129,25 @@ const APPLICATION_STATUS = {
   delay: "delay",
 };
 
+function mapDatabaseTaskToRow(databaseTask, currentRow = {}) {
+  return {
+    ...currentRow,
+    taskId: databaseTask.id,
+    lifecycleVersion: Number(databaseTask.lifecycle_version ?? 0),
+    actualTime: normalizeDatabaseTime(databaseTask.actual_time) || "",
+    observation: databaseTask.observation || "",
+    status: APPLICATION_STATUS[databaseTask.operational_status] || "pending",
+    delaySeconds: databaseTask.delay_seconds ?? null,
+    startedAt: databaseTask.started_at || null,
+    startedBy: databaseTask.started_by || null,
+    completedAt: databaseTask.completed_at || null,
+    completedBy: databaseTask.completed_by || null,
+    pendingUpload: false,
+    syncConflict: false,
+    syncError: null,
+  };
+}
+
 const AUTOSAVE_DELAY_MS = 1500;
 
 const CONNECTION_LABELS = {
@@ -143,8 +160,9 @@ const CONNECTION_LABELS = {
 
 function getConnectionLabel(connectionStatus, pendingCount = 0) {
   if (pendingCount > 0) {
-    return `${pendingCount} local ${pendingCount === 1 ? "draft" : "drafts"
-      } stored on this device`;
+    return `${pendingCount} local ${
+      pendingCount === 1 ? "draft" : "drafts"
+    } stored on this device`;
   }
 
   return CONNECTION_LABELS[connectionStatus] || "Connection status unavailable";
@@ -442,120 +460,281 @@ export default function DashboardPage() {
   }, [checklistId]);
 
   useEffect(() => {
-    function handleLifecycleSynced(event) {
+    if (!checklistId || !user?.id) {
+      return undefined;
+    }
+
+    const channel = supabase
+      .channel(`ramp-checklist-live-${checklistId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "ramp_checklist_items",
+          filter: `checklist_id=eq.${checklistId}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            return;
+          }
+
+          const changedTask = payload.new;
+
+          if (!changedTask?.id) {
+            return;
+          }
+
+          skipNextAutosaveRef.current = true;
+
+          setRows((currentRows) =>
+            currentRows.map((currentRow) => {
+              if (currentRow.taskId !== changedTask.id) {
+                return currentRow;
+              }
+
+              const serverVersion = Number(changedTask.lifecycle_version ?? 0);
+
+              const localVersion = Number(currentRow.lifecycleVersion ?? 0);
+
+              if (currentRow.pendingUpload && serverVersion < localVersion) {
+                return currentRow;
+              }
+
+              return mapDatabaseTaskToRow(changedTask, currentRow);
+            }),
+          );
+
+          setStatusMessage("Live checklist update received.");
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "ramp_checklists",
+          filter: `id=eq.${checklistId}`,
+        },
+        (payload) => {
+          const changedChecklist = payload.new;
+
+          if (!changedChecklist) {
+            return;
+          }
+
+          setRecordLocked(Boolean(changedChecklist.is_locked));
+
+          setApprovalDetails({
+            approvedBy: changedChecklist.approved_by || null,
+            approvedByName: "",
+            approvedAt: changedChecklist.approved_at || null,
+            notes: changedChecklist.approval_notes || "",
+          });
+
+          if (changedChecklist.is_locked) {
+            setStatusMessage(
+              "This checklist was approved and locked from another device.",
+            );
+          }
+        },
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          console.info("Live checklist synchronization active.");
+        }
+
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.error("Live checklist synchronization failed:", status);
+        }
+      });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [checklistId, user?.id]);
+
+  useEffect(() => {
+    async function reconcileAfterReconnect() {
+      const activeChecklistId = checklistIdRef.current;
+
+      if (!window.navigator.onLine || !activeChecklistId) {
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("ramp_checklist_items")
+          .select("*")
+          .eq("checklist_id", activeChecklistId)
+          .order("item_number", {
+            ascending: true,
+          });
+
+        if (error) {
+          throw error;
+        }
+
+        const serverItemsById = new Map(
+          (data || []).map((item) => [item.id, item]),
+        );
+
+        skipNextAutosaveRef.current = true;
+
+        setRows((currentRows) =>
+          currentRows.map((currentRow) => {
+            /*
+             * Preserve offline local edits until
+             * their lifecycle operations upload.
+             */
+            if (currentRow.pendingUpload) {
+              return currentRow;
+            }
+
+            const serverItem = serverItemsById.get(currentRow.taskId);
+
+            if (!serverItem) {
+              return currentRow;
+            }
+
+            return mapDatabaseTaskToRow(serverItem, currentRow);
+          }),
+        );
+
+        setStatusMessage("Checklist synchronized with the latest server data.");
+      } catch (error) {
+        console.error("Reconnect reconciliation failed:", error);
+      }
+    }
+
+    window.addEventListener("online", reconcileAfterReconnect);
+
+    return () => {
+      window.removeEventListener("online", reconcileAfterReconnect);
+    };
+  }, []);
+
+  useEffect(() => {
+    async function handleLifecycleSynced(event) {
       const detail = event.detail;
 
-      if (
-        !detail?.taskId ||
-        detail.checklistId !==
-        checklistIdRef.current
-      ) {
+      if (!detail?.taskId || detail.checklistId !== checklistIdRef.current) {
         return;
       }
 
       skipNextAutosaveRef.current = true;
 
-      setRows(currentRows =>
-        currentRows.map(row =>
+      setRows((currentRows) =>
+        currentRows.map((row) =>
           row.taskId === detail.taskId
             ? {
-              ...row,
-              lifecycleVersion: Number(
-                detail.lifecycleVersion ??
-                row.lifecycleVersion ??
-                0,
-              ),
-              pendingUpload: false,
-              syncConflict: false,
-              syncError: null,
-            }
+                ...row,
+                lifecycleVersion: Number(
+                  detail.lifecycleVersion ?? row.lifecycleVersion ?? 0,
+                ),
+                pendingUpload: false,
+                syncConflict: false,
+                syncError: null,
+              }
             : row,
         ),
       );
 
-      setStatusMessage(
-        "Lifecycle change synchronized.",
-      );
+      try {
+        const { data: synchronizedTask, error } = await supabase
+          .from("ramp_checklist_items")
+          .select("*")
+          .eq("id", detail.taskId)
+          .eq("checklist_id", detail.checklistId)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        if (synchronizedTask) {
+          skipNextAutosaveRef.current = true;
+
+          setRows((currentRows) =>
+            currentRows.map((row) =>
+              row.taskId === detail.taskId
+                ? mapDatabaseTaskToRow(synchronizedTask, row)
+                : row,
+            ),
+          );
+        }
+
+        setStatusMessage("Lifecycle change synchronized.");
+      } catch (error) {
+        console.error("Synchronized task reload failed:", error);
+
+        setStatusMessage(
+          "Lifecycle synchronized, but the latest task state could not be reloaded.",
+        );
+      }
 
       if (
         roleCanViewAudit &&
         loadAuditHistoryRef.current &&
         checklistIdRef.current
       ) {
-        void loadAuditHistoryRef.current(
-          checklistIdRef.current,
-        );
+        void loadAuditHistoryRef.current(checklistIdRef.current);
       }
     }
 
     function handleLifecycleConflict(event) {
       const detail = event.detail;
 
-      if (
-        !detail?.taskId ||
-        detail.checklistId !==
-        checklistIdRef.current
-      ) {
+      if (!detail?.taskId || detail.checklistId !== checklistIdRef.current) {
         return;
       }
 
       skipNextAutosaveRef.current = true;
 
-      setRows(currentRows =>
-        currentRows.map(row =>
+      setRows((currentRows) =>
+        currentRows.map((row) =>
           row.taskId === detail.taskId
             ? {
-              ...row,
-              pendingUpload: false,
-              syncConflict: true,
-              syncError:
-                detail.errorMessage ||
-                "Lifecycle conflict",
-            }
+                ...row,
+                pendingUpload: false,
+                syncConflict: true,
+                syncError: detail.errorMessage || "Lifecycle conflict",
+              }
             : row,
         ),
       );
 
-      setStatusMessage(
-        "A lifecycle change needs review.",
-      );
+      setStatusMessage("A lifecycle change needs review.");
     }
 
     function handleLifecycleFailure(event) {
       const detail = event.detail;
 
-      if (
-        !detail?.taskId ||
-        detail.checklistId !==
-        checklistIdRef.current
-      ) {
+      if (!detail?.taskId || detail.checklistId !== checklistIdRef.current) {
         return;
       }
 
-      setRows(currentRows =>
-        currentRows.map(row =>
+      setRows((currentRows) =>
+        currentRows.map((row) =>
           row.taskId === detail.taskId
             ? {
-              ...row,
-              pendingUpload: true,
-              syncConflict: false,
-              syncError:
-                detail.errorMessage ||
-                "Upload failed",
-            }
+                ...row,
+                pendingUpload: true,
+                syncConflict: false,
+                syncError: detail.errorMessage || "Upload failed",
+              }
             : row,
         ),
       );
 
-      setStatusMessage(
-        "A lifecycle upload failed and remains queued.",
-      );
+      setStatusMessage("A lifecycle upload failed and remains queued.");
     }
 
-    window.addEventListener(
-      "lifecycle-operation-synced",
-      handleLifecycleSynced,
-    );
+    function handleSyncedEvent(event) {
+      void handleLifecycleSynced(event);
+    }
+
+    window.addEventListener("lifecycle-operation-synced", handleSyncedEvent);
 
     window.addEventListener(
       "lifecycle-operation-conflict",
@@ -570,7 +749,7 @@ export default function DashboardPage() {
     return () => {
       window.removeEventListener(
         "lifecycle-operation-synced",
-        handleLifecycleSynced,
+        handleSyncedEvent,
       );
 
       window.removeEventListener(
@@ -649,7 +828,8 @@ export default function DashboardPage() {
 
       default:
         console.warn(
-          `Unknown timing base "${item.base}" for task ${item.taskCode || item.itemNumber || "unknown"
+          `Unknown timing base "${item.base}" for task ${
+            item.taskCode || item.itemNumber || "unknown"
           }.`,
         );
 
@@ -840,9 +1020,9 @@ export default function DashboardPage() {
       currentRows.map((row, rowIndex) =>
         rowIndex === index
           ? {
-            ...row,
-            ...changes,
-          }
+              ...row,
+              ...changes,
+            }
           : row,
       ),
     );
@@ -876,13 +1056,13 @@ export default function DashboardPage() {
     if (!flightInformationComplete) {
       window.alert(
         "Complete Flight Information before starting checklist activities.\n\n" +
-        "Required fields:\n" +
-        "- Flight Out\n" +
-        "- Flight Date\n" +
-        "- Aircraft Type\n" +
-        "- Registration\n" +
-        "- STA Scheduled\n" +
-        "- STD Scheduled",
+          "Required fields:\n" +
+          "- Flight Out\n" +
+          "- Flight Date\n" +
+          "- Aircraft Type\n" +
+          "- Registration\n" +
+          "- STA Scheduled\n" +
+          "- STD Scheduled",
       );
 
       return;
@@ -915,7 +1095,7 @@ export default function DashboardPage() {
     if (!row.taskId) {
       window.alert(
         "This task does not have a database ID yet.\n\n" +
-        "Save the checklist once before starting lifecycle processing.",
+          "Save the checklist once before starting lifecycle processing.",
       );
 
       return;
@@ -951,8 +1131,7 @@ export default function DashboardPage() {
         action: "start",
         checklistId,
         taskId: row.taskId,
-        lifecycleVersion:
-          row.lifecycleVersion ?? 0,
+        lifecycleVersion: row.lifecycleVersion ?? 0,
         userId: user.id,
       });
 
@@ -964,8 +1143,7 @@ export default function DashboardPage() {
         startedBy: user.id,
         completedAt: null,
         completedBy: null,
-        lifecycleVersion:
-          result.nextLifecycleVersion,
+        lifecycleVersion: result.nextLifecycleVersion,
         pendingUpload: true,
       });
 
@@ -981,7 +1159,7 @@ export default function DashboardPage() {
 
       window.alert(
         "The task could not be started.\n\n" +
-        (error?.message || "Unknown error"),
+          (error?.message || "Unknown error"),
       );
     } finally {
       setProcessingTaskNumber(null);
@@ -994,25 +1172,19 @@ export default function DashboardPage() {
     }
 
     if (recordLocked || approving) {
-      window.alert(
-        "This checklist is locked or is currently being approved.",
-      );
+      window.alert("This checklist is locked or is currently being approved.");
 
       return;
     }
 
     if (!roleCanUndoTask) {
-      window.alert(
-        "Your role cannot return a completed task to pending.",
-      );
+      window.alert("Your role cannot return a completed task to pending.");
 
       return;
     }
 
     if (!checklistId) {
-      window.alert(
-        "Save the checklist before changing completed tasks.",
-      );
+      window.alert("Save the checklist before changing completed tasks.");
 
       return;
     }
@@ -1038,7 +1210,7 @@ export default function DashboardPage() {
     if (!row.taskId) {
       window.alert(
         "This task does not have a database ID yet.\n\n" +
-        "Save the checklist once before changing its lifecycle.",
+          "Save the checklist once before changing its lifecycle.",
       );
 
       return;
@@ -1052,10 +1224,10 @@ export default function DashboardPage() {
 
     const confirmed = window.confirm(
       "Return this completed task to pending?\n\n" +
-      `Task: ${item.activity}\n\n` +
-      "The Start and Completion records will be cleared. " +
-      "The task must then be started and completed again. " +
-      "This action will be recorded after synchronization.",
+        `Task: ${item.activity}\n\n` +
+        "The Start and Completion records will be cleared. " +
+        "The task must then be started and completed again. " +
+        "This action will be recorded after synchronization.",
     );
 
     if (!confirmed) {
@@ -1065,16 +1237,13 @@ export default function DashboardPage() {
     try {
       setProcessingTaskNumber(itemNumber);
 
-      setStatusMessage(
-        `Returning to pending: ${item.activity}`,
-      );
+      setStatusMessage(`Returning to pending: ${item.activity}`);
 
       const result = await queueLifecycleAction({
         action: "reopen",
         checklistId,
         taskId: row.taskId,
-        lifecycleVersion:
-          row.lifecycleVersion ?? 0,
+        lifecycleVersion: row.lifecycleVersion ?? 0,
         userId: user.id,
       });
 
@@ -1088,8 +1257,7 @@ export default function DashboardPage() {
         startedBy: null,
         completedAt: null,
         completedBy: null,
-        lifecycleVersion:
-          result.nextLifecycleVersion,
+        lifecycleVersion: result.nextLifecycleVersion,
         pendingUpload: true,
       });
 
@@ -1118,14 +1286,10 @@ export default function DashboardPage() {
           block: "center",
         });
 
-        taskElement.classList.add(
-          "task-focus-pulse",
-        );
+        taskElement.classList.add("task-focus-pulse");
 
         window.setTimeout(() => {
-          taskElement.classList.remove(
-            "task-focus-pulse",
-          );
+          taskElement.classList.remove("task-focus-pulse");
         }, 1800);
       }, 150);
     } catch (error) {
@@ -1135,7 +1299,7 @@ export default function DashboardPage() {
 
       window.alert(
         "The completed task could not be returned to pending.\n\n" +
-        (error?.message || "Unknown error"),
+          (error?.message || "Unknown error"),
       );
     } finally {
       setProcessingTaskNumber(null);
@@ -1163,9 +1327,7 @@ export default function DashboardPage() {
     }
 
     if (!checklistId) {
-      window.alert(
-        "Save the checklist before completing tasks.",
-      );
+      window.alert("Save the checklist before completing tasks.");
 
       return;
     }
@@ -1183,9 +1345,7 @@ export default function DashboardPage() {
     const item = CHECKLIST_ITEMS[index];
 
     if (!row || !item) {
-      window.alert(
-        "The selected task could not be found.",
-      );
+      window.alert("The selected task could not be found.");
 
       return;
     }
@@ -1193,7 +1353,7 @@ export default function DashboardPage() {
     if (!row.taskId) {
       window.alert(
         "This task does not have a database ID yet.\n\n" +
-        "Save the checklist once before completing lifecycle processing.",
+          "Save the checklist once before completing lifecycle processing.",
       );
 
       return;
@@ -1206,18 +1366,14 @@ export default function DashboardPage() {
     }
 
     if (!row.startedAt) {
-      window.alert(
-        "Start this task before completing it.",
-      );
+      window.alert("Start this task before completing it.");
 
       return;
     }
 
-    const plannedDateTime =
-      plannedDateTimeFor(index);
+    const plannedDateTime = plannedDateTimeFor(index);
 
-    const plannedTime =
-      formatDateTimeAsTime(plannedDateTime);
+    const plannedTime = formatDateTimeAsTime(plannedDateTime);
 
     if (!plannedDateTime || !plannedTime) {
       window.alert(
@@ -1229,17 +1385,14 @@ export default function DashboardPage() {
 
     const actualTime = currentTime();
 
-    const actualDateTime =
-      startOfMinute(new Date());
+    const actualDateTime = startOfMinute(new Date());
 
-    const normalizedPlannedDateTime =
-      startOfMinute(plannedDateTime);
+    const normalizedPlannedDateTime = startOfMinute(plannedDateTime);
 
-    const delaySeconds =
-      calculateDateTimeDelaySeconds(
-        actualDateTime,
-        normalizedPlannedDateTime,
-      );
+    const delaySeconds = calculateDateTimeDelaySeconds(
+      actualDateTime,
+      normalizedPlannedDateTime,
+    );
 
     if (delaySeconds === null) {
       window.alert(
@@ -1249,47 +1402,34 @@ export default function DashboardPage() {
       return;
     }
 
-    const completedStatus =
-      classifyDelay(delaySeconds);
+    const completedStatus = classifyDelay(delaySeconds);
 
-    const databaseOperationalStatus =
-      DATABASE_STATUS[completedStatus];
+    const databaseOperationalStatus = DATABASE_STATUS[completedStatus];
 
     if (
-      ![
-        "on_time",
-        "light_delay",
-        "delay",
-      ].includes(databaseOperationalStatus)
+      !["on_time", "light_delay", "delay"].includes(databaseOperationalStatus)
     ) {
-      window.alert(
-        "The calculated operational status is invalid.",
-      );
+      window.alert("The calculated operational status is invalid.");
 
       return;
     }
 
-    const observationText =
-      row.observation?.trim() || "";
+    const observationText = row.observation?.trim() || "";
 
     try {
       setProcessingTaskNumber(itemNumber);
 
-      setStatusMessage(
-        `Completing: ${item.activity}`,
-      );
+      setStatusMessage(`Completing: ${item.activity}`);
 
       const result = await queueLifecycleAction({
         action: "complete",
         checklistId,
         taskId: row.taskId,
-        lifecycleVersion:
-          row.lifecycleVersion ?? 0,
+        lifecycleVersion: row.lifecycleVersion ?? 0,
         userId: user.id,
         actualTime,
         delaySeconds,
-        operationalStatus:
-          databaseOperationalStatus,
+        operationalStatus: databaseOperationalStatus,
         observation: observationText,
       });
 
@@ -1302,21 +1442,19 @@ export default function DashboardPage() {
         startedBy: row.startedBy,
         completedAt: result.occurredAt,
         completedBy: user.id,
-        lifecycleVersion:
-          result.nextLifecycleVersion,
+        lifecycleVersion: result.nextLifecycleVersion,
         pendingUpload: true,
         syncConflict: false,
         syncError: null,
       };
 
-      const updatedRows = rows.map(
-        (currentRow, rowIndex) =>
-          rowIndex === index
-            ? {
+      const updatedRows = rows.map((currentRow, rowIndex) =>
+        rowIndex === index
+          ? {
               ...currentRow,
               ...completedChanges,
             }
-            : currentRow,
+          : currentRow,
       );
 
       skipNextAutosaveRef.current = true;
@@ -1331,24 +1469,16 @@ export default function DashboardPage() {
       );
 
       window.setTimeout(() => {
-        openNextPendingTask(
-          updatedRows,
-          itemNumber,
-        );
+        openNextPendingTask(updatedRows, itemNumber);
       }, 450);
     } catch (error) {
-      console.error(
-        "Task completion failed:",
-        error,
-      );
+      console.error("Task completion failed:", error);
 
-      setStatusMessage(
-        "Task completion failed",
-      );
+      setStatusMessage("Task completion failed");
 
       window.alert(
         "The task could not be completed.\n\n" +
-        (error?.message || "Unknown error"),
+          (error?.message || "Unknown error"),
       );
     } finally {
       setProcessingTaskNumber(null);
@@ -1539,7 +1669,7 @@ export default function DashboardPage() {
 
       window.alert(
         "The Power BI reporting files could not be created.\n\n" +
-        (error?.message || "Unknown export error"),
+          (error?.message || "Unknown export error"),
       );
     }
   }
@@ -1659,20 +1789,20 @@ export default function DashboardPage() {
 
       const filteredRecords = normalizedSearch
         ? (data || []).filter((record) => {
-          const values = [
-            record.flight_in,
-            record.flight_out,
-            record.bay,
-            record.aircraft_type,
-            record.registration,
-          ];
+            const values = [
+              record.flight_in,
+              record.flight_out,
+              record.bay,
+              record.aircraft_type,
+              record.registration,
+            ];
 
-          return values.some((value) =>
-            String(value || "")
-              .toLowerCase()
-              .includes(normalizedSearch),
-          );
-        })
+            return values.some((value) =>
+              String(value || "")
+                .toLowerCase()
+                .includes(normalizedSearch),
+            );
+          })
         : data || [];
 
       setHistoryRecords(filteredRecords);
@@ -1685,7 +1815,7 @@ export default function DashboardPage() {
 
       window.alert(
         "Checklist history could not be loaded.\n\n" +
-        (error?.message || "Unknown error"),
+          (error?.message || "Unknown error"),
       );
     } finally {
       setHistoryLoading(false);
@@ -1806,7 +1936,7 @@ export default function DashboardPage() {
 
       window.alert(
         "Audit history could not be loaded.\n\n" +
-        (error?.message || "Unknown error"),
+          (error?.message || "Unknown error"),
       );
     } finally {
       setAuditLoading(false);
@@ -1941,26 +2071,16 @@ export default function DashboardPage() {
 
           return {
             taskId: savedItem.id,
-            lifecycleVersion: Number(
-              savedItem.lifecycle_version ?? 0
-            ),
-            actualTime:
-              normalizeDatabaseTime(savedItem.actual_time),
+            lifecycleVersion: Number(savedItem.lifecycle_version ?? 0),
+            actualTime: normalizeDatabaseTime(savedItem.actual_time),
             observation: savedItem.observation || "",
             status:
-              APPLICATION_STATUS[
-              savedItem.operational_status
-              ] || "pending",
-            delaySeconds:
-              savedItem.delay_seconds ?? null,
-            startedAt:
-              savedItem.started_at || null,
-            startedBy:
-              savedItem.started_by || null,
-            completedAt:
-              savedItem.completed_at || null,
-            completedBy:
-              savedItem.completed_by || null,
+              APPLICATION_STATUS[savedItem.operational_status] || "pending",
+            delaySeconds: savedItem.delay_seconds ?? null,
+            startedAt: savedItem.started_at || null,
+            startedBy: savedItem.started_by || null,
+            completedAt: savedItem.completed_at || null,
+            completedBy: savedItem.completed_by || null,
             pendingUpload: false,
           };
         }),
@@ -1983,7 +2103,7 @@ export default function DashboardPage() {
 
       window.alert(
         "The checklist could not be opened.\n\n" +
-        (error?.message || "Unknown error"),
+          (error?.message || "Unknown error"),
       );
     } finally {
       setLoadingRecord(false);
@@ -2044,9 +2164,9 @@ export default function DashboardPage() {
 
       window.alert(
         "Checklist approved successfully.\n\n" +
-        `Flight: ${flight.flightOut}\n` +
-        "Status: Completed\n" +
-        "Editing: Locked",
+          `Flight: ${flight.flightOut}\n` +
+          "Status: Completed\n" +
+          "Editing: Locked",
       );
     } catch (error) {
       console.error("Checklist approval failed:", error);
@@ -2055,7 +2175,7 @@ export default function DashboardPage() {
 
       window.alert(
         "The checklist could not be approved.\n\n" +
-        (error?.message || "Unknown error"),
+          (error?.message || "Unknown error"),
       );
     } finally {
       setApproving(false);
@@ -2170,7 +2290,8 @@ export default function DashboardPage() {
     }
 
     setStatusMessage(
-      `${draftCount} local ${draftCount === 1 ? "draft" : "drafts"
+      `${draftCount} local ${
+        draftCount === 1 ? "draft" : "drafts"
       } stored on this device`,
     );
 
@@ -2240,13 +2361,13 @@ export default function DashboardPage() {
         if (!silent) {
           window.alert(
             "Complete the required Flight Information before saving.\n\n" +
-            "Required fields:\n" +
-            "- Flight Out\n" +
-            "- Flight Date\n" +
-            "- Aircraft Type\n" +
-            "- Registration\n" +
-            "- STA Scheduled\n" +
-            "- STD Scheduled",
+              "Required fields:\n" +
+              "- Flight Out\n" +
+              "- Flight Date\n" +
+              "- Aircraft Type\n" +
+              "- Registration\n" +
+              "- STA Scheduled\n" +
+              "- STD Scheduled",
           );
         }
 
@@ -2267,8 +2388,8 @@ export default function DashboardPage() {
           if (!silent) {
             window.alert(
               "The checklist could not be saved to Supabase.\n\n" +
-              "A local draft was stored on this device for recovery.\n\n" +
-              "Lifecycle changes for existing saved tasks can be queued offline. Approval and new checklist creation still require the database service.",
+                "A local draft was stored on this device for recovery.\n\n" +
+                "Lifecycle changes for existing saved tasks can be queued offline. Approval and new checklist creation still require the database service.",
             );
           }
 
@@ -2281,7 +2402,7 @@ export default function DashboardPage() {
           if (!silent) {
             window.alert(
               "The checklist could not be saved online or stored in the offline queue.\n\n" +
-              (error?.message || "Unknown offline storage error"),
+                (error?.message || "Unknown offline storage error"),
             );
           }
 
@@ -2389,10 +2510,7 @@ export default function DashboardPage() {
           };
         });
 
-        const {
-          data: savedTaskItems,
-          error: itemError,
-        } = await supabase
+        const { data: savedTaskItems, error: itemError } = await supabase
           .from("ramp_checklist_items")
           .upsert(itemRecords, {
             onConflict: "checklist_id,task_code",
@@ -2409,7 +2527,7 @@ export default function DashboardPage() {
               "actual_time",
               "delay_seconds",
               "operational_status",
-            ].join(",")
+            ].join(","),
           );
 
         if (itemError) {
@@ -2417,15 +2535,15 @@ export default function DashboardPage() {
         }
 
         const savedTaskItemsByCode = new Map(
-          (savedTaskItems || []).map(savedItem => [
+          (savedTaskItems || []).map((savedItem) => [
             savedItem.task_code,
             savedItem,
-          ])
+          ]),
         );
 
         skipNextAutosaveRef.current = true;
 
-        setRows(currentRows =>
+        setRows((currentRows) =>
           currentRows.map((currentRow, index) => {
             const checklistItem = CHECKLIST_ITEMS[index];
 
@@ -2433,9 +2551,7 @@ export default function DashboardPage() {
               return currentRow;
             }
 
-            const savedItem = savedTaskItemsByCode.get(
-              checklistItem.taskCode
-            );
+            const savedItem = savedTaskItemsByCode.get(checklistItem.taskCode);
 
             if (!savedItem) {
               return currentRow;
@@ -2444,33 +2560,18 @@ export default function DashboardPage() {
             return {
               ...currentRow,
               taskId: savedItem.id,
-              lifecycleVersion: Number(
-                savedItem.lifecycle_version ?? 0
-              ),
-              startedAt:
-                savedItem.started_at ??
-                currentRow.startedAt ??
-                null,
-              startedBy:
-                savedItem.started_by ??
-                currentRow.startedBy ??
-                null,
+              lifecycleVersion: Number(savedItem.lifecycle_version ?? 0),
+              startedAt: savedItem.started_at ?? currentRow.startedAt ?? null,
+              startedBy: savedItem.started_by ?? currentRow.startedBy ?? null,
               completedAt:
-                savedItem.completed_at ??
-                currentRow.completedAt ??
-                null,
+                savedItem.completed_at ?? currentRow.completedAt ?? null,
               completedBy:
-                savedItem.completed_by ??
-                currentRow.completedBy ??
-                null,
-              pendingUpload:
-                currentRow.pendingUpload ?? false,
-              syncConflict:
-                currentRow.syncConflict ?? false,
-              syncError:
-                currentRow.syncError ?? null,
+                savedItem.completed_by ?? currentRow.completedBy ?? null,
+              pendingUpload: currentRow.pendingUpload ?? false,
+              syncConflict: currentRow.syncConflict ?? false,
+              syncError: currentRow.syncError ?? null,
             };
-          })
+          }),
         );
 
         const activeTaskCodes = CHECKLIST_ITEMS.map((item) => item.taskCode);
@@ -2490,7 +2591,8 @@ export default function DashboardPage() {
 
         if (savedItemCount !== CHECKLIST_ITEMS.length) {
           throw new Error(
-            `Only ${savedItemCount ?? 0} of ${CHECKLIST_ITEMS.length
+            `Only ${savedItemCount ?? 0} of ${
+              CHECKLIST_ITEMS.length
             } task records were saved.`,
           );
         }
@@ -2523,8 +2625,8 @@ export default function DashboardPage() {
         if (!silent) {
           window.alert(
             "OPS checklist saved successfully.\n\n" +
-            `Flight: ${flight.flightOut}\n` +
-            `Completed: ${metrics.done}/${CHECKLIST_ITEMS.length}`,
+              `Flight: ${flight.flightOut}\n` +
+              `Completed: ${metrics.done}/${CHECKLIST_ITEMS.length}`,
           );
         }
 
@@ -2548,7 +2650,7 @@ export default function DashboardPage() {
         if (!silent) {
           window.alert(
             "The checklist could not be saved.\n\n" +
-            (error?.message || "Unknown error"),
+              (error?.message || "Unknown error"),
           );
         }
 
@@ -2733,6 +2835,15 @@ export default function DashboardPage() {
       </header>
 
       <section className="ramp-content">
+        <div className="mobile-user-identity">
+          <span>Signed in as</span>
+
+          <strong>
+            {profile?.full_name || user?.email || "Operational User"}
+          </strong>
+
+          <small>{getRoleLabel(profile?.role)}</small>
+        </div>
         <div className="ramp-status-bar">
           <div
             className={`connection-indicator connection-${connectionStatus}`}
@@ -2762,9 +2873,9 @@ export default function DashboardPage() {
             <strong>Local draft protection active</strong>
 
             <span>
-              The latest checklist draft is stored on this device.
-              Lifecycle changes for existing saved tasks use the
-              synchronization queue and retry when connectivity returns.
+              The latest checklist draft is stored on this device. Lifecycle
+              changes for existing saved tasks use the synchronization queue and
+              retry when connectivity returns.
             </span>
           </div>
         ) : null}
@@ -3109,17 +3220,17 @@ export default function DashboardPage() {
                   const pendingTiming =
                     row.status === "pending"
                       ? getPendingTaskTiming(
-                        plannedDateTime,
-                        operationalNow,
-                        `Awaiting ${requiredTimeLabelFor(item)}`,
-                      )
+                          plannedDateTime,
+                          operationalNow,
+                          `Awaiting ${requiredTimeLabelFor(item)}`,
+                        )
                       : {
-                        overdue: false,
-                        overdueSeconds: 0,
-                        remainingSeconds: 0,
-                        progressPercent: 100,
-                        label: "",
-                      };
+                          overdue: false,
+                          overdueSeconds: 0,
+                          remainingSeconds: 0,
+                          progressPercent: 100,
+                          label: "",
+                        };
 
                   return (
                     <ChecklistActivity

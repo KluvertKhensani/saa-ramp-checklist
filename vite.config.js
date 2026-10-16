@@ -79,9 +79,12 @@ export default defineConfig({
       },
 
       workbox: {
-        navigateFallback: "/saa-ramp-checklist/index.html",
+        navigateFallback:
+          "/saa-ramp-checklist/index.html",
 
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"],
+        globPatterns: [
+          "**/*.{js,css,html,ico,png,svg,webp}",
+        ],
 
         cleanupOutdatedCaches: true,
 
@@ -89,7 +92,9 @@ export default defineConfig({
 
         skipWaiting: false,
 
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [
+          /^\/api\//,
+        ],
       },
 
       devOptions: {

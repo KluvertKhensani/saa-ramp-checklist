@@ -1943,3 +1943,88 @@ button.sync-status:disabled {
     font-size: 0.72rem;
   }
 }
+
+.mandatory-update-screen {
+  position: fixed;
+  z-index: 100000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background:
+    linear-gradient(
+      135deg,
+      #003b71,
+      #0066a1
+    );
+}
+
+.mandatory-update-card {
+  width: min(100%, 26rem);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow:
+    0 1.25rem 3rem
+    rgb(0 0 0 / 25%);
+  text-align: center;
+}
+
+.mandatory-update-card strong {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: #003b71;
+  font-size: 1.15rem;
+}
+
+.mandatory-update-card p {
+  margin: 0 0 0.75rem;
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+.mandatory-update-card span {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.pwa-update-notice,
+.pwa-offline-ready {
+  position: fixed;
+  z-index: 99999;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  width: min(
+    calc(100% - 2rem),
+    25rem
+  );
+  padding: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.9rem;
+  background: #ffffff;
+  box-shadow:
+    0 0.75rem 2rem
+    rgb(15 23 42 / 18%);
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.pwa-update-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.pwa-update-actions button,
+.pwa-offline-ready button {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.8rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #005b96;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}

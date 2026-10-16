@@ -1,137 +1,295 @@
-/* global __APP_VERSION__ */
-
-import {
-  CheckCircle2,
-  DownloadCloud,
-  RefreshCw,
-  WifiOff,
-  X,
-} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useRegisterSW } from "virtual:pwa-register/react";
 
-import { registerSW } from "virtual:pwa-register";
+import { supabase } from "../lib/supabase";
+import { clearApplicationCaches } from "../utils/appCacheCleanup";
 
-const APPLICATION_VERSION =
-  typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "1.0.0";
+const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
 export default function PwaUpdatePrompt() {
-  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
 
-  const [offlineReady, setOfflineReady] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  const [registrationError, setRegistrationError] = useState(false);
+  const [installingUpdate, setInstallingUpdate] = useState(false);
 
-  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState("");
 
-  const updateServiceWorkerRef = useRef(null);
+  const registrationRef = useRef(null);
+
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    offlineReady: [offlineReady, setOfflineReady],
+    updateServiceWorker,
+  } = useRegisterSW({
+    immediate: true,
+
+    onRegisteredSW(_serviceWorkerUrl, registration) {
+      registrationRef.current = registration || null;
+    },
+
+    onRegisterError(error) {
+      console.error("Service worker registration failed:", error);
+
+      setUpdateError(
+        error?.message || "The application updater could not be registered.",
+      );
+    },
+  });
 
   useEffect(() => {
-    const updateServiceWorker = registerSW({
-      immediate: true,
+    let active = true;
 
-      onNeedRefresh() {
-        setUpdateAvailable(true);
-        setOfflineReady(false);
-      },
+    async function loadAuthenticationState() {
+      try {
+        const { data, error } = await supabase.auth.getSession();
 
-      onOfflineReady() {
-        setOfflineReady(true);
-      },
+        if (error) {
+          throw error;
+        }
 
-      onRegisteredSW(swScriptUrl, registration) {
-        console.info("PWA service worker registered:", swScriptUrl);
-
-        if (!registration) {
+        if (!active) {
           return;
         }
 
-        const updateInterval = window.setInterval(
-          () => {
-            registration.update().catch((error) => {
-              console.error("PWA update check failed:", error);
-            });
-          },
-          60 * 60 * 1000,
-        );
+        setSignedIn(Boolean(data.session));
+      } catch (error) {
+        console.error("Authentication state check failed:", error);
+      } finally {
+        if (active) {
+          setAuthChecked(true);
+        }
+      }
+    }
 
-        window.addEventListener(
-          "beforeunload",
-          () => {
-            window.clearInterval(updateInterval);
-          },
-          {
-            once: true,
-          },
-        );
+    void loadAuthenticationState();
+
+    const { data: authSubscription } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSignedIn(Boolean(session));
+        setAuthChecked(true);
       },
-
-      onRegisterError(error) {
-        console.error("PWA registration failed:", error);
-
-        setRegistrationError(true);
-      },
-    });
-
-    updateServiceWorkerRef.current = updateServiceWorker;
+    );
 
     return () => {
-      updateServiceWorkerRef.current = null;
+      active = false;
+
+      authSubscription.subscription.unsubscribe();
     };
   }, []);
 
-  async function installUpdate() {
-    if (updating || !updateServiceWorkerRef.current) {
-      return;
+  useEffect(() => {
+    async function checkForUpdate() {
+      if (!window.navigator.onLine || !registrationRef.current) {
+        return;
+      }
+
+      try {
+        await registrationRef.current.update();
+      } catch (error) {
+        console.error("Application update check failed:", error);
+      }
     }
 
+    const initialTimer = window.setTimeout(() => {
+      void checkForUpdate();
+    }, 1000);
+
+    const updateTimer = window.setInterval(() => {
+      void checkForUpdate();
+    }, UPDATE_CHECK_INTERVAL_MS);
+
+    function handleOnline() {
+      void checkForUpdate();
+    }
+
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(updateTimer);
+
+      window.removeEventListener("online", handleOnline);
+    };
+  }, []);
+
+  useEffect(() => {
+    async function installUpdateBeforeLogin() {
+      if (!authChecked || !needRefresh || signedIn || installingUpdate) {
+        return;
+      }
+
+      try {
+        setInstallingUpdate(true);
+        setUpdateError("");
+
+        await updateServiceWorker(true);
+      } catch (error) {
+        console.error("Automatic application update failed:", error);
+
+        setInstallingUpdate(false);
+
+        setUpdateError(
+          error?.message ||
+            "The latest application version could not be installed.",
+        );
+      }
+    }
+
+    void installUpdateBeforeLogin();
+  }, [
+    authChecked,
+    installingUpdate,
+    needRefresh,
+    signedIn,
+    updateServiceWorker,
+  ]);
+
+  async function handleManualUpdate() {
     try {
-      setUpdating(true);
+      setInstallingUpdate(true);
+      setUpdateError("");
 
-      await updateServiceWorkerRef.current(true);
+      await updateServiceWorker(true);
     } catch (error) {
-      console.error("PWA update failed:", error);
+      console.error("Application update failed:", error);
 
-      setUpdating(false);
-      setRegistrationError(true);
-      setUpdateAvailable(false);
+      setInstallingUpdate(false);
+
+      setUpdateError(
+        error?.message ||
+          "The latest application version could not be installed.",
+      );
     }
   }
 
-  function dismissUpdate() {
-    if (updating) {
-      return;
+  async function handleUpdateRecovery() {
+    try {
+      setInstallingUpdate(true);
+      setUpdateError("");
+
+      const registration = await navigator.serviceWorker.getRegistration();
+
+      if (registration) {
+        await registration.unregister();
+      }
+
+      const deletedCacheCount = await clearApplicationCaches();
+
+      console.info(`Removed ${deletedCacheCount} application cache(s).`);
+
+      const recoveryUrl = new URL(
+        import.meta.env.BASE_URL,
+        window.location.origin,
+      );
+
+      recoveryUrl.hash = "#/login";
+      recoveryUrl.searchParams.set("app-refresh", Date.now().toString());
+
+      window.location.replace(recoveryUrl.toString());
+    } catch (error) {
+      console.error("Application update recovery failed:", error);
+
+      setInstallingUpdate(false);
+
+      setUpdateError(
+        error?.message || "The application cache could not be refreshed.",
+      );
     }
-
-    setUpdateAvailable(false);
   }
 
-  function dismissOfflineReady() {
-    setOfflineReady(false);
+  if (!authChecked) {
+    return null;
   }
 
-  function dismissRegistrationError() {
-    setRegistrationError(false);
-  }
-
-  if (updateAvailable) {
+  if (needRefresh && !signedIn) {
     return (
-      <aside
-        className="pwa-update-prompt"
-        role="alertdialog"
-        aria-modal="false"
-        aria-labelledby="pwa-update-title"
-        aria-describedby="pwa-update-description"
+      <div
+        className="mandatory-update-screen"
+        role="alert"
+        aria-live="assertive"
       >
-        <div className="pwa-update-icon">
-          <DownloadCloud size={23} aria-hidden="true" />
+        <div className="mandatory-update-card">
+          <strong>Updating OPS Checklist</strong>
+
+          <p>A new version is being installed before sign-in.</p>
+
+          <span>Keep this screen open.</span>
+
+          {updateError ? (
+            <>
+              <p className="mandatory-update-error">{updateError}</p>
+
+              <button
+                type="button"
+                className="mandatory-update-retry"
+                disabled={installingUpdate}
+                onClick={() => {
+                  void handleUpdateRecovery();
+                }}
+              >
+                Refresh application
+              </button>
+            </>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (needRefresh && signedIn) {
+    return (
+      <div className="pwa-update-prompt" role="alert" aria-live="assertive">
+        <div className="pwa-update-content">
+          <strong>Application update available</strong>
+
+          <span>
+            Save or complete the current operation before installing the latest
+            version.
+          </span>
+
+          {updateError ? <span>{updateError}</span> : null}
         </div>
 
-        <div className="pwa-update-content">
-          <strong id="pwa-update-title">New version available</strong>
+        <div className="pwa-update-actions">
+          <button
+            type="button"
+            className="pwa-update-button pwa-update-button-primary"
+            disabled={installingUpdate}
+            onClick={() => {
+              void handleManualUpdate();
+            }}
+          >
+            {installingUpdate ? "Updating..." : "Update now"}
+          </button>
 
-          <span id="pwa-update-description">
-            Version {APPLICATION_VERSION} is ready. Reload the application to
-            open the newest deployed build.
+          <button
+            type="button"
+            className="pwa-update-button pwa-update-button-secondary"
+            disabled={installingUpdate}
+            onClick={() => {
+              setNeedRefresh(false);
+            }}
+          >
+            Later
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (offlineReady) {
+    return (
+      <div
+        className="pwa-update-prompt pwa-update-prompt-ready"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="pwa-update-content">
+          <strong>Offline mode is ready</strong>
+
+          <span>
+            The application shell is available when connectivity is interrupted.
           </span>
         </div>
 
@@ -139,92 +297,14 @@ export default function PwaUpdatePrompt() {
           <button
             type="button"
             className="pwa-update-button pwa-update-button-primary"
-            onClick={installUpdate}
-            disabled={updating}
+            onClick={() => {
+              setOfflineReady(false);
+            }}
           >
-            <RefreshCw
-              size={16}
-              className={updating ? "spin" : ""}
-              aria-hidden="true"
-            />
-
-            {updating ? "Updating..." : "Reload now"}
-          </button>
-
-          <button
-            type="button"
-            className="pwa-update-button pwa-update-button-secondary"
-            onClick={dismissUpdate}
-            disabled={updating}
-          >
-            Later
+            Dismiss
           </button>
         </div>
-      </aside>
-    );
-  }
-
-  if (offlineReady) {
-    return (
-      <aside
-        className="pwa-update-prompt pwa-update-prompt-ready"
-        role="status"
-        aria-live="polite"
-      >
-        <div className="pwa-update-icon">
-          <CheckCircle2 size={23} aria-hidden="true" />
-        </div>
-
-        <div className="pwa-update-content">
-          <strong>Application files ready</strong>
-
-          <span>
-            Previously loaded screens can open without a network connection.
-            Database actions still require Supabase.
-          </span>
-        </div>
-
-        <button
-          type="button"
-          className="pwa-update-close"
-          onClick={dismissOfflineReady}
-          aria-label="Dismiss offline-ready notification"
-        >
-          <X size={18} aria-hidden="true" />
-        </button>
-      </aside>
-    );
-  }
-
-  if (registrationError) {
-    return (
-      <aside
-        className="pwa-update-prompt pwa-update-prompt-error"
-        role="status"
-        aria-live="polite"
-      >
-        <div className="pwa-update-icon">
-          <WifiOff size={23} aria-hidden="true" />
-        </div>
-
-        <div className="pwa-update-content">
-          <strong>Update checking unavailable</strong>
-
-          <span>
-            Continue using the current version. Refresh the browser after the
-            connection is restored.
-          </span>
-        </div>
-
-        <button
-          type="button"
-          className="pwa-update-close"
-          onClick={dismissRegistrationError}
-          aria-label="Dismiss update error notification"
-        >
-          <X size={18} aria-hidden="true" />
-        </button>
-      </aside>
+      </div>
     );
   }
 
