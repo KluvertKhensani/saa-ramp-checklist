@@ -1,6 +1,6 @@
 const DATABASE_NAME = "saa-ramp-checklist-offline";
 
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 const ACTION_STORE = "pending_actions";
 

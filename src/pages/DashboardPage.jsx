@@ -148,7 +148,7 @@ function mapDatabaseTaskToRow(databaseTask, currentRow = {}) {
   };
 }
 
-const AUTOSAVE_DELAY_MS = 1500;
+const AUTOSAVE_DELAY_MS = 10000;
 
 const CONNECTION_LABELS = {
   checking: "Checking service connection",
@@ -381,9 +381,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let active = true;
+    let requestInProgress = false;
 
     async function checkConnection() {
-      if (!navigator.onLine) {
+      if (requestInProgress) {
+        return;
+      }
+
+      if (!window.navigator.onLine) {
         if (active) {
           setConnectionStatus("offline");
         }
@@ -391,12 +396,14 @@ export default function DashboardPage() {
         return;
       }
 
-      if (
-        active &&
-        connectionStatus !== "online" &&
-        connectionStatus !== "pending"
-      ) {
-        setConnectionStatus("checking");
+      requestInProgress = true;
+
+      if (active) {
+        setConnectionStatus((currentStatus) =>
+          currentStatus === "online" || currentStatus === "pending"
+            ? currentStatus
+            : "checking",
+        );
       }
 
       try {
@@ -408,7 +415,6 @@ export default function DashboardPage() {
 
         if (error) {
           setConnectionStatus("unreachable");
-
           return;
         }
 
@@ -425,24 +431,33 @@ export default function DashboardPage() {
         if (active) {
           setConnectionStatus("unreachable");
         }
+      } finally {
+        requestInProgress = false;
       }
     }
 
     function handleOnline() {
-      checkConnection();
+      void checkConnection();
     }
 
     function handleOffline() {
-      setConnectionStatus("offline");
+      if (active) {
+        setConnectionStatus("offline");
+      }
     }
 
     window.addEventListener("online", handleOnline);
 
     window.addEventListener("offline", handleOffline);
 
-    checkConnection();
+    void checkConnection();
 
-    const connectionTimer = window.setInterval(checkConnection, 60000);
+    const connectionTimer = window.setInterval(
+      () => {
+        void checkConnection();
+      },
+      5 * 60 * 1000,
+    );
 
     return () => {
       active = false;
@@ -453,7 +468,7 @@ export default function DashboardPage() {
 
       window.clearInterval(connectionTimer);
     };
-  }, [connectionStatus, refreshPendingSyncCount]);
+  }, [refreshPendingSyncCount]);
 
   useEffect(() => {
     checklistIdRef.current = checklistId;
@@ -485,10 +500,10 @@ export default function DashboardPage() {
             return;
           }
 
-          skipNextAutosaveRef.current = true;
+          let updateApplied = false;
 
-          setRows((currentRows) =>
-            currentRows.map((currentRow) => {
+          setRows((currentRows) => {
+            const updatedRows = currentRows.map((currentRow) => {
               if (currentRow.taskId !== changedTask.id) {
                 return currentRow;
               }
@@ -501,9 +516,39 @@ export default function DashboardPage() {
                 return currentRow;
               }
 
-              return mapDatabaseTaskToRow(changedTask, currentRow);
-            }),
-          );
+              const mappedRow = mapDatabaseTaskToRow(changedTask, currentRow);
+
+              const rowIsUnchanged =
+                mappedRow.lifecycleVersion === currentRow.lifecycleVersion &&
+                mappedRow.actualTime === currentRow.actualTime &&
+                mappedRow.observation === currentRow.observation &&
+                mappedRow.status === currentRow.status &&
+                mappedRow.delaySeconds === currentRow.delaySeconds &&
+                mappedRow.startedAt === currentRow.startedAt &&
+                mappedRow.startedBy === currentRow.startedBy &&
+                mappedRow.completedAt === currentRow.completedAt &&
+                mappedRow.completedBy === currentRow.completedBy &&
+                mappedRow.pendingUpload === currentRow.pendingUpload &&
+                mappedRow.syncConflict === currentRow.syncConflict &&
+                mappedRow.syncError === currentRow.syncError;
+
+              if (rowIsUnchanged) {
+                return currentRow;
+              }
+
+              updateApplied = true;
+
+              return mappedRow;
+            });
+
+            if (!updateApplied) {
+              return currentRows;
+            }
+
+            skipNextAutosaveRef.current = true;
+
+            return updatedRows;
+          });
 
           setStatusMessage("Live checklist update received.");
         },
