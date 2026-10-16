@@ -168,8 +168,8 @@ function getConnectionLabel(connectionStatus, pendingCount = 0) {
   return CONNECTION_LABELS[connectionStatus] || "Connection status unavailable";
 }
 
-function databaseIsAvailable(connectionStatus) {
-  return connectionStatus === "online" || connectionStatus === "pending";
+function databaseIsAvailable() {
+  return window.navigator.onLine;
 }
 
 function createInitialFlight(coordinatorName = "") {
@@ -407,7 +407,11 @@ export default function DashboardPage() {
       }
 
       try {
-        const { error } = await supabase.from("profiles").select("id").limit(1);
+        const { data: sessionData, error } = await supabase.auth.getSession();
+
+        if (!error && !sessionData.session) {
+          console.info("No authenticated session is currently available.");
+        }
 
         if (!active) {
           return;
@@ -717,14 +721,6 @@ export default function DashboardPage() {
           "Lifecycle synchronized, but the latest task state could not be reloaded.",
         );
       }
-
-      if (
-        roleCanViewAudit &&
-        loadAuditHistoryRef.current &&
-        checklistIdRef.current
-      ) {
-        void loadAuditHistoryRef.current(checklistIdRef.current);
-      }
     }
 
     function handleLifecycleConflict(event) {
@@ -807,7 +803,7 @@ export default function DashboardPage() {
         handleLifecycleFailure,
       );
     };
-  }, [roleCanViewAudit]);
+  }, []);
 
   useEffect(() => {
     const readyTimer = window.setTimeout(() => {
@@ -1937,10 +1933,12 @@ export default function DashboardPage() {
             "created_at",
           ].join(","),
         )
+
         .eq("checklist_id", targetChecklistId)
         .order("created_at", {
           ascending: false,
-        });
+        })
+        .limit(100);
 
       if (error) {
         throw error;
@@ -2422,7 +2420,7 @@ export default function DashboardPage() {
         };
       }
 
-      if (!databaseIsAvailable(connectionStatus)) {
+      if (!databaseIsAvailable()) {
         try {
           if (!queueChecklistSnapshotRef.current) {
             throw new Error("The offline checklist queue is not ready.");
@@ -2719,7 +2717,6 @@ export default function DashboardPage() {
     [
       approving,
       checklistId,
-      connectionStatus,
       flight,
       metrics.done,
       profile?.full_name,
