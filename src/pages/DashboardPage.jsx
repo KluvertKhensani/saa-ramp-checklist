@@ -351,6 +351,53 @@ export default function DashboardPage() {
   const checklistActivitiesDisabled =
     taskCompletionDisabled || !flightInformationComplete;
 
+  useEffect(() => {
+    console.info("OPS permission diagnostic", {
+      userId: user?.id ?? null,
+      email: user?.email ?? null,
+      profileLoaded: Boolean(profile),
+      role: profile?.role ?? null,
+      roleCanCreate,
+      roleCanOperate,
+      roleCanCompleteTask,
+      roleCanUndoTask,
+      roleCanEditFlight,
+      roleCanEditObservation,
+      roleCanViewHistory,
+      roleCanViewAudit,
+      roleCanExport,
+      roleIsReadOnly,
+      recordLocked,
+      approving,
+      flightInformationDisabled,
+      observationsDisabled,
+      taskCompletionDisabled,
+      flightInformationComplete,
+      checklistActivitiesDisabled,
+    });
+  }, [
+    approving,
+    checklistActivitiesDisabled,
+    flightInformationComplete,
+    flightInformationDisabled,
+    observationsDisabled,
+    profile,
+    recordLocked,
+    roleCanCompleteTask,
+    roleCanCreate,
+    roleCanEditFlight,
+    roleCanEditObservation,
+    roleCanExport,
+    roleCanOperate,
+    roleCanUndoTask,
+    roleCanViewAudit,
+    roleCanViewHistory,
+    roleIsReadOnly,
+    taskCompletionDisabled,
+    user?.email,
+    user?.id,
+  ]);
+
   function isTaskProcessing(itemNumber) {
     return processingTaskNumber === itemNumber;
   }
@@ -477,131 +524,6 @@ export default function DashboardPage() {
   useEffect(() => {
     checklistIdRef.current = checklistId;
   }, [checklistId]);
-
-  useEffect(() => {
-    if (!checklistId || !user?.id) {
-      return undefined;
-    }
-
-    const channel = supabase
-      .channel(`ramp-checklist-live-${checklistId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "ramp_checklist_items",
-          filter: `checklist_id=eq.${checklistId}`,
-        },
-        (payload) => {
-          if (payload.eventType === "DELETE") {
-            return;
-          }
-
-          const changedTask = payload.new;
-
-          if (!changedTask?.id) {
-            return;
-          }
-
-          let updateApplied = false;
-
-          setRows((currentRows) => {
-            const updatedRows = currentRows.map((currentRow) => {
-              if (currentRow.taskId !== changedTask.id) {
-                return currentRow;
-              }
-
-              const serverVersion = Number(changedTask.lifecycle_version ?? 0);
-
-              const localVersion = Number(currentRow.lifecycleVersion ?? 0);
-
-              if (currentRow.pendingUpload && serverVersion < localVersion) {
-                return currentRow;
-              }
-
-              const mappedRow = mapDatabaseTaskToRow(changedTask, currentRow);
-
-              const rowIsUnchanged =
-                mappedRow.lifecycleVersion === currentRow.lifecycleVersion &&
-                mappedRow.actualTime === currentRow.actualTime &&
-                mappedRow.observation === currentRow.observation &&
-                mappedRow.status === currentRow.status &&
-                mappedRow.delaySeconds === currentRow.delaySeconds &&
-                mappedRow.startedAt === currentRow.startedAt &&
-                mappedRow.startedBy === currentRow.startedBy &&
-                mappedRow.completedAt === currentRow.completedAt &&
-                mappedRow.completedBy === currentRow.completedBy &&
-                mappedRow.pendingUpload === currentRow.pendingUpload &&
-                mappedRow.syncConflict === currentRow.syncConflict &&
-                mappedRow.syncError === currentRow.syncError;
-
-              if (rowIsUnchanged) {
-                return currentRow;
-              }
-
-              updateApplied = true;
-
-              return mappedRow;
-            });
-
-            if (!updateApplied) {
-              return currentRows;
-            }
-
-            skipNextAutosaveRef.current = true;
-
-            return updatedRows;
-          });
-
-          setStatusMessage("Live checklist update received.");
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "ramp_checklists",
-          filter: `id=eq.${checklistId}`,
-        },
-        (payload) => {
-          const changedChecklist = payload.new;
-
-          if (!changedChecklist) {
-            return;
-          }
-
-          setRecordLocked(Boolean(changedChecklist.is_locked));
-
-          setApprovalDetails({
-            approvedBy: changedChecklist.approved_by || null,
-            approvedByName: "",
-            approvedAt: changedChecklist.approved_at || null,
-            notes: changedChecklist.approval_notes || "",
-          });
-
-          if (changedChecklist.is_locked) {
-            setStatusMessage(
-              "This checklist was approved and locked from another device.",
-            );
-          }
-        },
-      )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          console.info("Live checklist synchronization active.");
-        }
-
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          console.error("Live checklist synchronization failed:", status);
-        }
-      });
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [checklistId, user?.id]);
 
   useEffect(() => {
     async function reconcileAfterReconnect() {
