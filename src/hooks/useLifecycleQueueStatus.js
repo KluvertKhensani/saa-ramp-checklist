@@ -13,9 +13,7 @@ const initialSummary = {
 
 export default function useLifecycleQueueStatus() {
   const [summary, setSummary] = useState(initialSummary);
-  const [isOnline, setIsOnline] = useState(
-    () => window.navigator.onLine
-  );
+  const [isOnline, setIsOnline] = useState(() => window.navigator.onLine);
   const [isRetrying, setIsRetrying] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -23,10 +21,7 @@ export default function useLifecycleQueueStatus() {
       const nextSummary = await getQueueSummary();
       setSummary(nextSummary);
     } catch (error) {
-      console.error(
-        "Unable to read lifecycle queue status:",
-        error
-      );
+      console.error("Unable to read lifecycle queue status:", error);
     }
   }, []);
 
@@ -41,10 +36,7 @@ export default function useLifecycleQueueStatus() {
       await processLifecycleQueue();
       await refresh();
     } catch (error) {
-      console.error(
-        "Unable to process lifecycle queue:",
-        error
-      );
+      console.error("Unable to process lifecycle queue:", error);
     } finally {
       setIsRetrying(false);
     }
@@ -68,15 +60,9 @@ export default function useLifecycleQueueStatus() {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    window.addEventListener(
-      "lifecycle-queue-changed",
-      handleQueueChange
-    );
+    window.addEventListener("lifecycle-queue-changed", handleQueueChange);
 
-    window.addEventListener(
-      "lifecycle-sync-finished",
-      handleQueueChange
-    );
+    window.addEventListener("lifecycle-sync-finished", handleQueueChange);
 
     const initialRefreshTimer = window.setTimeout(() => {
       void refresh();
@@ -85,25 +71,13 @@ export default function useLifecycleQueueStatus() {
     return () => {
       window.clearTimeout(initialRefreshTimer);
 
-      window.removeEventListener(
-        "online",
-        handleOnline
-      );
+      window.removeEventListener("online", handleOnline);
 
-      window.removeEventListener(
-        "offline",
-        handleOffline
-      );
+      window.removeEventListener("offline", handleOffline);
 
-      window.removeEventListener(
-        "lifecycle-queue-changed",
-        handleQueueChange
-      );
+      window.removeEventListener("lifecycle-queue-changed", handleQueueChange);
 
-      window.removeEventListener(
-        "lifecycle-sync-finished",
-        handleQueueChange
-      );
+      window.removeEventListener("lifecycle-sync-finished", handleQueueChange);
     };
   }, [refresh]);
 

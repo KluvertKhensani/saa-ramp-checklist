@@ -1,30 +1,15 @@
-import {
-  enqueueLifecycleOperation,
-} from "../offline/lifecycleQueue";
-import {
-  processLifecycleQueue,
-} from "../offline/processLifecycleQueue";
+import { enqueueLifecycleOperation } from "../offline/lifecycleQueue";
+import { processLifecycleQueue } from "../offline/processLifecycleQueue";
 
-const supportedActions = new Set([
-  "start",
-  "complete",
-  "reopen",
-  "update",
-]);
+const supportedActions = new Set(["start", "complete", "reopen", "update"]);
 
-const completionStatuses = new Set([
-  "on_time",
-  "light_delay",
-  "delay",
-]);
+const completionStatuses = new Set(["on_time", "light_delay", "delay"]);
 
 function validateLifecycleVersion(value) {
   const version = Number(value ?? 0);
 
   if (!Number.isInteger(version) || version < 0) {
-    throw new Error(
-      "Lifecycle version must be zero or greater."
-    );
+    throw new Error("Lifecycle version must be zero or greater.");
   }
 
   return version;
@@ -34,15 +19,11 @@ function validateDelaySeconds(value) {
   const delay = Number(value);
 
   if (!Number.isFinite(delay)) {
-    throw new Error(
-      "Delay seconds must be a valid number."
-    );
+    throw new Error("Delay seconds must be a valid number.");
   }
 
   if (!Number.isInteger(delay)) {
-    throw new Error(
-      "Delay seconds must be an integer."
-    );
+    throw new Error("Delay seconds must be an integer.");
   }
 
   return delay;
@@ -60,9 +41,7 @@ export async function queueLifecycleAction({
   observation,
 }) {
   if (!supportedActions.has(action)) {
-    throw new Error(
-      `Unsupported lifecycle action: ${action}`
-    );
+    throw new Error(`Unsupported lifecycle action: ${action}`);
   }
 
   if (!checklistId) {
@@ -74,13 +53,10 @@ export async function queueLifecycleAction({
   }
 
   if (!userId) {
-    throw new Error(
-      "An authenticated user is required."
-    );
+    throw new Error("An authenticated user is required.");
   }
 
-  const expectedVersion =
-    validateLifecycleVersion(lifecycleVersion);
+  const expectedVersion = validateLifecycleVersion(lifecycleVersion);
 
   const payload = {
     occurredAt: new Date().toISOString(),
@@ -88,57 +64,44 @@ export async function queueLifecycleAction({
 
   if (action === "complete") {
     if (!actualTime) {
-      throw new Error(
-        "Actual time is required when completing a task."
-      );
+      throw new Error("Actual time is required when completing a task.");
     }
 
     if (!completionStatuses.has(operationalStatus)) {
-      throw new Error(
-        "Completion requires on_time, light_delay, or delay."
-      );
+      throw new Error("Completion requires on_time, light_delay, or delay.");
     }
 
     payload.actualTime = actualTime;
-    payload.delaySeconds =
-      validateDelaySeconds(delaySeconds);
-    payload.operationalStatus =
-      operationalStatus;
+    payload.delaySeconds = validateDelaySeconds(delaySeconds);
+    payload.operationalStatus = operationalStatus;
   }
 
-  if (
-    action === "update" &&
-    operationalStatus !== undefined
-  ) {
+  if (action === "update" && operationalStatus !== undefined) {
     if (
       operationalStatus !== "pending" &&
       !completionStatuses.has(operationalStatus)
     ) {
-      throw new Error(
-        "Invalid operational status."
-      );
+      throw new Error("Invalid operational status.");
     }
 
-    payload.operationalStatus =
-      operationalStatus;
+    payload.operationalStatus = operationalStatus;
   }
 
   if (observation !== undefined) {
     payload.observation = observation;
   }
 
-  const operation =
-    await enqueueLifecycleOperation({
-      checklistId,
-      taskId,
-      action,
-      payload,
-      expectedVersion,
-      userId,
-    });
+  const operation = await enqueueLifecycleOperation({
+    checklistId,
+    taskId,
+    action,
+    payload,
+    expectedVersion,
+    userId,
+  });
 
   if (window.navigator.onLine) {
-    void processLifecycleQueue();
+    await processLifecycleQueue();
   }
 
   return {
@@ -147,11 +110,9 @@ export async function queueLifecycleAction({
     operationalStatus:
       action === "complete"
         ? operationalStatus
-        : action === "start" ||
-            action === "reopen"
+        : action === "start" || action === "reopen"
           ? "pending"
           : operationalStatus,
-    nextLifecycleVersion:
-      expectedVersion + 1,
+    nextLifecycleVersion: expectedVersion + 1,
   };
 }

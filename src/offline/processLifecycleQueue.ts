@@ -8,7 +8,19 @@ import {
 
 const LIFECYCLE_SYNC_LOCK_NAME = "saa-ramp-lifecycle-sync";
 
+const MAX_AUTOMATIC_ATTEMPTS = 3;
+
+const LIFECYCLE_OPERATION_DELAY_MS = 250;
+
 let lifecycleSyncPromise: Promise<void> | null = null;
+
+let lifecycleSyncRegistered = false;
+
+function wait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
+}
 
 function sortOperations(
   operations: LifecycleQueueItem[],
@@ -204,9 +216,8 @@ async function processLifecycleQueueInternal(): Promise<void> {
 
   const retryableOperations = allOperations.filter(
     (item) =>
-      item.status === "pending" ||
-      item.status === "failed" ||
-      item.status === "uploading",
+      (item.status === "pending" || item.status === "uploading") &&
+      Number(item.attempts ?? 0) < MAX_AUTOMATIC_ATTEMPTS,
   );
 
   const normalizedOperations: LifecycleQueueItem[] = [];
@@ -226,12 +237,14 @@ async function processLifecycleQueueInternal(): Promise<void> {
 
     try {
       await uploadOperation(operation);
+
+      await wait(LIFECYCLE_OPERATION_DELAY_MS);
     } catch (error) {
       console.error("Lifecycle queue processing paused:", error);
 
       /*
-       * Stop here so a later lifecycle action
-       * cannot overtake the failed operation.
+       * Stop so a later lifecycle operation
+       * cannot overtake an earlier one.
        */
       break;
     }
@@ -296,6 +309,12 @@ export function processLifecycleQueue(): Promise<void> {
 }
 
 export function registerLifecycleSync(): () => void {
+  if (lifecycleSyncRegistered) {
+    return () => {};
+  }
+
+  lifecycleSyncRegistered = true;
+
   function handleOnline() {
     void processLifecycleQueue();
   }
@@ -304,5 +323,7 @@ export function registerLifecycleSync(): () => void {
 
   return () => {
     window.removeEventListener("online", handleOnline);
+
+    lifecycleSyncRegistered = false;
   };
 }
