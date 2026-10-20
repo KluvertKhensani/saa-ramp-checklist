@@ -82,10 +82,26 @@ jobs:
       - name: Verify deployment output
         shell: bash
         run: |
+          set -euo pipefail
+
           test -f dist/index.html
           test -f dist/404.html
           test -f dist/manifest.webmanifest
-          echo "GitHub Pages deployment files are present."
+          test -f dist/sw.js
+
+          workbox_file="$(find dist -maxdepth 1 -type f -name 'workbox-*.js' -print -quit)"
+
+          if [ -z "$workbox_file" ]; then
+            echo "ERROR: The Workbox runtime file was not generated."
+            exit 1
+          fi
+
+          echo "Verified GitHub Pages output:"
+          echo "- dist/index.html"
+          echo "- dist/404.html"
+          echo "- dist/manifest.webmanifest"
+          echo "- dist/sw.js"
+          echo "- $workbox_file"
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
