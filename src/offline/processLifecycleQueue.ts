@@ -243,10 +243,10 @@ async function processLifecycleQueueInternal(): Promise<void> {
       console.error("Lifecycle queue processing paused:", error);
 
       /*
-       * Stop so a later lifecycle operation
-       * cannot overtake an earlier one.
+       * Propagate the failure so callers do not
+       * report successful synchronization.
        */
-      break;
+      throw error;
     }
   }
 }

@@ -100,8 +100,11 @@ export async function queueLifecycleAction({
     userId,
   });
 
+  let synchronized = false;
+
   if (window.navigator.onLine) {
     await processLifecycleQueue();
+    synchronized = true;
   }
 
   return {
@@ -114,5 +117,6 @@ export async function queueLifecycleAction({
           ? "pending"
           : operationalStatus,
     nextLifecycleVersion: expectedVersion + 1,
+    synchronized,
   };
 }
