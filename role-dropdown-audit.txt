@@ -1,0 +1,232 @@
+﻿
+  src\components\checklist\ChecklistHistory.jsx:166:            aria-label="Search checklist history"
+  src\components\checklist\ChecklistHistory.jsx:167:          />
+  src\components\checklist\ChecklistHistory.jsx:168:        </label>
+  src\components\checklist\ChecklistHistory.jsx:169:
+> src\components\checklist\ChecklistHistory.jsx:170:        <select
+  src\components\checklist\ChecklistHistory.jsx:171:          value={statusValue}
+  src\components\checklist\ChecklistHistory.jsx:172:          onChange={handleStatusChange}
+  src\components\checklist\ChecklistHistory.jsx:173:          disabled={loading || openingRecordId !== null}
+  src\components\checklist\ChecklistHistory.jsx:174:          aria-label="Filter checklists by status"
+  src\components\checklist\ChecklistHistory.jsx:175:        >
+  src\components\checklist\ChecklistHistory.jsx:176:          <option value="all">All statuses</option>
+  src\components\checklist\ChecklistHistory.jsx:177:
+  src\components\checklist\ChecklistHistory.jsx:178:          <option value="draft">Draft</option>
+  src\components\checklist\ChecklistHistory.jsx:179:
+  src\components\checklist\ChecklistHistory.jsx:180:          <option value="in_progress">In Progress</option>
+  src\components\checklist\ChecklistHistory.jsx:181:
+  src\components\checklist\ChecklistHistory.jsx:182:          <option value="completed">Completed</option>
+  src\components\checklist\FlightInformation.jsx:195:
+  src\components\checklist\FlightInformation.jsx:196:        <label>
+  src\components\checklist\FlightInformation.jsx:197:          <span>Aircraft Type *</span>
+  src\components\checklist\FlightInformation.jsx:198:
+> src\components\checklist\FlightInformation.jsx:199:          <select
+  src\components\checklist\FlightInformation.jsx:200:            value={flight.aircraftType}
+  src\components\checklist\FlightInformation.jsx:201:            onChange={(event) => changeAircraftType(event.target.value)}
+  src\components\checklist\FlightInformation.jsx:202:            disabled={disabled}
+  src\components\checklist\FlightInformation.jsx:203:            required
+  src\components\checklist\FlightInformation.jsx:204:            aria-required="true"
+  src\components\checklist\FlightInformation.jsx:205:            aria-label="Aircraft type, required"
+  src\components\checklist\FlightInformation.jsx:206:          >
+  src\components\checklist\FlightInformation.jsx:207:            <option value="">Select aircraft</option>
+  src\components\checklist\FlightInformation.jsx:208:
+  src\components\checklist\FlightInformation.jsx:209:            <option value="A320">A320</option>
+  src\components\checklist\FlightInformation.jsx:210:
+  src\components\checklist\FlightInformation.jsx:211:            <option value="A330">A330</option>
+  src\components\checklist\FlightInformation.jsx:216:
+  src\components\checklist\FlightInformation.jsx:217:        <label>
+  src\components\checklist\FlightInformation.jsx:218:          <span>Registration *</span>
+  src\components\checklist\FlightInformation.jsx:219:
+> src\components\checklist\FlightInformation.jsx:220:          <select
+  src\components\checklist\FlightInformation.jsx:221:            value={flight.registration}
+  src\components\checklist\FlightInformation.jsx:222:            onChange={(event) =>
+  src\components\checklist\FlightInformation.jsx:223:              change(
+  src\components\checklist\FlightInformation.jsx:224:                "registration",
+  src\components\checklist\FlightInformation.jsx:225:                normalizeOperationalCode(event.target.value),
+  src\components\checklist\FlightInformation.jsx:226:              )
+  src\components\checklist\FlightInformation.jsx:227:            }
+  src\components\checklist\FlightInformation.jsx:228:            disabled={disabled || !flight.aircraftType}
+  src\components\checklist\FlightInformation.jsx:229:            required
+  src\components\checklist\FlightInformation.jsx:230:            aria-required="true"
+  src\components\checklist\FlightInformation.jsx:231:            aria-label="Aircraft registration, required"
+  src\components\checklist\FlightInformation.jsx:232:          >
+  src\contexts\AuthContext.jsx:21:    });
+  src\contexts\AuthContext.jsx:22:
+  src\contexts\AuthContext.jsx:23:    const queryPromise = supabase
+  src\contexts\AuthContext.jsx:24:      .from("profiles")
+> src\contexts\AuthContext.jsx:25:      .select(["id", "full_name", "role"].join(","))
+  src\contexts\AuthContext.jsx:26:      .eq("id", userId)
+  src\contexts\AuthContext.jsx:27:      .maybeSingle();
+  src\contexts\AuthContext.jsx:28:
+  src\contexts\AuthContext.jsx:29:    const result = await Promise.race([queryPromise, timeoutPromise]);
+  src\contexts\AuthContext.jsx:30:
+  src\contexts\AuthContext.jsx:31:    if (result.error) {
+  src\contexts\AuthContext.jsx:32:      throw result.error;
+  src\contexts\AuthContext.jsx:33:    }
+  src\contexts\AuthContext.jsx:34:
+  src\contexts\AuthContext.jsx:35:    if (!result.data) {
+  src\contexts\AuthContext.jsx:36:      throw new Error("No operational profile was found for this account.");
+  src\contexts\AuthContext.jsx:37:    }
+  src\pages\LoginPage.jsx:4:
+  src\pages\LoginPage.jsx:5:import AppLogo from "../components/AppLogo";
+  src\pages\LoginPage.jsx:6:import { useAuth } from "../contexts/useAuth";
+  src\pages\LoginPage.jsx:7:
+> src\pages\LoginPage.jsx:8:const LOGIN_ROLE_OPTIONS = [
+  src\pages\LoginPage.jsx:9:  {
+  src\pages\LoginPage.jsx:10:    value: "administrator",
+  src\pages\LoginPage.jsx:11:    label: "Administrator",
+  src\pages\LoginPage.jsx:12:  },
+  src\pages\LoginPage.jsx:13:  {
+  src\pages\LoginPage.jsx:14:    value: "occ_manager",
+  src\pages\LoginPage.jsx:15:    label: "OCC Manager",
+  src\pages\LoginPage.jsx:16:  },
+  src\pages\LoginPage.jsx:17:  {
+  src\pages\LoginPage.jsx:18:    value: "controller",
+  src\pages\LoginPage.jsx:19:    label: "Controller",
+  src\pages\LoginPage.jsx:20:  },
+  src\pages\LoginPage.jsx:76:  const [email, setEmail] = useState("");
+  src\pages\LoginPage.jsx:77:
+  src\pages\LoginPage.jsx:78:  const [password, setPassword] = useState("");
+  src\pages\LoginPage.jsx:79:
+> src\pages\LoginPage.jsx:80:  const [selectedRole, setSelectedRole] = useState("");
+  src\pages\LoginPage.jsx:81:
+  src\pages\LoginPage.jsx:82:  const [showPassword, setShowPassword] = useState(false);
+  src\pages\LoginPage.jsx:83:
+  src\pages\LoginPage.jsx:84:  const [submitting, setSubmitting] = useState(false);
+  src\pages\LoginPage.jsx:85:
+  src\pages\LoginPage.jsx:86:  const [message, setMessage] = useState(null);
+  src\pages\LoginPage.jsx:87:
+  src\pages\LoginPage.jsx:88:  if (!authLoading && user && !submitting) {
+  src\pages\LoginPage.jsx:89:    return <Navigate to="/" replace />;
+  src\pages\LoginPage.jsx:90:  }
+  src\pages\LoginPage.jsx:91:
+> src\pages\LoginPage.jsx:92:  function verifySelectedRole(signedInProfile) {
+  src\pages\LoginPage.jsx:93:    if (!signedInProfile) {
+  src\pages\LoginPage.jsx:94:      throw new Error("No operational profile was found for this account.");
+  src\pages\LoginPage.jsx:95:    }
+  src\pages\LoginPage.jsx:96:
+  src\pages\LoginPage.jsx:97:    const assignedRole = normalizeRole(signedInProfile.role);
+  src\pages\LoginPage.jsx:98:
+> src\pages\LoginPage.jsx:99:    const chosenRole = normalizeRole(selectedRole);
+  src\pages\LoginPage.jsx:100:
+  src\pages\LoginPage.jsx:101:    if (!assignedRole) {
+  src\pages\LoginPage.jsx:102:      throw new Error("No operational role is assigned to this account.");
+  src\pages\LoginPage.jsx:103:    }
+  src\pages\LoginPage.jsx:104:
+  src\pages\LoginPage.jsx:105:    if (!chosenRole) {
+> src\pages\LoginPage.jsx:106:      throw new Error("Select your assigned operational role.");
+  src\pages\LoginPage.jsx:107:    }
+  src\pages\LoginPage.jsx:108:
+  src\pages\LoginPage.jsx:109:    if (assignedRole !== chosenRole) {
+  src\pages\LoginPage.jsx:110:      throw new Error(
+> src\pages\LoginPage.jsx:111:        "The selected role does not match the role assigned to this account.",
+  src\pages\LoginPage.jsx:112:      );
+  src\pages\LoginPage.jsx:113:    }
+  src\pages\LoginPage.jsx:114:
+  src\pages\LoginPage.jsx:115:    return assignedRole;
+  src\pages\LoginPage.jsx:116:  }
+  src\pages\LoginPage.jsx:117:
+  src\pages\LoginPage.jsx:118:  async function handleSubmit(event) {
+  src\pages\LoginPage.jsx:119:    event.preventDefault();
+  src\pages\LoginPage.jsx:120:
+  src\pages\LoginPage.jsx:121:    if (submitting) {
+  src\pages\LoginPage.jsx:122:      return;
+  src\pages\LoginPage.jsx:123:    }
+  src\pages\LoginPage.jsx:168:
+  src\pages\LoginPage.jsx:169:        return;
+  src\pages\LoginPage.jsx:170:      }
+  src\pages\LoginPage.jsx:171:
+> src\pages\LoginPage.jsx:172:      if (!selectedRole) {
+> src\pages\LoginPage.jsx:173:        throw new Error("Select your assigned operational role.");
+  src\pages\LoginPage.jsx:174:      }
+  src\pages\LoginPage.jsx:175:
+  src\pages\LoginPage.jsx:176:      const { data, error } = await signIn({
+  src\pages\LoginPage.jsx:177:        email: email.trim(),
+  src\pages\LoginPage.jsx:178:        password,
+  src\pages\LoginPage.jsx:179:      });
+  src\pages\LoginPage.jsx:180:
+  src\pages\LoginPage.jsx:181:      if (error) {
+  src\pages\LoginPage.jsx:182:        throw error;
+  src\pages\LoginPage.jsx:183:      }
+  src\pages\LoginPage.jsx:184:
+  src\pages\LoginPage.jsx:185:      const signedInProfile = data?.profile;
+  src\pages\LoginPage.jsx:186:
+  src\pages\LoginPage.jsx:187:      try {
+> src\pages\LoginPage.jsx:188:        verifySelectedRole(signedInProfile);
+  src\pages\LoginPage.jsx:189:      } catch (roleError) {
+  src\pages\LoginPage.jsx:190:        const { error: signOutError } = await signOut();
+  src\pages\LoginPage.jsx:191:
+  src\pages\LoginPage.jsx:192:        if (signOutError) {
+  src\pages\LoginPage.jsx:193:          console.error("Sign-out after role mismatch failed:", signOutError);
+  src\pages\LoginPage.jsx:194:        }
+  src\pages\LoginPage.jsx:195:
+  src\pages\LoginPage.jsx:196:        throw roleError;
+  src\pages\LoginPage.jsx:197:      }
+  src\pages\LoginPage.jsx:198:
+  src\pages\LoginPage.jsx:199:      setMessage({
+  src\pages\LoginPage.jsx:200:        type: "success",
+  src\pages\LoginPage.jsx:218:    setPassword("");
+  src\pages\LoginPage.jsx:219:    setShowPassword(false);
+  src\pages\LoginPage.jsx:220:
+  src\pages\LoginPage.jsx:221:    if (nextMode === "register") {
+> src\pages\LoginPage.jsx:222:      setSelectedRole("");
+  src\pages\LoginPage.jsx:223:    }
+  src\pages\LoginPage.jsx:224:  }
+  src\pages\LoginPage.jsx:225:
+  src\pages\LoginPage.jsx:226:  return (
+  src\pages\LoginPage.jsx:227:    <main className="auth-page">
+  src\pages\LoginPage.jsx:228:      <section className="auth-visual">
+  src\pages\LoginPage.jsx:229:        <div className="auth-visual-content">
+  src\pages\LoginPage.jsx:230:          <div className="login-brand-logo">
+  src\pages\LoginPage.jsx:231:            <AppLogo
+  src\pages\LoginPage.jsx:232:              className="saa-login-logo"
+  src\pages\LoginPage.jsx:233:              alt="OPS Check-List GRU - Turnaround Report"
+  src\pages\LoginPage.jsx:234:            />
+  src\pages\LoginPage.jsx:282:          </h2>
+  src\pages\LoginPage.jsx:283:
+  src\pages\LoginPage.jsx:284:          <p className="auth-helper">
+  src\pages\LoginPage.jsx:285:            {mode === "login"
+> src\pages\LoginPage.jsx:286:              ? "Select your assigned role and use your registered account to continue."
+  src\pages\LoginPage.jsx:287:              : "Create an account to securely save and retrieve checklist records."}
+  src\pages\LoginPage.jsx:288:          </p>
+  src\pages\LoginPage.jsx:289:
+  src\pages\LoginPage.jsx:290:          <div
+  src\pages\LoginPage.jsx:291:            className="auth-tabs"
+  src\pages\LoginPage.jsx:292:            role="tablist"
+  src\pages\LoginPage.jsx:293:            aria-label="Authentication options"
+  src\pages\LoginPage.jsx:294:          >
+  src\pages\LoginPage.jsx:295:            <button
+  src\pages\LoginPage.jsx:296:              type="button"
+  src\pages\LoginPage.jsx:297:              className={mode === "login" ? "active" : ""}
+  src\pages\LoginPage.jsx:298:              onClick={() => changeMode("login")}
+  src\pages\LoginPage.jsx:342:
+  src\pages\LoginPage.jsx:343:                <div className="input-shell">
+  src\pages\LoginPage.jsx:344:                  <UserRound size={19} aria-hidden="true" />
+  src\pages\LoginPage.jsx:345:
+> src\pages\LoginPage.jsx:346:                  <select
+  src\pages\LoginPage.jsx:347:                    id="login-role"
+  src\pages\LoginPage.jsx:348:                    name="role"
+> src\pages\LoginPage.jsx:349:                    value={selectedRole}
+> src\pages\LoginPage.jsx:350:                    onChange={(event) => setSelectedRole(event.target.value)}
+  src\pages\LoginPage.jsx:351:                    disabled={submitting}
+  src\pages\LoginPage.jsx:352:                    required
+  src\pages\LoginPage.jsx:353:                    autoComplete="off"
+  src\pages\LoginPage.jsx:354:                    aria-label="Operational role"
+  src\pages\LoginPage.jsx:355:                  >
+> src\pages\LoginPage.jsx:356:                    <option value="">Select your assigned role</option>
+  src\pages\LoginPage.jsx:357:
+> src\pages\LoginPage.jsx:358:                    {LOGIN_ROLE_OPTIONS.map((roleOption) => (
+  src\pages\LoginPage.jsx:359:                      <option key={roleOption.value} value={roleOption.value}>
+  src\pages\LoginPage.jsx:360:                        {roleOption.label}
+  src\pages\LoginPage.jsx:361:                      </option>
+  src\pages\LoginPage.jsx:362:                    ))}
+  src\pages\LoginPage.jsx:363:                  </select>
+  src\pages\LoginPage.jsx:364:                </div>
+  src\pages\LoginPage.jsx:365:              </label>
+  src\pages\LoginPage.jsx:366:            ) : null}
+  src\pages\LoginPage.jsx:367:
+  src\pages\LoginPage.jsx:368:            <label className="input-group" htmlFor="login-email">
+  src\pages\LoginPage.jsx:369:              <span>Email address</span>
+  src\pages\LoginPage.jsx:370:
+
+

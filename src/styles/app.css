@@ -462,9 +462,11 @@
   font-weight: 800;
 }
 
-.connection-indicator span {
+.connection-indicator-dot {
   width: 8px;
   height: 8px;
+  min-width: 8px;
+  min-height: 8px;
   border-radius: 50%;
   background: var(--green);
   box-shadow: 0 0 0 4px rgba(30, 158, 90, 0.12);
@@ -776,7 +778,7 @@
   padding: 9px 11px;
   color: #16233d;
   background: #ffffff;
-  border: 1px solid #d9dfE9;
+  border: 1px solid #d9dfe9;
   border-radius: 9px;
   font: inherit;
   font-size: 16px;
@@ -1951,12 +1953,7 @@ button.sync-status:disabled {
   display: grid;
   place-items: center;
   padding: 1.25rem;
-  background:
-    linear-gradient(
-      135deg,
-      #003b71,
-      #0066a1
-    );
+  background: linear-gradient(135deg, #003b71, #0066a1);
 }
 
 .mandatory-update-card {
@@ -1964,9 +1961,7 @@ button.sync-status:disabled {
   padding: 1.5rem;
   border-radius: 1rem;
   background: #ffffff;
-  box-shadow:
-    0 1.25rem 3rem
-    rgb(0 0 0 / 25%);
+  box-shadow: 0 1.25rem 3rem rgb(0 0 0 / 25%);
   text-align: center;
 }
 
@@ -1995,17 +1990,12 @@ button.sync-status:disabled {
   right: 1rem;
   bottom: 1rem;
   display: flex;
-  width: min(
-    calc(100% - 2rem),
-    25rem
-  );
+  width: min(calc(100% - 2rem), 25rem);
   padding: 1rem;
   border: 1px solid #cbd5e1;
   border-radius: 0.9rem;
   background: #ffffff;
-  box-shadow:
-    0 0.75rem 2rem
-    rgb(15 23 42 / 18%);
+  box-shadow: 0 0.75rem 2rem rgb(15 23 42 / 18%);
   flex-direction: column;
   gap: 0.65rem;
 }

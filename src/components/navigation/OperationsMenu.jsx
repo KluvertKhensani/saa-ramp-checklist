@@ -38,11 +38,6 @@ const NAVIGATION_ITEMS = [
     icon: ListChecks,
   },
   {
-    id: "approval-section",
-    label: "Approval",
-    icon: ShieldCheck,
-  },
-  {
     id: "audit-history",
     label: "Audit History",
     icon: History,

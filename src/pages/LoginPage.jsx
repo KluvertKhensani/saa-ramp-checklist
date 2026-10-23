@@ -5,69 +5,8 @@ import { Navigate } from "react-router-dom";
 import AppLogo from "../components/AppLogo";
 import { useAuth } from "../contexts/useAuth";
 
-const LOGIN_ROLE_OPTIONS = [
-  {
-    value: "administrator",
-    label: "Administrator",
-  },
-  {
-    value: "occ_manager",
-    label: "OCC Manager",
-  },
-  {
-    value: "controller",
-    label: "Controller",
-  },
-  {
-    value: "turnaround_coordinator",
-    label: "Turnaround Coordinator",
-  },
-  {
-    value: "trc_coordinator",
-    label: "TRC Coordinator",
-  },
-  {
-    value: "ramp_agent",
-    label: "Ramp Agent",
-  },
-  {
-    value: "qa_inspector",
-    label: "QA Inspector",
-  },
-  {
-    value: "auditor",
-    label: "Auditor",
-  },
-  {
-    value: "viewer",
-    label: "Viewer",
-  },
-  {
-    value: "data_analyst",
-    label: "Data Analyst",
-  },
-  {
-    value: "duty_officer",
-    label: "Duty Officer",
-  },
-  {
-    value: "station_manager",
-    label: "Station Manager",
-  },
-  {
-    value: "senior_manager",
-    label: "Senior Manager",
-  },
-];
-
-function normalizeRole(role) {
-  return String(role || "")
-    .trim()
-    .toLowerCase();
-}
-
 export default function LoginPage() {
-  const { user, authLoading, signIn, signUp, signOut } = useAuth();
+  const { user, authLoading, signIn, signUp } = useAuth();
 
   const [mode, setMode] = useState("login");
 
@@ -77,8 +16,6 @@ export default function LoginPage() {
 
   const [password, setPassword] = useState("");
 
-  const [selectedRole, setSelectedRole] = useState("");
-
   const [showPassword, setShowPassword] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
@@ -87,32 +24,6 @@ export default function LoginPage() {
 
   if (!authLoading && user && !submitting) {
     return <Navigate to="/" replace />;
-  }
-
-  function verifySelectedRole(signedInProfile) {
-    if (!signedInProfile) {
-      throw new Error("No operational profile was found for this account.");
-    }
-
-    const assignedRole = normalizeRole(signedInProfile.role);
-
-    const chosenRole = normalizeRole(selectedRole);
-
-    if (!assignedRole) {
-      throw new Error("No operational role is assigned to this account.");
-    }
-
-    if (!chosenRole) {
-      throw new Error("Select your assigned operational role.");
-    }
-
-    if (assignedRole !== chosenRole) {
-      throw new Error(
-        "The selected role does not match the role assigned to this account.",
-      );
-    }
-
-    return assignedRole;
   }
 
   async function handleSubmit(event) {
@@ -169,10 +80,6 @@ export default function LoginPage() {
         return;
       }
 
-      if (!selectedRole) {
-        throw new Error("Select your assigned operational role.");
-      }
-
       const { data, error } = await signIn({
         email: email.trim(),
         password,
@@ -182,23 +89,13 @@ export default function LoginPage() {
         throw error;
       }
 
-      const signedInProfile = data?.profile;
-
-      try {
-        verifySelectedRole(signedInProfile);
-      } catch (roleError) {
-        const { error: signOutError } = await signOut();
-
-        if (signOutError) {
-          console.error("Sign-out after role mismatch failed:", signOutError);
-        }
-
-        throw roleError;
+      if (!data?.profile) {
+        throw new Error("No operational profile was found for this account.");
       }
 
       setMessage({
         type: "success",
-        text: "Role verified. Opening OPS Check-List GRU - Turnaround Report...",
+        text: "Access verified. Opening OPS Check-List GRU - Turnaround Report...",
       });
     } catch (error) {
       console.error("Authentication failed:", error);
@@ -217,46 +114,13 @@ export default function LoginPage() {
     setMessage(null);
     setPassword("");
     setShowPassword(false);
-
-    if (nextMode === "register") {
-      setSelectedRole("");
-    }
   }
 
   return (
     <main className="auth-page">
-      <section className="auth-visual">
-        <div className="auth-visual-content">
-          <div className="login-brand-logo">
-            <AppLogo
-              className="saa-login-logo"
-              alt="OPS Check-List GRU - Turnaround Report"
-            />
-          </div>
-
-          <p className="eyebrow">OPS Check-List GRU - Turnaround Report</p>
-
-          <h1>Precision control from chocks on to pushback</h1>
-
-          <p className="auth-introduction">
-            Record operational milestones, monitor turnaround performance, and
-            securely synchronise ramp checklists across desktop and mobile
-            devices.
-          </p>
-
-          <div className="auth-capabilities">
-            <span>Live pushback countdown</span>
-
-            <span>Supabase-secured records</span>
-
-            <span>Mobile-ready operations</span>
-          </div>
-        </div>
-      </section>
-
       <section className="auth-panel">
         <div className="auth-card">
-          <div className="mobile-brand">
+          <div className="login-centered-brand">
             <div className="mobile-logo-shell">
               <AppLogo
                 className="saa-mobile-login-logo"
@@ -264,28 +128,26 @@ export default function LoginPage() {
               />
             </div>
 
-            <div>
-              <strong>OPS GRU</strong>
+            <strong>OPS Check-List GRU</strong>
 
-              <span>Turnaround Operations</span>
-            </div>
+            <span>Turnaround Report</span>
           </div>
 
-          <p className="eyebrow">
+          <p className="eyebrow auth-centered-text">
             {mode === "login" ? "Welcome back" : "Create your account"}
           </p>
 
-          <h2>
+          <h2 className="auth-centered-text">
             {mode === "login"
               ? "Sign in to continue"
               : "Register for operational access"}
           </h2>
 
-          <p className="auth-helper">
-            {mode === "login"
-              ? "Select your assigned role and use your registered account to continue."
-              : "Create an account to securely save and retrieve checklist records."}
-          </p>
+          {mode === "register" ? (
+            <p className="auth-helper auth-centered-text">
+              Create an account to save and retrieve checklist records.
+            </p>
+          ) : null}
 
           <div
             className="auth-tabs"
@@ -332,35 +194,6 @@ export default function LoginPage() {
                     disabled={submitting}
                     required
                   />
-                </div>
-              </label>
-            ) : null}
-
-            {mode === "login" ? (
-              <label className="input-group" htmlFor="login-role">
-                <span>Operational role</span>
-
-                <div className="input-shell">
-                  <UserRound size={19} aria-hidden="true" />
-
-                  <select
-                    id="login-role"
-                    name="role"
-                    value={selectedRole}
-                    onChange={(event) => setSelectedRole(event.target.value)}
-                    disabled={submitting}
-                    required
-                    autoComplete="off"
-                    aria-label="Operational role"
-                  >
-                    <option value="">Select your assigned role</option>
-
-                    {LOGIN_ROLE_OPTIONS.map((roleOption) => (
-                      <option key={roleOption.value} value={roleOption.value}>
-                        {roleOption.label}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </label>
             ) : null}
@@ -448,11 +281,6 @@ export default function LoginPage() {
                   : "Create account"}
             </button>
           </form>
-
-          <p className="security-note">
-            Access is protected using Supabase Authentication, assigned
-            operational roles, and database Row Level Security.
-          </p>
         </div>
       </section>
     </main>

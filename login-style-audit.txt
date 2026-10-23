@@ -1,0 +1,495 @@
+﻿
+  src\styles\app.css:15:  --blue: #1b4fa0;
+  src\styles\app.css:16:}
+  src\styles\app.css:17:
+> src\styles\app.css:18:.auth-page {
+  src\styles\app.css:19:  min-height: 100vh;
+  src\styles\app.css:20:  display: grid;
+  src\styles\app.css:21:  grid-template-columns: minmax(360px, 1.1fr) minmax(420px, 0.9fr);
+  src\styles\app.css:22:  background: var(--background);
+  src\styles\app.css:23:}
+  src\styles\app.css:24:
+> src\styles\app.css:25:.auth-visual {
+  src\styles\app.css:26:  position: relative;
+  src\styles\app.css:27:  overflow: hidden;
+  src\styles\app.css:28:  display: flex;
+  src\styles\app.css:29:  align-items: flex-end;
+  src\styles\app.css:30:  padding: clamp(38px, 7vw, 96px);
+  src\styles\app.css:31:  color: white;
+  src\styles\app.css:32:  background:
+  src\styles\app.css:33:    radial-gradient(
+  src\styles\app.css:34:      circle at 78% 20%,
+  src\styles\app.css:35:      rgba(245, 183, 0, 0.28),
+  src\styles\app.css:38:    linear-gradient(145deg, #071a32 0%, #0b2545 55%, #123f78 100%);
+  src\styles\app.css:39:}
+  src\styles\app.css:40:
+> src\styles\app.css:41:.auth-visual::before,
+> src\styles\app.css:42:.auth-visual::after {
+  src\styles\app.css:43:  position: absolute;
+  src\styles\app.css:44:  content: "";
+  src\styles\app.css:45:  border-radius: 999px;
+  src\styles\app.css:46:  transform: rotate(-24deg);
+  src\styles\app.css:47:}
+  src\styles\app.css:48:
+> src\styles\app.css:49:.auth-visual::before {
+  src\styles\app.css:50:  width: 440px;
+  src\styles\app.css:51:  height: 74px;
+  src\styles\app.css:52:  top: 17%;
+  src\styles\app.css:53:  right: -130px;
+  src\styles\app.css:54:  background: rgba(245, 183, 0, 0.9);
+  src\styles\app.css:55:}
+  src\styles\app.css:56:
+> src\styles\app.css:57:.auth-visual::after {
+  src\styles\app.css:58:  width: 520px;
+  src\styles\app.css:59:  height: 28px;
+  src\styles\app.css:60:  top: 30%;
+  src\styles\app.css:61:  right: -160px;
+  src\styles\app.css:62:  background: rgba(30, 158, 90, 0.8);
+  src\styles\app.css:63:}
+  src\styles\app.css:64:
+> src\styles\app.css:65:.auth-visual-content {
+  src\styles\app.css:66:  position: relative;
+  src\styles\app.css:67:  z-index: 1;
+  src\styles\app.css:68:  max-width: 650px;
+  src\styles\app.css:69:}
+  src\styles\app.css:70:
+  src\styles\app.css:71:.brand-mark {
+  src\styles\app.css:72:  width: 68px;
+  src\styles\app.css:73:  height: 68px;
+  src\styles\app.css:74:  display: grid;
+  src\styles\app.css:75:  place-items: center;
+  src\styles\app.css:96:  text-transform: uppercase;
+  src\styles\app.css:97:}
+  src\styles\app.css:98:
+> src\styles\app.css:99:.auth-visual .eyebrow {
+  src\styles\app.css:100:  color: var(--gold);
+  src\styles\app.css:101:}
+  src\styles\app.css:102:
+> src\styles\app.css:103:.auth-visual h1 {
+  src\styles\app.css:104:  max-width: 700px;
+  src\styles\app.css:105:  margin: 0;
+  src\styles\app.css:106:  font-size: clamp(2.35rem, 5vw, 4.8rem);
+  src\styles\app.css:107:  line-height: 1.02;
+  src\styles\app.css:108:  letter-spacing: -0.055em;
+  src\styles\app.css:109:}
+  src\styles\app.css:110:
+> src\styles\app.css:111:.auth-introduction {
+  src\styles\app.css:112:  max-width: 620px;
+  src\styles\app.css:113:  margin: 26px 0;
+  src\styles\app.css:114:  color: #d6e0ef;
+  src\styles\app.css:115:  font-size: clamp(1rem, 1.5vw, 1.18rem);
+  src\styles\app.css:116:  line-height: 1.75;
+  src\styles\app.css:117:}
+  src\styles\app.css:118:
+> src\styles\app.css:119:.auth-capabilities {
+  src\styles\app.css:120:  display: flex;
+  src\styles\app.css:121:  flex-wrap: wrap;
+  src\styles\app.css:122:  gap: 10px;
+  src\styles\app.css:123:}
+  src\styles\app.css:124:
+> src\styles\app.css:125:.auth-capabilities span {
+  src\styles\app.css:126:  padding: 9px 13px;
+  src\styles\app.css:127:  border: 1px solid rgba(255, 255, 255, 0.18);
+  src\styles\app.css:128:  border-radius: 999px;
+  src\styles\app.css:129:  color: #e6edf7;
+  src\styles\app.css:130:  background: rgba(255, 255, 255, 0.08);
+  src\styles\app.css:131:  font-size: 0.82rem;
+  src\styles\app.css:132:  font-weight: 700;
+  src\styles\app.css:133:  backdrop-filter: blur(10px);
+  src\styles\app.css:134:}
+  src\styles\app.css:135:
+> src\styles\app.css:136:.auth-panel {
+  src\styles\app.css:137:  display: grid;
+  src\styles\app.css:138:  place-items: center;
+  src\styles\app.css:139:  padding: clamp(24px, 6vw, 76px);
+  src\styles\app.css:140:}
+  src\styles\app.css:141:
+> src\styles\app.css:142:.auth-card {
+  src\styles\app.css:143:  width: min(100%, 470px);
+  src\styles\app.css:144:}
+  src\styles\app.css:145:
+  src\styles\app.css:146:.mobile-brand {
+  src\styles\app.css:147:  display: none;
+  src\styles\app.css:148:  align-items: center;
+  src\styles\app.css:149:  gap: 12px;
+  src\styles\app.css:150:  margin-bottom: 34px;
+  src\styles\app.css:151:}
+  src\styles\app.css:152:
+  src\styles\app.css:161:  font-size: 0.78rem;
+  src\styles\app.css:162:}
+  src\styles\app.css:163:
+> src\styles\app.css:164:.auth-card h2 {
+  src\styles\app.css:165:  margin: 0;
+  src\styles\app.css:166:  color: var(--ink);
+  src\styles\app.css:167:  font-size: clamp(1.8rem, 4vw, 2.45rem);
+  src\styles\app.css:168:  letter-spacing: -0.035em;
+  src\styles\app.css:169:}
+  src\styles\app.css:170:
+> src\styles\app.css:171:.auth-helper {
+  src\styles\app.css:172:  margin: 12px 0 25px;
+  src\styles\app.css:173:  color: var(--muted);
+  src\styles\app.css:174:  line-height: 1.65;
+  src\styles\app.css:175:}
+  src\styles\app.css:176:
+> src\styles\app.css:177:.auth-tabs {
+  src\styles\app.css:178:  display: grid;
+  src\styles\app.css:179:  grid-template-columns: 1fr 1fr;
+  src\styles\app.css:180:  gap: 6px;
+  src\styles\app.css:181:  margin-bottom: 24px;
+  src\styles\app.css:182:  padding: 5px;
+  src\styles\app.css:183:  border: 1px solid var(--line);
+  src\styles\app.css:184:  border-radius: 14px;
+  src\styles\app.css:185:  background: #eef2f7;
+  src\styles\app.css:186:}
+  src\styles\app.css:187:
+> src\styles\app.css:188:.auth-tabs button {
+  src\styles\app.css:189:  min-height: 44px;
+  src\styles\app.css:190:  border: 0;
+  src\styles\app.css:191:  border-radius: 10px;
+  src\styles\app.css:192:  color: var(--muted);
+  src\styles\app.css:193:  background: transparent;
+  src\styles\app.css:194:  font-weight: 800;
+  src\styles\app.css:195:}
+  src\styles\app.css:196:
+> src\styles\app.css:197:.auth-tabs button.active {
+  src\styles\app.css:198:  color: var(--ink);
+  src\styles\app.css:199:  background: white;
+  src\styles\app.css:200:  box-shadow: 0 4px 14px rgba(11, 37, 69, 0.09);
+  src\styles\app.css:201:}
+  src\styles\app.css:202:
+> src\styles\app.css:203:.auth-form {
+  src\styles\app.css:204:  display: grid;
+  src\styles\app.css:205:  gap: 18px;
+  src\styles\app.css:206:}
+  src\styles\app.css:207:
+  src\styles\app.css:208:.input-group {
+  src\styles\app.css:209:  display: grid;
+  src\styles\app.css:210:  gap: 7px;
+  src\styles\app.css:211:}
+  src\styles\app.css:212:
+  src\styles\app.css:213:.input-group > span {
+  src\styles\app.css:263:  background: #eef2f7;
+  src\styles\app.css:264:}
+  src\styles\app.css:265:
+> src\styles\app.css:266:.primary-auth-button {
+  src\styles\app.css:267:  min-height: 52px;
+  src\styles\app.css:268:  border: 0;
+  src\styles\app.css:269:  border-radius: 12px;
+  src\styles\app.css:270:  color: var(--ink);
+  src\styles\app.css:271:  background: var(--gold);
+  src\styles\app.css:272:  font-weight: 850;
+  src\styles\app.css:273:  transition:
+  src\styles\app.css:274:    transform 150ms ease,
+  src\styles\app.css:275:    background 150ms ease;
+  src\styles\app.css:276:}
+  src\styles\app.css:277:
+> src\styles\app.css:278:.primary-auth-button:hover:not(:disabled) {
+  src\styles\app.css:279:  transform: translateY(-1px);
+  src\styles\app.css:280:  background: #ffc519;
+  src\styles\app.css:281:}
+  src\styles\app.css:282:
+> src\styles\app.css:283:.primary-auth-button:disabled {
+  src\styles\app.css:284:  opacity: 0.68;
+  src\styles\app.css:285:}
+  src\styles\app.css:286:
+  src\styles\app.css:287:.form-message {
+  src\styles\app.css:288:  padding: 12px 14px;
+  src\styles\app.css:289:  border-radius: 10px;
+  src\styles\app.css:290:  font-size: 0.88rem;
+  src\styles\app.css:291:  font-weight: 650;
+  src\styles\app.css:292:  line-height: 1.5;
+  src\styles\app.css:293:}
+  src\styles\app.css:502:}
+  src\styles\app.css:503:
+  src\styles\app.css:504:@media (max-width: 980px) {
+> src\styles\app.css:505:  .auth-page {
+  src\styles\app.css:506:    grid-template-columns: 1fr;
+  src\styles\app.css:507:  }
+  src\styles\app.css:508:
+> src\styles\app.css:509:  .auth-visual {
+  src\styles\app.css:510:    display: none;
+  src\styles\app.css:511:  }
+  src\styles\app.css:512:
+  src\styles\app.css:513:  .mobile-brand {
+  src\styles\app.css:514:    display: flex;
+  src\styles\app.css:515:  }
+  src\styles\app.css:516:
+> src\styles\app.css:517:  .auth-panel {
+  src\styles\app.css:518:    min-height: 100vh;
+  src\styles\app.css:519:  }
+  src\styles\app.css:520:
+  src\styles\app.css:521:  .foundation-grid {
+  src\styles\app.css:522:    grid-template-columns: repeat(2, 1fr);
+  src\styles\app.css:523:  }
+  src\styles\app.css:524:}
+  src\styles\app.css:525:
+  src\styles\app.css:526:@media (max-width: 640px) {
+> src\styles\app.css:527:  .auth-panel {
+  src\styles\app.css:528:    align-items: start;
+  src\styles\app.css:529:    padding: 22px 18px 40px;
+  src\styles\app.css:530:  }
+  src\styles\app.css:531:
+> src\styles\app.css:532:  .auth-card {
+  src\styles\app.css:533:    padding-top: 10px;
+  src\styles\app.css:534:  }
+  src\styles\app.css:535:
+  src\styles\app.css:536:  .app-header {
+  src\styles\app.css:537:    align-items: flex-start;
+  src\styles\app.css:538:    padding: 12px 14px;
+  src\styles\app.css:539:  }
+  src\styles\app.css:540:
+  src\styles\app.css:541:  .header-brand h1 {
+  src\styles\app.css:542:    font-size: 0.96rem;
+  src\styles\app.css:1374:  }
+  src\styles\app.css:1375:}
+  src\styles\app.css:1376:
+> src\styles\app.css:1377:.login-brand-logo {
+  src\styles\app.css:1378:  display: flex;
+  src\styles\app.css:1379:  align-items: center;
+  src\styles\app.css:1380:  justify-content: center;
+  src\styles\app.css:1381:  width: min(260px, 82vw);
+  src\styles\app.css:1382:  min-height: 88px;
+  src\styles\app.css:1383:  padding: 12px 18px;
+  src\styles\app.css:1384:  margin: 0 auto 18px;
+  src\styles\app.css:1385:  background: #ffffff;
+  src\styles\app.css:1386:  border-radius: 14px;
+  src\styles\app.css:1387:}
+  src\styles\app.css:1388:
+> src\styles\app.css:1389:.saa-login-logo {
+  src\styles\app.css:1390:  display: block;
+  src\styles\app.css:1391:  width: 100%;
+  src\styles\app.css:1392:  max-width: 220px;
+  src\styles\app.css:1393:  height: 68px;
+  src\styles\app.css:1394:  object-fit: contain;
+  src\styles\app.css:1395:  object-position: center;
+  src\styles\app.css:1396:  opacity: 1;
+  src\styles\app.css:1397:  visibility: visible;
+  src\styles\app.css:1398:}
+  src\styles\app.css:1399:
+  src\styles\app.css:1421:}
+  src\styles\app.css:1422:
+  src\styles\app.css:1423:@media (max-width: 760px) {
+> src\styles\app.css:1424:  .login-brand-logo {
+  src\styles\app.css:1425:    width: min(220px, 84vw);
+  src\styles\app.css:1426:    min-height: 76px;
+  src\styles\app.css:1427:  }
+  src\styles\app.css:1428:
+> src\styles\app.css:1429:  .saa-login-logo {
+  src\styles\app.css:1430:    max-width: 190px;
+  src\styles\app.css:1431:    height: 58px;
+  src\styles\app.css:1432:  }
+  src\styles\app.css:1433:
+  src\styles\app.css:1434:  .ramp-brand-logo {
+  src\styles\app.css:1435:    width: 125px;
+  src\styles\app.css:1436:    min-width: 125px;
+  src\styles\app.css:1437:    height: 52px;
+  src\styles\app.css:1438:  }
+  src\styles\app.css:1439:
+  src\styles\app.css:1612:  overflow-wrap: anywhere;
+  src\styles\app.css:1613:}
+  src\styles\app.css:1614:
+> src\styles\app.css:1615:.approval-role-note {
+  src\styles\app.css:1616:  margin: 16px 0 0;
+  src\styles\app.css:1617:  color: #6b7a99;
+  src\styles\app.css:1618:}
+  src\styles\app.css:1619:
+  src\styles\app.css:1620:@media (max-width: 760px) {
+  src\styles\app.css:1621:  .approval-panel {
+  src\styles\app.css:1622:    padding: 16px;
+  src\styles\app.css:1623:  }
+  src\styles\app.css:1624:
+  src\styles\app.css:1625:  .approval-details {
+  src\styles\mobile-overrides.css:18:  overflow-x: hidden;
+  src\styles\mobile-overrides.css:19:}
+  src\styles\mobile-overrides.css:20:
+> src\styles\mobile-overrides.css:21:.auth-page,
+> src\styles\mobile-overrides.css:22:.auth-panel,
+> src\styles\mobile-overrides.css:23:.auth-card,
+> src\styles\mobile-overrides.css:24:.auth-form,
+  src\styles\mobile-overrides.css:25:.input-group,
+  src\styles\mobile-overrides.css:26:.input-shell,
+  src\styles\mobile-overrides.css:27:.ramp-page,
+  src\styles\mobile-overrides.css:28:.ramp-header,
+  src\styles\mobile-overrides.css:29:.ramp-content,
+  src\styles\mobile-overrides.css:30:.ramp-card,
+  src\styles\mobile-overrides.css:31:.history-view,
+  src\styles\mobile-overrides.css:32:.history-panel,
+  src\styles\mobile-overrides.css:33:.audit-panel,
+  src\styles\mobile-overrides.css:34:.approval-panel,
+  src\styles\mobile-overrides.css:39:  min-width: 0;
+  src\styles\mobile-overrides.css:40:}
+  src\styles\mobile-overrides.css:41:
+> src\styles\mobile-overrides.css:42:.auth-form,
+  src\styles\mobile-overrides.css:43:.input-group,
+  src\styles\mobile-overrides.css:44:.input-shell {
+  src\styles\mobile-overrides.css:45:  width: 100%;
+  src\styles\mobile-overrides.css:46:}
+  src\styles\mobile-overrides.css:47:
+  src\styles\mobile-overrides.css:48:.input-shell input,
+  src\styles\mobile-overrides.css:49:.input-shell select {
+  src\styles\mobile-overrides.css:50:  flex: 1;
+  src\styles\mobile-overrides.css:51:  width: 100%;
+  src\styles\mobile-overrides.css:52:  max-width: 100%;
+  src\styles\mobile-overrides.css:96:.flight-grid input,
+  src\styles\mobile-overrides.css:97:.flight-grid select,
+  src\styles\mobile-overrides.css:98:.observation-field input,
+> src\styles\mobile-overrides.css:99:.auth-form input,
+> src\styles\mobile-overrides.css:100:.auth-form select,
+  src\styles\mobile-overrides.css:101:.export-controls input {
+  src\styles\mobile-overrides.css:102:  width: 100%;
+  src\styles\mobile-overrides.css:103:  max-width: 100%;
+  src\styles\mobile-overrides.css:104:  min-width: 0;
+  src\styles\mobile-overrides.css:105:}
+  src\styles\mobile-overrides.css:106:
+  src\styles\mobile-overrides.css:107:.field-with-button {
+  src\styles\mobile-overrides.css:108:  display: grid;
+  src\styles\mobile-overrides.css:109:  grid-template-columns: minmax(0, 1fr) auto;
+  src\styles\mobile-overrides.css:110:  gap: 8px;
+  src\styles\mobile-overrides.css:558:}
+  src\styles\mobile-overrides.css:559:
+  src\styles\mobile-overrides.css:560:@media (max-width: 420px) {
+> src\styles\mobile-overrides.css:561:  .auth-panel {
+  src\styles\mobile-overrides.css:562:    width: 100%;
+  src\styles\mobile-overrides.css:563:    padding: 18px 12px 34px;
+  src\styles\mobile-overrides.css:564:  }
+  src\styles\mobile-overrides.css:565:
+> src\styles\mobile-overrides.css:566:  .auth-card {
+  src\styles\mobile-overrides.css:567:    width: 100%;
+  src\styles\mobile-overrides.css:568:  }
+  src\styles\mobile-overrides.css:569:
+  src\styles\mobile-overrides.css:570:  .ramp-content {
+  src\styles\mobile-overrides.css:571:    width: 100%;
+  src\styles\mobile-overrides.css:572:    padding-right: 10px;
+  src\styles\mobile-overrides.css:573:    padding-left: 10px;
+  src\styles\mobile-overrides.css:574:  }
+  src\styles\mobile-overrides.css:575:
+  src\styles\mobile-overrides.css:576:  .ramp-card,
+  src\styles\mobile-overrides.css:4617:  }
+  src\styles\mobile-overrides.css:4618:}
+  src\styles\mobile-overrides.css:4619:
+> src\styles\mobile-overrides.css:4620:/* Mandatory application update before sign-in */
+  src\styles\mobile-overrides.css:4621:
+  src\styles\mobile-overrides.css:4622:.mandatory-update-screen {
+  src\styles\mobile-overrides.css:4623:  position: fixed;
+  src\styles\mobile-overrides.css:4624:  z-index: 100000;
+  src\styles\mobile-overrides.css:4625:  inset: 0;
+  src\styles\mobile-overrides.css:4626:  display: grid;
+  src\styles\mobile-overrides.css:4627:  min-height: 100vh;
+  src\styles\mobile-overrides.css:4628:  min-height: 100dvh;
+  src\styles\mobile-overrides.css:4629:  padding: 20px;
+  src\styles\mobile-overrides.css:4630:  background: linear-gradient(135deg, #071e38, #0b4f81);
+  src\styles\mobile-overrides.css:4707:  }
+  src\styles\mobile-overrides.css:4708:}
+  src\styles\mobile-overrides.css:4709:
+> src\styles\mobile-overrides.css:4710:/* Unified login experience for desktop, tablet and mobile */
+  src\styles\mobile-overrides.css:4711:
+> src\styles\mobile-overrides.css:4712:.auth-page {
+  src\styles\mobile-overrides.css:4713:  display: grid;
+  src\styles\mobile-overrides.css:4714:  min-height: 100vh;
+  src\styles\mobile-overrides.css:4715:  min-height: 100dvh;
+  src\styles\mobile-overrides.css:4716:  padding: max(24px, env(safe-area-inset-top)) 18px
+  src\styles\mobile-overrides.css:4717:    max(24px, env(safe-area-inset-bottom));
+  src\styles\mobile-overrides.css:4718:  background:
+  src\styles\mobile-overrides.css:4719:    radial-gradient(circle at top right, rgb(18 97 214 / 20%), transparent 34%),
+  src\styles\mobile-overrides.css:4720:    linear-gradient(145deg, #071e38, #0b4f81);
+  src\styles\mobile-overrides.css:4721:  place-items: center;
+  src\styles\mobile-overrides.css:4722:}
+  src\styles\mobile-overrides.css:4723:
+> src\styles\mobile-overrides.css:4724:.auth-panel {
+  src\styles\mobile-overrides.css:4725:  display: grid;
+  src\styles\mobile-overrides.css:4726:  justify-items: center;
+  src\styles\mobile-overrides.css:4727:  width: min(100%, 460px);
+  src\styles\mobile-overrides.css:4728:  padding: 0;
+  src\styles\mobile-overrides.css:4729:}
+  src\styles\mobile-overrides.css:4730:
+> src\styles\mobile-overrides.css:4731:.auth-card {
+  src\styles\mobile-overrides.css:4732:  width: 100%;
+  src\styles\mobile-overrides.css:4733:  padding: 30px;
+  src\styles\mobile-overrides.css:4734:  overflow: hidden;
+  src\styles\mobile-overrides.css:4735:  background: #ffffff;
+  src\styles\mobile-overrides.css:4736:  border: 1px solid rgb(255 255 255 / 28%);
+  src\styles\mobile-overrides.css:4737:  border-radius: 20px;
+  src\styles\mobile-overrides.css:4738:  box-shadow: 0 24px 65px rgb(0 0 0 / 30%);
+  src\styles\mobile-overrides.css:4739:}
+  src\styles\mobile-overrides.css:4740:
+> src\styles\mobile-overrides.css:4741:.auth-card .saa-app-logo,
+> src\styles\mobile-overrides.css:4742:.auth-card img {
+  src\styles\mobile-overrides.css:4743:  max-width: 150px;
+  src\styles\mobile-overrides.css:4744:  height: auto;
+  src\styles\mobile-overrides.css:4745:}
+  src\styles\mobile-overrides.css:4746:
+> src\styles\mobile-overrides.css:4747:.auth-form {
+  src\styles\mobile-overrides.css:4748:  display: grid;
+  src\styles\mobile-overrides.css:4749:  gap: 15px;
+  src\styles\mobile-overrides.css:4750:  width: 100%;
+  src\styles\mobile-overrides.css:4751:}
+  src\styles\mobile-overrides.css:4752:
+> src\styles\mobile-overrides.css:4753:.auth-form .input-shell {
+  src\styles\mobile-overrides.css:4754:  min-height: 48px;
+  src\styles\mobile-overrides.css:4755:  background: #ffffff;
+  src\styles\mobile-overrides.css:4756:}
+  src\styles\mobile-overrides.css:4757:
+> src\styles\mobile-overrides.css:4758:.auth-form input,
+> src\styles\mobile-overrides.css:4759:.auth-form select {
+  src\styles\mobile-overrides.css:4760:  min-height: 46px;
+  src\styles\mobile-overrides.css:4761:  font-size: 16px;
+  src\styles\mobile-overrides.css:4762:}
+  src\styles\mobile-overrides.css:4763:
+> src\styles\mobile-overrides.css:4764:.auth-form button[type="submit"] {
+  src\styles\mobile-overrides.css:4765:  width: 100%;
+  src\styles\mobile-overrides.css:4766:  min-height: 48px;
+  src\styles\mobile-overrides.css:4767:  color: #ffffff;
+  src\styles\mobile-overrides.css:4768:  background: #0b5f99;
+  src\styles\mobile-overrides.css:4769:  border: 0;
+  src\styles\mobile-overrides.css:4770:  border-radius: 10px;
+  src\styles\mobile-overrides.css:4771:  font-weight: 800;
+  src\styles\mobile-overrides.css:4772:}
+  src\styles\mobile-overrides.css:4773:
+> src\styles\mobile-overrides.css:4774:.auth-form button[type="submit"]:hover:not(:disabled) {
+  src\styles\mobile-overrides.css:4775:  background: #084c7b;
+  src\styles\mobile-overrides.css:4776:}
+  src\styles\mobile-overrides.css:4777:
+> src\styles\mobile-overrides.css:4778:.auth-form button[type="submit"]:focus-visible {
+  src\styles\mobile-overrides.css:4779:  outline: 3px solid rgb(18 97 214 / 28%);
+  src\styles\mobile-overrides.css:4780:  outline-offset: 3px;
+  src\styles\mobile-overrides.css:4781:}
+  src\styles\mobile-overrides.css:4782:
+  src\styles\mobile-overrides.css:4783:@media (max-width: 600px) {
+> src\styles\mobile-overrides.css:4784:  .auth-page {
+  src\styles\mobile-overrides.css:4785:    padding: max(14px, env(safe-area-inset-top)) 12px
+  src\styles\mobile-overrides.css:4786:      max(20px, env(safe-area-inset-bottom));
+  src\styles\mobile-overrides.css:4787:  }
+  src\styles\mobile-overrides.css:4788:
+> src\styles\mobile-overrides.css:4789:  .auth-card {
+  src\styles\mobile-overrides.css:4790:    padding: 22px 18px;
+  src\styles\mobile-overrides.css:4791:    border-radius: 16px;
+  src\styles\mobile-overrides.css:4792:  }
+  src\styles\mobile-overrides.css:4793:
+> src\styles\mobile-overrides.css:4794:  .auth-card .saa-app-logo,
+> src\styles\mobile-overrides.css:4795:  .auth-card img {
+  src\styles\mobile-overrides.css:4796:    max-width: 130px;
+  src\styles\mobile-overrides.css:4797:  }
+  src\styles\mobile-overrides.css:4798:}
+  src\styles\mobile-overrides.css:4799:
+  src\styles\mobile-overrides.css:4800:@media (max-width: 380px) {
+> src\styles\mobile-overrides.css:4801:  .auth-card {
+  src\styles\mobile-overrides.css:4802:    padding: 19px 14px;
+  src\styles\mobile-overrides.css:4803:  }
+  src\styles\mobile-overrides.css:4804:}
+  src\styles\mobile-overrides.css:4805:
+  src\styles\mobile-overrides.css:4806:/* Mandatory update recovery */
+  src\styles\mobile-overrides.css:4807:
+  src\styles\mobile-overrides.css:4808:.mandatory-update-error {
+  src\styles\mobile-overrides.css:4809:  padding: 9px 10px;
+  src\styles\mobile-overrides.css:4810:  color: #991b1b !important;
+  src\styles\mobile-overrides.css:4811:  background: #fee2e2;
+  src\styles\mobile-overrides.css:4840:}
+  src\styles\mobile-overrides.css:4841:
+  src\styles\mobile-overrides.css:4842:@media print {
+> src\styles\mobile-overrides.css:4843:  .auth-page,
+  src\styles\mobile-overrides.css:4844:  .mandatory-update-screen {
+  src\styles\mobile-overrides.css:4845:    display: none !important;
+  src\styles\mobile-overrides.css:4846:  }
+  src\styles\mobile-overrides.css:4847:}
+
+

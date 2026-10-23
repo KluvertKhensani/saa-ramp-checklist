@@ -44,7 +44,7 @@ export default defineConfig({
 
         display: "standalone",
 
-        orientation: "portrait-primary",
+        orientation: "any",
 
         background_color: "#f3f5f8",
 

@@ -1,0 +1,264 @@
+﻿
+  src\styles\app.css:447:  margin: 15px 0 0;
+  src\styles\app.css:448:  color: var(--muted);
+  src\styles\app.css:449:  line-height: 1.65;
+  src\styles\app.css:450:}
+  src\styles\app.css:451:
+> src\styles\app.css:452:.connection-indicator {
+  src\styles\app.css:453:  display: flex;
+  src\styles\app.css:454:  align-items: center;
+  src\styles\app.css:455:  gap: 9px;
+  src\styles\app.css:456:  flex: 0 0 auto;
+  src\styles\app.css:457:  padding: 10px 14px;
+  src\styles\app.css:458:  border-radius: 999px;
+  src\styles\app.css:459:  color: #147443;
+  src\styles\app.css:460:  background: var(--green-soft);
+  src\styles\app.css:461:  font-size: 0.8rem;
+  src\styles\app.css:462:  font-weight: 800;
+  src\styles\app.css:463:}
+  src\styles\app.css:464:
+> src\styles\app.css:465:.connection-indicator span {
+  src\styles\app.css:466:  width: 8px;
+  src\styles\app.css:467:  height: 8px;
+  src\styles\app.css:468:  border-radius: 50%;
+  src\styles\app.css:469:  background: var(--green);
+  src\styles\app.css:470:  box-shadow: 0 0 0 4px rgba(30, 158, 90, 0.12);
+  src\styles\app.css:471:}
+  src\styles\app.css:472:
+  src\styles\app.css:473:.foundation-grid {
+  src\styles\app.css:474:  display: grid;
+  src\styles\app.css:475:  grid-template-columns: repeat(4, 1fr);
+  src\styles\app.css:476:  gap: 16px;
+  src\styles\app.css:477:  margin-top: 18px;
+  src\styles\app.css:478:}
+  src\styles\app.css:479:
+  src\styles\app.css:480:.foundation-card {
+  src\styles\app.css:481:  min-height: 210px;
+  src\styles\app.css:482:  padding: 24px;
+  src\styles\app.css:483:  border: 1px solid var(--line);
+  src\styles\app.css:484:  border-radius: 18px;
+  src\styles\app.css:485:  background: white;
+  src\styles\app.css:680:  width: min(1380px, calc(100% - 32px));
+  src\styles\app.css:681:  margin: 0 auto;
+  src\styles\app.css:682:  padding: 18px 0 100px;
+  src\styles\app.css:683:}
+  src\styles\app.css:684:
+> src\styles\app.css:685:.ramp-status-bar {
+  src\styles\app.css:686:  display: flex;
+  src\styles\app.css:687:  align-items: center;
+  src\styles\app.css:688:  gap: 8px;
+  src\styles\app.css:689:  margin-bottom: 13px;
+  src\styles\app.css:690:  color: #6b7a99;
+  src\styles\app.css:691:  font-size: 13px;
+  src\styles\app.css:692:  font-weight: 700;
+  src\styles\app.css:693:}
+  src\styles\app.css:694:
+  src\styles\app.css:695:.status-online {
+  src\styles\app.css:696:  width: 9px;
+  src\styles\app.css:697:  height: 9px;
+  src\styles\app.css:698:  background: #1e9e5a;
+  src\styles\app.css:699:  border-radius: 50%;
+  src\styles\app.css:700:}
+  src\styles\app.css:701:
+  src\styles\app.css:702:.ramp-card {
+  src\styles\app.css:703:  padding: 20px;
+  src\styles\app.css:704:  margin-bottom: 16px;
+  src\styles\app.css:705:  background: #ffffff;
+  src\styles\mobile-overrides.css:3571:  }
+  src\styles\mobile-overrides.css:3572:}
+  src\styles\mobile-overrides.css:3573:
+  src\styles\mobile-overrides.css:3574:/* Connectivity indicator */
+  src\styles\mobile-overrides.css:3575:
+> src\styles\mobile-overrides.css:3576:.ramp-status-bar {
+  src\styles\mobile-overrides.css:3577:  display: flex;
+  src\styles\mobile-overrides.css:3578:  align-items: center;
+  src\styles\mobile-overrides.css:3579:  gap: 10px;
+  src\styles\mobile-overrides.css:3580:  flex-wrap: wrap;
+  src\styles\mobile-overrides.css:3581:}
+  src\styles\mobile-overrides.css:3582:
+> src\styles\mobile-overrides.css:3583:.connection-indicator {
+  src\styles\mobile-overrides.css:3584:  display: inline-flex;
+  src\styles\mobile-overrides.css:3585:  align-items: center;
+  src\styles\mobile-overrides.css:3586:  gap: 7px;
+  src\styles\mobile-overrides.css:3587:  flex: 0 0 auto;
+  src\styles\mobile-overrides.css:3588:  font-size: 12px;
+  src\styles\mobile-overrides.css:3589:  font-weight: 800;
+  src\styles\mobile-overrides.css:3590:}
+  src\styles\mobile-overrides.css:3591:
+> src\styles\mobile-overrides.css:3592:.connection-indicator-dot {
+  src\styles\mobile-overrides.css:3593:  width: 9px;
+  src\styles\mobile-overrides.css:3594:  height: 9px;
+  src\styles\mobile-overrides.css:3595:  border-radius: 50%;
+  src\styles\mobile-overrides.css:3596:  background: #7b8797;
+  src\styles\mobile-overrides.css:3597:  box-shadow: 0 0 0 3px rgba(123, 135, 151, 0.15);
+  src\styles\mobile-overrides.css:3598:}
+  src\styles\mobile-overrides.css:3599:
+  src\styles\mobile-overrides.css:3600:.connection-online {
+  src\styles\mobile-overrides.css:3601:  color: #167943;
+  src\styles\mobile-overrides.css:3602:}
+  src\styles\mobile-overrides.css:3603:
+> src\styles\mobile-overrides.css:3604:.connection-online .connection-indicator-dot {
+  src\styles\mobile-overrides.css:3605:  background: #20a85b;
+  src\styles\mobile-overrides.css:3606:  box-shadow: 0 0 0 3px rgba(32, 168, 91, 0.17);
+  src\styles\mobile-overrides.css:3607:}
+  src\styles\mobile-overrides.css:3608:
+  src\styles\mobile-overrides.css:3609:.connection-checking {
+  src\styles\mobile-overrides.css:3610:  color: #725900;
+  src\styles\mobile-overrides.css:3611:}
+  src\styles\mobile-overrides.css:3612:
+> src\styles\mobile-overrides.css:3613:.connection-checking .connection-indicator-dot {
+  src\styles\mobile-overrides.css:3614:  background: #d4a900;
+  src\styles\mobile-overrides.css:3615:  box-shadow: 0 0 0 3px rgba(212, 169, 0, 0.18);
+  src\styles\mobile-overrides.css:3616:  animation: connection-pulse 1.2s ease-in-out infinite;
+  src\styles\mobile-overrides.css:3617:}
+  src\styles\mobile-overrides.css:3618:
+  src\styles\mobile-overrides.css:3619:.connection-offline,
+  src\styles\mobile-overrides.css:3620:.connection-unreachable {
+  src\styles\mobile-overrides.css:3621:  color: #a82424;
+  src\styles\mobile-overrides.css:3622:}
+  src\styles\mobile-overrides.css:3623:
+> src\styles\mobile-overrides.css:3624:.connection-offline .connection-indicator-dot,
+> src\styles\mobile-overrides.css:3625:.connection-unreachable .connection-indicator-dot {
+  src\styles\mobile-overrides.css:3626:  background: #d43838;
+  src\styles\mobile-overrides.css:3627:  box-shadow: 0 0 0 3px rgba(212, 56, 56, 0.17);
+  src\styles\mobile-overrides.css:3628:}
+  src\styles\mobile-overrides.css:3629:
+  src\styles\mobile-overrides.css:3630:.connection-syncing,
+  src\styles\mobile-overrides.css:3631:.connection-pending {
+  src\styles\mobile-overrides.css:3632:  color: #1261d6;
+  src\styles\mobile-overrides.css:3633:}
+  src\styles\mobile-overrides.css:3634:
+> src\styles\mobile-overrides.css:3635:.connection-syncing .connection-indicator-dot,
+> src\styles\mobile-overrides.css:3636:.connection-pending .connection-indicator-dot {
+  src\styles\mobile-overrides.css:3637:  background: #1261d6;
+  src\styles\mobile-overrides.css:3638:  box-shadow: 0 0 0 3px rgba(18, 97, 214, 0.17);
+  src\styles\mobile-overrides.css:3639:}
+  src\styles\mobile-overrides.css:3640:
+  src\styles\mobile-overrides.css:3641:.connection-conflict {
+  src\styles\mobile-overrides.css:3642:  color: #a54b00;
+  src\styles\mobile-overrides.css:3643:}
+  src\styles\mobile-overrides.css:3644:
+> src\styles\mobile-overrides.css:3645:.connection-conflict .connection-indicator-dot {
+  src\styles\mobile-overrides.css:3646:  background: #e27513;
+  src\styles\mobile-overrides.css:3647:  box-shadow: 0 0 0 3px rgba(226, 117, 19, 0.17);
+  src\styles\mobile-overrides.css:3648:}
+  src\styles\mobile-overrides.css:3649:
+> src\styles\mobile-overrides.css:3650:.ramp-status-divider {
+  src\styles\mobile-overrides.css:3651:  color: #b0bac7;
+  src\styles\mobile-overrides.css:3652:}
+  src\styles\mobile-overrides.css:3653:
+> src\styles\mobile-overrides.css:3654:.ramp-status-message {
+  src\styles\mobile-overrides.css:3655:  min-width: 0;
+  src\styles\mobile-overrides.css:3656:}
+  src\styles\mobile-overrides.css:3657:
+  src\styles\mobile-overrides.css:3658:@keyframes connection-pulse {
+  src\styles\mobile-overrides.css:3659:  0%,
+  src\styles\mobile-overrides.css:3660:  100% {
+  src\styles\mobile-overrides.css:3661:    opacity: 0.45;
+  src\styles\mobile-overrides.css:3662:  }
+  src\styles\mobile-overrides.css:3663:
+  src\styles\mobile-overrides.css:3664:  50% {
+  src\styles\mobile-overrides.css:3665:    opacity: 1;
+  src\styles\mobile-overrides.css:3666:  }
+  src\styles\mobile-overrides.css:3667:}
+  src\styles\mobile-overrides.css:3668:
+  src\styles\mobile-overrides.css:3669:@media (max-width: 600px) {
+> src\styles\mobile-overrides.css:3670:  .ramp-status-bar {
+  src\styles\mobile-overrides.css:3671:    align-items: flex-start;
+  src\styles\mobile-overrides.css:3672:    flex-direction: column;
+  src\styles\mobile-overrides.css:3673:    gap: 5px;
+  src\styles\mobile-overrides.css:3674:  }
+  src\styles\mobile-overrides.css:3675:
+> src\styles\mobile-overrides.css:3676:  .ramp-status-divider {
+  src\styles\mobile-overrides.css:3677:    display: none;
+  src\styles\mobile-overrides.css:3678:  }
+  src\styles\mobile-overrides.css:3679:}
+  src\styles\mobile-overrides.css:3680:
+  src\styles\mobile-overrides.css:3681:@media (prefers-reduced-motion: reduce) {
+> src\styles\mobile-overrides.css:3682:  .connection-checking .connection-indicator-dot {
+  src\styles\mobile-overrides.css:3683:    animation: none;
+  src\styles\mobile-overrides.css:3684:  }
+  src\styles\mobile-overrides.css:3685:}
+  src\styles\mobile-overrides.css:3686:
+  src\styles\mobile-overrides.css:3687:@media print {
+> src\styles\mobile-overrides.css:3688:  .connection-indicator,
+> src\styles\mobile-overrides.css:3689:  .ramp-status-divider {
+  src\styles\mobile-overrides.css:3690:    display: none !important;
+  src\styles\mobile-overrides.css:3691:  }
+  src\styles\mobile-overrides.css:3692:}
+  src\styles\mobile-overrides.css:3693:
+  src\styles\mobile-overrides.css:3694:/* Checklist activity view controls */
+  src\styles\mobile-overrides.css:3695:
+  src\styles\mobile-overrides.css:3696:.task-view-controls {
+  src\styles\mobile-overrides.css:3697:  display: grid;
+  src\styles\mobile-overrides.css:3698:  gap: 12px;
+  src\styles\mobile-overrides.css:3699:  margin: 0 0 16px;
+  src\styles\mobile-overrides.css:3700:  padding: 16px;
+  src\styles\mobile-overrides.css:3701:  background: #ffffff;
+  src\styles\mobile-overrides.css:3702:  border: 1px solid #dbe2eb;
+  src\styles\mobile-overrides.css:3703:  border-radius: 14px;
+  src\styles\mobile-overrides.css:3704:  box-shadow: 0 4px 16px rgba(15, 35, 60, 0.05);
+  src\styles\mobile-overrides.css:3705:}
+  src\styles\mobile-overrides.css:3706:
+  src\styles\mobile-overrides.css:3707:.task-view-heading {
+  src\styles\mobile-overrides.css:3708:  display: flex;
+  src\styles\mobile-overrides.css:3709:  align-items: flex-start;
+  src\styles\mobile-overrides.css:3964:  }
+  src\styles\mobile-overrides.css:3965:}
+  src\styles\mobile-overrides.css:3966:
+  src\styles\mobile-overrides.css:3967:/* Local draft and connectivity notice */
+  src\styles\mobile-overrides.css:3968:
+> src\styles\mobile-overrides.css:3969:.local-draft-notice {
+  src\styles\mobile-overrides.css:3970:  display: flex;
+  src\styles\mobile-overrides.css:3971:  align-items: flex-start;
+  src\styles\mobile-overrides.css:3972:  gap: 10px;
+  src\styles\mobile-overrides.css:3973:  margin: 0 0 14px;
+  src\styles\mobile-overrides.css:3974:  padding: 11px 13px;
+  src\styles\mobile-overrides.css:3975:  color: #725900;
+  src\styles\mobile-overrides.css:3976:  background: #fff8dd;
+  src\styles\mobile-overrides.css:3977:  border: 1px solid #ead38a;
+  src\styles\mobile-overrides.css:3978:  border-radius: 10px;
+  src\styles\mobile-overrides.css:3979:  font-size: 11px;
+  src\styles\mobile-overrides.css:3980:  line-height: 1.45;
+  src\styles\mobile-overrides.css:3981:}
+  src\styles\mobile-overrides.css:3982:
+> src\styles\mobile-overrides.css:3983:.local-draft-notice strong {
+  src\styles\mobile-overrides.css:3984:  flex: 0 0 auto;
+  src\styles\mobile-overrides.css:3985:  color: #624b00;
+  src\styles\mobile-overrides.css:3986:}
+  src\styles\mobile-overrides.css:3987:
+> src\styles\mobile-overrides.css:3988:.local-draft-notice span {
+  src\styles\mobile-overrides.css:3989:  min-width: 0;
+  src\styles\mobile-overrides.css:3990:}
+  src\styles\mobile-overrides.css:3991:
+  src\styles\mobile-overrides.css:3992:@media (max-width: 600px) {
+> src\styles\mobile-overrides.css:3993:  .local-draft-notice {
+  src\styles\mobile-overrides.css:3994:    flex-direction: column;
+  src\styles\mobile-overrides.css:3995:    gap: 4px;
+  src\styles\mobile-overrides.css:3996:  }
+  src\styles\mobile-overrides.css:3997:}
+  src\styles\mobile-overrides.css:3998:
+  src\styles\mobile-overrides.css:3999:@media print {
+> src\styles\mobile-overrides.css:4000:  .local-draft-notice {
+  src\styles\mobile-overrides.css:4001:    display: none !important;
+  src\styles\mobile-overrides.css:4002:  }
+  src\styles\mobile-overrides.css:4003:}
+  src\styles\mobile-overrides.css:4004:
+  src\styles\mobile-overrides.css:4005:/* PWA update prompt and final mobile viewport safeguards */
+  src\styles\mobile-overrides.css:4006:
+  src\styles\mobile-overrides.css:4007:html {
+  src\styles\mobile-overrides.css:4008:  min-height: 100%;
+  src\styles\mobile-overrides.css:4009:  min-height: 100dvh;
+  src\styles\mobile-overrides.css:4010:}
+  src\styles\mobile-overrides.css:4011:
+  src\styles\mobile-overrides.css:4012:body,
+  src\styles\mobile-overrides.css:4013:#root {
+  src\styles\mobile-overrides.css:4014:  min-height: 100%;
+  src\styles\mobile-overrides.css:4015:  min-height: 100dvh;
+  src\styles\mobile-overrides.css:4016:}
+  src\styles\mobile-overrides.css:4017:
+  src\styles\mobile-overrides.css:4018:.ramp-page {
+  src\styles\mobile-overrides.css:4019:  min-height: 100vh;
+  src\styles\mobile-overrides.css:4020:  min-height: 100dvh;
+
+

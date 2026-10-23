@@ -1,0 +1,500 @@
+﻿              "- Registration\n" +
+              "- STA Scheduled\n" +
+              "- STD Scheduled",
+          );
+        }
+
+        return {
+          saved: false,
+          queued: false,
+        };
+      }
+
+      if (!databaseIsAvailable()) {
+        try {
+          if (!queueChecklistSnapshotRef.current) {
+            throw new Error("The offline checklist queue is not ready.");
+          }
+
+          const queuedResult = await queueChecklistSnapshotRef.current(reason);
+
+          if (!silent) {
+            window.alert(
+              "The checklist could not be saved to Supabase.\n\n" +
+                "A local draft was stored on this device for recovery.\n\n" +
+                "Lifecycle changes for existing saved tasks can be queued offline. Approval and new checklist creation still require the database service.",
+            );
+          }
+
+          return queuedResult;
+        } catch (error) {
+          console.error("Offline checklist queue failed:", error);
+
+          setStatusMessage("Offline storage failed");
+
+          if (!silent) {
+            window.alert(
+              "The checklist could not be saved online or stored in the offline queue.\n\n" +
+                (error?.message || "Unknown offline storage error"),
+            );
+          }
+
+          return {
+            saved: false,
+            queued: false,
+            offline: true,
+            error,
+            reason,
+          };
+        }
+      }
+
+      saveInProgressRef.current = true;
+
+      pendingSaveRef.current = false;
+
+      setSaving(true);
+
+      setStatusMessage("Saving checklist...");
+
+      try {
+        const checklistRecord = {
+          flight_in: flight.flightIn.trim() || null,
+          flight_out: flight.flightOut.trim(),
+          flight_date: flight.flightDate,
+          bay: flight.bay.trim() || null,
+          aircraft_type: flight.aircraftType || null,
+          registration: flight.registration.trim() || null,
+          sta: flight.sta || null,
+          eta: flight.eta || null,
+          ata: flight.ata || null,
+          chocks_on: flight.chocksOn || null,
+          std: flight.std || null,
+          defined_push_time: flight.definedPushTime || null,
+          trc_coordinator:
+            profile?.full_name ||
+            user?.email ||
+            flight.trcCoordinator.trim() ||
+            null,
+          checklist_status:
+            metrics.done === CHECKLIST_ITEMS.length
+              ? "completed"
+              : "in_progress",
+          owner_id: user.id,
+        };
+
+        let activeChecklistId = checklistIdRef.current || checklistId;
+
+        if (!activeChecklistId) {
+          const { data, error } = await supabase
+            .from("ramp_checklists")
+            .insert(checklistRecord)
+            .select()
+            .single();
+
+          if (error) {
+            throw error;
+          }
+
+          activeChecklistId = data.id;
+
+          checklistIdRef.current = data.id;
+
+          setChecklistId(data.id);
+        } else {
+          const updateRecord = {
+            ...checklistRecord,
+          };
+
+          delete updateRecord.owner_id;
+
+          const { data: updatedChecklist, error } = await supabase
+            .from("ramp_checklists")
+            .update(updateRecord)
+            .eq("id", activeChecklistId)
+            .select("id")
+            .maybeSingle();
+
+          if (error) {
+            throw error;
+          }
+
+          if (!updatedChecklist) {
+            throw new Error(
+              "The checklist was not updated. The database policy may not allow this account to update the selected checklist.",
+            );
+          }
+        }
+
+        const itemRecords = CHECKLIST_ITEMS.map((item, index) => {
+          const row = rows[index];
+
+          return {
+            checklist_id: activeChecklistId,
+            task_code: item.taskCode,
+            item_number: item.itemNumber,
+            phase: item.phase,
+            activity: item.activity,
+            impact_category: item.impactCategory,
+            base_time: item.base,
+            planned_offset_seconds: item.offsetSec,
+            planned_time: plannedTimeForRef.current?.(index) || null,
+            observation: row.observation?.trim() || null,
+          };
+        });
+
+        const { data: savedTaskItems, error: itemError } = await supabase
+          .from("ramp_checklist_items")
+          .upsert(itemRecords, {
+            onConflict: "checklist_id,task_code",
+          })
+          .select(
+            [
+              "id",
+              "task_code",
+              "lifecycle_version",
+              "started_at",
+              "started_by",
+              "completed_at",
+              "completed_by",
+              "actual_time",
+              "delay_seconds",
+              "operational_status",
+            ].join(","),
+          );
+
+        if (itemError) {
+          throw itemError;
+        }
+
+        const savedTaskItemsByCode = new Map(
+          (savedTaskItems || []).map((savedItem) => [
+            savedItem.task_code,
+            savedItem,
+          ]),
+        );
+
+        const confirmedRows = rows.map((currentRow, index) => {
+          const checklistItem = CHECKLIST_ITEMS[index];
+
+          if (!checklistItem) {
+            return currentRow;
+          }
+
+          const savedItem = savedTaskItemsByCode.get(checklistItem.taskCode);
+
+          if (!savedItem) {
+            return currentRow;
+          }
+
+          return {
+            ...currentRow,
+            taskId: savedItem.id,
+            lifecycleVersion: Number(savedItem.lifecycle_version ?? 0),
+            startedAt: savedItem.started_at ?? currentRow.startedAt ?? null,
+            startedBy: savedItem.started_by ?? currentRow.startedBy ?? null,
+            completedAt:
+              savedItem.completed_at ?? currentRow.completedAt ?? null,
+            completedBy:
+              savedItem.completed_by ?? currentRow.completedBy ?? null,
+            actualTime:
+              normalizeDatabaseTime(savedItem.actual_time) ||
+              currentRow.actualTime ||
+              "",
+            delaySeconds:
+              savedItem.delay_seconds ?? currentRow.delaySeconds ?? null,
+            status:
+              APPLICATION_STATUS[savedItem.operational_status] ||
+              currentRow.status ||
+              "pending",
+            pendingUpload: false,
+            syncConflict: false,
+            syncError: null,
+          };
+        });
+
+        setRows(confirmedRows);
+
+        if (savedTaskItems?.length !== CHECKLIST_ITEMS.length) {
+          throw new Error(
+            `Only ${savedTaskItems?.length ?? 0} of ${
+              CHECKLIST_ITEMS.length
+            } task records were returned after saving.`,
+          );
+        }
+
+        window.localStorage.setItem(
+          LOCAL_DRAFT_KEY,
+          JSON.stringify({
+            version: 2,
+            checklistId: activeChecklistId,
+            userId: user.id,
+            storedAt: new Date().toISOString(),
+            flight,
+            rows: confirmedRows,
+            recordLocked: false,
+            serverSaved: true,
+          }),
+        );
+
+        const savedTime = new Date().toLocaleTimeString("en-ZA", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        });
+
+        setStatusMessage(`Saved to Supabase at ${savedTime}`);
+
+        if (!silent && roleCanViewAudit && loadAuditHistoryRef.current) {
+          await loadAuditHistoryRef.current(activeChecklistId);
+        }
+
+        if (!silent) {
+          window.alert(
+            "OPS checklist saved successfully.\n\n" +
+              `Flight: ${flight.flightOut}\n` +
+              `Completed: ${metrics.done}/${CHECKLIST_ITEMS.length}`,
+          );
+        }
+
+        return {
+          saved: true,
+          checklistId: activeChecklistId,
+          reason,
+        };
+      } catch (error) {
+        console.error("Checklist save failed:", error);
+
+        const saveErrorMessage = error?.message || "Unknown database error";
+
+        setStatusMessage(`Save failed: ${saveErrorMessage}`);
+        if (!silent) {
+          window.alert(
+            "The checklist could not be saved.\n\n" +
+              (error?.message || "Unknown error"),
+          );
+        }
+
+        return {
+          saved: false,
+          error,
+          reason,
+        };
+      } finally {
+        saveInProgressRef.current = false;
+
+        setSaving(false);
+
+        if (pendingSaveRef.current) {
+          pendingSaveRef.current = false;
+
+          setStatusMessage("Unsaved changes");
+        }
+      }
+    },
+    [
+      approving,
+      checklistId,
+      flight,
+      metrics.done,
+      profile?.full_name,
+      recordLocked,
+      roleCanOperate,
+      roleCanViewAudit,
+      rows,
+      user?.email,
+      user?.id,
+    ],
+  );
+
+  async function saveChecklist() {
+    await persistChecklist({
+      silent: false,
+      reason: "manual",
+    });
+  }
+
+  const nextPendingCandidate = CHECKLIST_ITEMS.map((item, index) => {
+    const row = rows[index];
+
+    const plannedDateTime = plannedDateTimeFor(index);
+
+    const plannedTime = formatDateTimeAsTime(plannedDateTime);
+
+    const timing = getPendingTaskTiming(
+      plannedDateTime,
+      operationalNow,
+      `Awaiting ${requiredTimeLabelFor(item)}`,
+    );
+
+    return {
+      item,
+      row,
+      plannedTime,
+      plannedDateTime,
+      timing,
+    };
+  })
+    .filter(({ row }) => !row || !row.status || row.status === "pending")
+    .sort(compareTaskCandidates)[0];
+
+  const nextTaskLabel = nextPendingCandidate
+    ? nextPendingCandidate.item.activity
+    : "All activities complete";
+
+  return (
+    <main className="ramp-page">
+      <ChecklistPrintReport
+        flight={flight}
+        rows={rows}
+        metrics={metrics}
+        operationalMetrics={operationalMetrics}
+        preArrivalMetrics={preArrivalMetrics}
+        plannedTimeFor={plannedTimeFor}
+        profile={profile}
+      />
+
+      <OperationsMenu
+        open={operationsMenuOpen}
+        onClose={() => setOperationsMenuOpen(false)}
+        flight={flight}
+        profile={profile}
+        completedCount={metrics.done}
+        totalCount={CHECKLIST_ITEMS.length}
+        nextTaskLabel={nextTaskLabel}
+        phases={CHECKLIST_PHASES}
+        activePhase={activePhase}
+        onPhaseChange={navigateToPhase}
+        onNavigate={navigateToSection}
+        onNextTask={() => openNextPendingTask()}
+        onHistory={showHistory}
+        onSave={saveChecklist}
+        onReset={resetChecklist}
+        onPrint={() => window.print()}
+        onExport={openExcelExport}
+        onSignOut={handleSignOut}
+        canSave={roleCanOperate}
+        canExport={roleCanExport && Boolean(checklistId)}
+        saveDisabled={saving || approving || recordLocked}
+        resetDisabled={checklistReadOnly}
+      />
+      <header className="ramp-header">
+        <div className="ramp-brand">
+          <div className="ramp-brand-logo">
+            <AppLogo
+              className="saa-app-logo"
+              alt="OPS Check-List GRU - Turnaround Report"
+            />
+          </div>
+
+          <div>
+            <h1>OPS Check-List GRU - Turnaround Report</h1>
+
+            <p>PTS Turnaround Performance Report</p>
+          </div>
+        </div>
+
+        <div className="ramp-header-actions">
+          <div className="ramp-user">
+            <strong>
+              {profile?.full_name || user?.email || "Operational User"}
+            </strong>
+
+            <span>{getRoleLabel(profile?.role)}</span>
+          </div>
+
+          <LiveClock />
+
+          <OperationsMenuButton onClick={() => setOperationsMenuOpen(true)} />
+        </div>
+      </header>
+
+      <section className="ramp-content">
+        <div className="mobile-user-identity">
+          <span>Signed in as</span>
+
+          <strong>
+            {profile?.full_name || user?.email || "Operational User"}
+          </strong>
+
+          <small>{getRoleLabel(profile?.role)}</small>
+        </div>
+        <div className="ramp-status-bar">
+          <div
+            className={`connection-indicator connection-${connectionStatus}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="connection-indicator-dot" aria-hidden="true" />
+
+            <span>
+              {getConnectionLabel(connectionStatus, pendingSyncCount)}
+            </span>
+          </div>
+
+          <span className="ramp-status-divider">|</span>
+
+          <span className="ramp-status-message">
+            {loadingRecord
+              ? "Loading checklist..."
+              : !flightInformationComplete && activeView === "checklist"
+                ? "Complete the required Flight Information to enable the checklist. Changes are protected locally until you select Save."
+                : statusMessage}
+          </span>
+        </div>
+
+        {pendingSyncCount > 0 ? (
+          <div className="local-draft-notice" role="status">
+            <strong>Local draft protection active</strong>
+
+            <span>
+              The latest checklist draft is stored on this device. Lifecycle
+              changes for existing saved tasks use the synchronization queue and
+              retry when connectivity returns.
+            </span>
+          </div>
+        ) : null}
+
+        {activeView === "history" ? (
+          <div className="history-view">
+            <div className="history-navigation">
+              <button
+                type="button"
+                className="ramp-button ramp-button-light"
+                onClick={returnToChecklist}
+              >
+                <ArrowLeft size={17} aria-hidden="true" />
+                Back to Checklist
+              </button>
+            </div>
+
+            {roleCanExport ? (
+              <div id="excel-export">
+                <Suspense
+                  fallback={
+                    <SecondaryViewLoading label="Loading report export..." />
+                  }
+                >
+                  <ChecklistExport profile={profile} />
+                </Suspense>
+              </div>
+            ) : null}
+
+            <Suspense
+              fallback={
+                <SecondaryViewLoading label="Loading checklist history..." />
+              }
+            >
+              <ChecklistHistory
+                records={historyRecords}
+                loading={historyLoading}
+                searchValue={historySearch}
+                statusValue={historyStatus}
+                onSearchChange={setHistorySearch}
+                onStatusChange={setHistoryStatus}
+                onRefresh={loadChecklistHistory}
+                onOpen={openChecklist}
+                onNew={createNewChecklist}
+                canCreate={roleCanCreate}
+              />
+            </Suspense>

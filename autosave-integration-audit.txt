@@ -1,0 +1,471 @@
+﻿
+  src\pages\DashboardPage.jsx:284:  const [operationalNow, setOperationalNow] = useState(() => new Date());
+  src\pages\DashboardPage.jsx:285:
+  src\pages\DashboardPage.jsx:286:  const [focusedTaskNumber, setFocusedTaskNumber] = useState(null);
+  src\pages\DashboardPage.jsx:287:
+> src\pages\DashboardPage.jsx:288:  const [processingTaskNumber, setProcessingTaskNumber] = useState(null);
+  src\pages\DashboardPage.jsx:289:
+  src\pages\DashboardPage.jsx:290:  const [operationsMenuOpen, setOperationsMenuOpen] = useState(false);
+  src\pages\DashboardPage.jsx:291:
+> src\pages\DashboardPage.jsx:292:  const [localDraftRestored, setLocalDraftRestored] = useState(false);
+  src\pages\DashboardPage.jsx:293:
+  src\pages\DashboardPage.jsx:294:  const [connectionStatus, setConnectionStatus] = useState(
+  src\pages\DashboardPage.jsx:295:    navigator.onLine ? "checking" : "offline",
+  src\pages\DashboardPage.jsx:296:  );
+  src\pages\DashboardPage.jsx:297:
+  src\pages\DashboardPage.jsx:298:  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  src\pages\DashboardPage.jsx:299:
+> src\pages\DashboardPage.jsx:300:  const saveInProgressRef = useRef(false);
+  src\pages\DashboardPage.jsx:301:
+> src\pages\DashboardPage.jsx:302:  const pendingSaveRef = useRef(false);
+  src\pages\DashboardPage.jsx:303:
+  src\pages\DashboardPage.jsx:304:  const checklistIdRef = useRef(null);
+  src\pages\DashboardPage.jsx:305:
+> src\pages\DashboardPage.jsx:306:  const skipNextAutosaveRef = useRef(false);
+  src\pages\DashboardPage.jsx:307:
+  src\pages\DashboardPage.jsx:308:  const plannedTimeForRef = useRef(null);
+  src\pages\DashboardPage.jsx:309:
+  src\pages\DashboardPage.jsx:310:  const loadAuditHistoryRef = useRef(null);
+  src\pages\DashboardPage.jsx:311:
+  src\pages\DashboardPage.jsx:312:  const queueChecklistSnapshotRef = useRef(null);
+  src\pages\DashboardPage.jsx:313:
+  src\pages\DashboardPage.jsx:314:  const suppressDraftPersistenceRef = useRef(false);
+  src\pages\DashboardPage.jsx:315:
+  src\pages\DashboardPage.jsx:316:  const roleCanCreate = canCreateChecklist(profile?.role);
+  src\pages\DashboardPage.jsx:317:
+  src\pages\DashboardPage.jsx:318:  const roleCanOperate = canOperateChecklist(profile?.role);
+  src\pages\DashboardPage.jsx:397:    user?.id,
+  src\pages\DashboardPage.jsx:398:  ]);
+  src\pages\DashboardPage.jsx:399:
+  src\pages\DashboardPage.jsx:400:  function isTaskProcessing(itemNumber) {
+> src\pages\DashboardPage.jsx:401:    return processingTaskNumber === itemNumber;
+  src\pages\DashboardPage.jsx:402:  }
+  src\pages\DashboardPage.jsx:403:
+  src\pages\DashboardPage.jsx:404:  const refreshPendingSyncCount = useCallback(async () => {
+  src\pages\DashboardPage.jsx:405:    try {
+  src\pages\DashboardPage.jsx:406:      const actionCount = await getOfflineActionCount();
+  src\pages\DashboardPage.jsx:407:
+  src\pages\DashboardPage.jsx:408:      setPendingSyncCount(actionCount);
+  src\pages\DashboardPage.jsx:409:
+  src\pages\DashboardPage.jsx:410:      return actionCount;
+  src\pages\DashboardPage.jsx:411:    } catch (error) {
+  src\pages\DashboardPage.jsx:412:      console.error("Offline queue count failed:", error);
+  src\pages\DashboardPage.jsx:413:
+  src\pages\DashboardPage.jsx:552:
+  src\pages\DashboardPage.jsx:553:          if (belongsToUser && hasValidFlight && hasValidRows) {
+  src\pages\DashboardPage.jsx:554:            const restoredChecklistId = parsedDraft.checklistId ?? null;
+  src\pages\DashboardPage.jsx:555:
+> src\pages\DashboardPage.jsx:556:            skipNextAutosaveRef.current = true;
+  src\pages\DashboardPage.jsx:557:
+  src\pages\DashboardPage.jsx:558:            checklistIdRef.current = restoredChecklistId;
+  src\pages\DashboardPage.jsx:559:
+  src\pages\DashboardPage.jsx:560:            if (cancelled) {
+  src\pages\DashboardPage.jsx:561:              return;
+  src\pages\DashboardPage.jsx:562:            }
+  src\pages\DashboardPage.jsx:563:
+  src\pages\DashboardPage.jsx:564:            setChecklistId(restoredChecklistId);
+  src\pages\DashboardPage.jsx:565:
+  src\pages\DashboardPage.jsx:566:            setFlight(parsedDraft.flight);
+  src\pages\DashboardPage.jsx:567:
+  src\pages\DashboardPage.jsx:568:            setRows(parsedDraft.rows);
+  src\pages\DashboardPage.jsx:585:      } catch (error) {
+  src\pages\DashboardPage.jsx:586:        console.error("Local checklist draft restoration failed:", error);
+  src\pages\DashboardPage.jsx:587:      } finally {
+  src\pages\DashboardPage.jsx:588:        if (!cancelled) {
+> src\pages\DashboardPage.jsx:589:          setLocalDraftRestored(true);
+  src\pages\DashboardPage.jsx:590:
+  src\pages\DashboardPage.jsx:591:          if (!restored) {
+  src\pages\DashboardPage.jsx:592:            setStatusMessage("Checklist ready");
+  src\pages\DashboardPage.jsx:593:          }
+  src\pages\DashboardPage.jsx:594:        }
+  src\pages\DashboardPage.jsx:595:      }
+  src\pages\DashboardPage.jsx:596:    }
+  src\pages\DashboardPage.jsx:597:
+  src\pages\DashboardPage.jsx:598:    const restorationTimer = window.setTimeout(restoreLocalDraft, 0);
+  src\pages\DashboardPage.jsx:599:
+  src\pages\DashboardPage.jsx:600:    return () => {
+  src\pages\DashboardPage.jsx:601:      cancelled = true;
+  src\pages\DashboardPage.jsx:606:
+  src\pages\DashboardPage.jsx:607:  useEffect(() => {
+  src\pages\DashboardPage.jsx:608:    if (
+  src\pages\DashboardPage.jsx:609:      !user?.id ||
+> src\pages\DashboardPage.jsx:610:      !localDraftRestored ||
+  src\pages\DashboardPage.jsx:611:      suppressDraftPersistenceRef.current
+  src\pages\DashboardPage.jsx:612:    ) {
+  src\pages\DashboardPage.jsx:613:      return undefined;
+  src\pages\DashboardPage.jsx:614:    }
+  src\pages\DashboardPage.jsx:615:
+  src\pages\DashboardPage.jsx:616:    const draftTimer = window.setTimeout(() => {
+  src\pages\DashboardPage.jsx:617:      const draftRecord = {
+  src\pages\DashboardPage.jsx:618:        version: 2,
+  src\pages\DashboardPage.jsx:619:        checklistId: checklistIdRef.current ?? checklistId ?? null,
+  src\pages\DashboardPage.jsx:620:        userId: user.id,
+  src\pages\DashboardPage.jsx:621:        storedAt: new Date().toISOString(),
+  src\pages\DashboardPage.jsx:622:        flight,
+  src\pages\DashboardPage.jsx:637:
+  src\pages\DashboardPage.jsx:638:    return () => {
+  src\pages\DashboardPage.jsx:639:      window.clearTimeout(draftTimer);
+  src\pages\DashboardPage.jsx:640:    };
+> src\pages\DashboardPage.jsx:641:  }, [checklistId, flight, localDraftRestored, recordLocked, rows, user?.id]);
+  src\pages\DashboardPage.jsx:642:
+  src\pages\DashboardPage.jsx:643:  useEffect(() => {
+  src\pages\DashboardPage.jsx:644:    async function reconcileAfterReconnect() {
+  src\pages\DashboardPage.jsx:645:      const activeChecklistId = checklistIdRef.current;
+  src\pages\DashboardPage.jsx:646:
+  src\pages\DashboardPage.jsx:647:      if (!window.navigator.onLine || !activeChecklistId) {
+  src\pages\DashboardPage.jsx:648:        return;
+  src\pages\DashboardPage.jsx:649:      }
+  src\pages\DashboardPage.jsx:650:
+  src\pages\DashboardPage.jsx:651:      try {
+  src\pages\DashboardPage.jsx:652:        const { data, error } = await supabase
+  src\pages\DashboardPage.jsx:653:          .from("ramp_checklist_items")
+  src\pages\DashboardPage.jsx:664:        const serverItemsById = new Map(
+  src\pages\DashboardPage.jsx:665:          (data || []).map((item) => [item.id, item]),
+  src\pages\DashboardPage.jsx:666:        );
+  src\pages\DashboardPage.jsx:667:
+> src\pages\DashboardPage.jsx:668:        skipNextAutosaveRef.current = true;
+  src\pages\DashboardPage.jsx:669:
+  src\pages\DashboardPage.jsx:670:        setRows((currentRows) =>
+  src\pages\DashboardPage.jsx:671:          currentRows.map((currentRow) => {
+  src\pages\DashboardPage.jsx:672:            /*
+  src\pages\DashboardPage.jsx:673:             * Preserve offline local edits until
+  src\pages\DashboardPage.jsx:674:             * their lifecycle operations upload.
+  src\pages\DashboardPage.jsx:675:             */
+  src\pages\DashboardPage.jsx:676:            if (currentRow.pendingUpload) {
+  src\pages\DashboardPage.jsx:677:              return currentRow;
+  src\pages\DashboardPage.jsx:678:            }
+  src\pages\DashboardPage.jsx:679:
+  src\pages\DashboardPage.jsx:680:            const serverItem = serverItemsById.get(currentRow.taskId);
+  src\pages\DashboardPage.jsx:707:      if (!detail?.taskId || detail.checklistId !== checklistIdRef.current) {
+  src\pages\DashboardPage.jsx:708:        return;
+  src\pages\DashboardPage.jsx:709:      }
+  src\pages\DashboardPage.jsx:710:
+> src\pages\DashboardPage.jsx:711:      skipNextAutosaveRef.current = true;
+  src\pages\DashboardPage.jsx:712:
+  src\pages\DashboardPage.jsx:713:      setRows((currentRows) =>
+  src\pages\DashboardPage.jsx:714:        currentRows.map((row) =>
+  src\pages\DashboardPage.jsx:715:          row.taskId === detail.taskId
+  src\pages\DashboardPage.jsx:716:            ? {
+  src\pages\DashboardPage.jsx:717:                ...row,
+  src\pages\DashboardPage.jsx:718:                lifecycleVersion: Number(
+  src\pages\DashboardPage.jsx:719:                  detail.lifecycleVersion ?? row.lifecycleVersion ?? 0,
+  src\pages\DashboardPage.jsx:720:                ),
+  src\pages\DashboardPage.jsx:721:                pendingUpload: false,
+  src\pages\DashboardPage.jsx:722:                syncConflict: false,
+  src\pages\DashboardPage.jsx:723:                syncError: null,
+  src\pages\DashboardPage.jsx:738:          throw error;
+  src\pages\DashboardPage.jsx:739:        }
+  src\pages\DashboardPage.jsx:740:
+  src\pages\DashboardPage.jsx:741:        if (synchronizedTask) {
+> src\pages\DashboardPage.jsx:742:          skipNextAutosaveRef.current = true;
+  src\pages\DashboardPage.jsx:743:
+  src\pages\DashboardPage.jsx:744:          setRows((currentRows) =>
+  src\pages\DashboardPage.jsx:745:            currentRows.map((row) =>
+  src\pages\DashboardPage.jsx:746:              row.taskId === detail.taskId
+  src\pages\DashboardPage.jsx:747:                ? mapDatabaseTaskToRow(synchronizedTask, row)
+  src\pages\DashboardPage.jsx:748:                : row,
+  src\pages\DashboardPage.jsx:749:            ),
+  src\pages\DashboardPage.jsx:750:          );
+  src\pages\DashboardPage.jsx:751:        }
+  src\pages\DashboardPage.jsx:752:
+  src\pages\DashboardPage.jsx:753:        setStatusMessage("Lifecycle change synchronized.");
+  src\pages\DashboardPage.jsx:754:      } catch (error) {
+  src\pages\DashboardPage.jsx:767:      if (!detail?.taskId || detail.checklistId !== checklistIdRef.current) {
+  src\pages\DashboardPage.jsx:768:        return;
+  src\pages\DashboardPage.jsx:769:      }
+  src\pages\DashboardPage.jsx:770:
+> src\pages\DashboardPage.jsx:771:      skipNextAutosaveRef.current = true;
+  src\pages\DashboardPage.jsx:772:
+  src\pages\DashboardPage.jsx:773:      setRows((currentRows) =>
+  src\pages\DashboardPage.jsx:774:        currentRows.map((row) =>
+  src\pages\DashboardPage.jsx:775:          row.taskId === detail.taskId
+  src\pages\DashboardPage.jsx:776:            ? {
+  src\pages\DashboardPage.jsx:777:                ...row,
+  src\pages\DashboardPage.jsx:778:                pendingUpload: false,
+  src\pages\DashboardPage.jsx:779:                syncConflict: true,
+  src\pages\DashboardPage.jsx:780:                syncError: detail.errorMessage || "Lifecycle conflict",
+  src\pages\DashboardPage.jsx:781:              }
+  src\pages\DashboardPage.jsx:782:            : row,
+  src\pages\DashboardPage.jsx:783:        ),
+  src\pages\DashboardPage.jsx:1109:    setStatusMessage("Not saved");
+  src\pages\DashboardPage.jsx:1110:  }
+  src\pages\DashboardPage.jsx:1111:
+  src\pages\DashboardPage.jsx:1112:  async function startActivity(itemNumber) {
+> src\pages\DashboardPage.jsx:1113:    if (processingTaskNumber !== null) {
+  src\pages\DashboardPage.jsx:1114:      return;
+  src\pages\DashboardPage.jsx:1115:    }
+  src\pages\DashboardPage.jsx:1116:
+  src\pages\DashboardPage.jsx:1117:    if (taskCompletionDisabled) {
+  src\pages\DashboardPage.jsx:1118:      window.alert(
+  src\pages\DashboardPage.jsx:1119:        "Your role cannot start this task, or the checklist is locked.",
+  src\pages\DashboardPage.jsx:1120:      );
+  src\pages\DashboardPage.jsx:1121:
+  src\pages\DashboardPage.jsx:1122:      return;
+  src\pages\DashboardPage.jsx:1123:    }
+  src\pages\DashboardPage.jsx:1124:
+  src\pages\DashboardPage.jsx:1125:    if (!flightInformationComplete) {
+  src\pages\DashboardPage.jsx:1192:      return;
+  src\pages\DashboardPage.jsx:1193:    }
+  src\pages\DashboardPage.jsx:1194:
+  src\pages\DashboardPage.jsx:1195:    try {
+> src\pages\DashboardPage.jsx:1196:      setProcessingTaskNumber(itemNumber);
+  src\pages\DashboardPage.jsx:1197:      setStatusMessage(`Starting: ${item.activity}`);
+  src\pages\DashboardPage.jsx:1198:
+  src\pages\DashboardPage.jsx:1199:      const result = await queueLifecycleAction({
+  src\pages\DashboardPage.jsx:1200:        action: "start",
+  src\pages\DashboardPage.jsx:1201:        checklistId,
+  src\pages\DashboardPage.jsx:1202:        taskId: row.taskId,
+  src\pages\DashboardPage.jsx:1203:        lifecycleVersion: row.lifecycleVersion ?? 0,
+  src\pages\DashboardPage.jsx:1204:        userId: user.id,
+  src\pages\DashboardPage.jsx:1205:      });
+  src\pages\DashboardPage.jsx:1206:
+> src\pages\DashboardPage.jsx:1207:      skipNextAutosaveRef.current = true;
+  src\pages\DashboardPage.jsx:1208:
+  src\pages\DashboardPage.jsx:1209:      updateRowState(itemNumber, {
+  src\pages\DashboardPage.jsx:1210:        status: "pending",
+  src\pages\DashboardPage.jsx:1211:        startedAt: result.occurredAt,
+  src\pages\DashboardPage.jsx:1212:        startedBy: user.id,
+  src\pages\DashboardPage.jsx:1213:        completedAt: null,
+  src\pages\DashboardPage.jsx:1214:        completedBy: null,
+  src\pages\DashboardPage.jsx:1215:        lifecycleVersion: result.nextLifecycleVersion,
+  src\pages\DashboardPage.jsx:1216:        pendingUpload: !result.synchronized,
+  src\pages\DashboardPage.jsx:1217:        syncConflict: false,
+  src\pages\DashboardPage.jsx:1218:        syncError: null,
+  src\pages\DashboardPage.jsx:1219:      });
+  src\pages\DashboardPage.jsx:1233:        "The task could not be started.\n\n" +
+  src\pages\DashboardPage.jsx:1234:          (error?.message || "Unknown error"),
+  src\pages\DashboardPage.jsx:1235:      );
+  src\pages\DashboardPage.jsx:1236:    } finally {
+> src\pages\DashboardPage.jsx:1237:      setProcessingTaskNumber(null);
+  src\pages\DashboardPage.jsx:1238:    }
+  src\pages\DashboardPage.jsx:1239:  }
+  src\pages\DashboardPage.jsx:1240:
+  src\pages\DashboardPage.jsx:1241:  async function undoActivity(itemNumber) {
+> src\pages\DashboardPage.jsx:1242:    if (processingTaskNumber !== null) {
+  src\pages\DashboardPage.jsx:1243:      return;
+  src\pages\DashboardPage.jsx:1244:    }
+  src\pages\DashboardPage.jsx:1245:
+  src\pages\DashboardPage.jsx:1246:    if (recordLocked || approving) {
+  src\pages\DashboardPage.jsx:1247:      window.alert("This checklist is locked or is currently being approved.");
+  src\pages\DashboardPage.jsx:1248:
+  src\pages\DashboardPage.jsx:1249:      return;
+  src\pages\DashboardPage.jsx:1250:    }
+  src\pages\DashboardPage.jsx:1251:
+  src\pages\DashboardPage.jsx:1252:    if (!roleCanUndoTask) {
+  src\pages\DashboardPage.jsx:1253:      window.alert("Your role cannot return a completed task to pending.");
+  src\pages\DashboardPage.jsx:1254:
+  src\pages\DashboardPage.jsx:1306:      return;
+  src\pages\DashboardPage.jsx:1307:    }
+  src\pages\DashboardPage.jsx:1308:
+  src\pages\DashboardPage.jsx:1309:    try {
+> src\pages\DashboardPage.jsx:1310:      setProcessingTaskNumber(itemNumber);
+  src\pages\DashboardPage.jsx:1311:
+  src\pages\DashboardPage.jsx:1312:      setStatusMessage(`Returning to pending: ${item.activity}`);
+  src\pages\DashboardPage.jsx:1313:
+  src\pages\DashboardPage.jsx:1314:      const result = await queueLifecycleAction({
+  src\pages\DashboardPage.jsx:1315:        action: "reopen",
+  src\pages\DashboardPage.jsx:1316:        checklistId,
+  src\pages\DashboardPage.jsx:1317:        taskId: row.taskId,
+  src\pages\DashboardPage.jsx:1318:        lifecycleVersion: row.lifecycleVersion ?? 0,
+  src\pages\DashboardPage.jsx:1319:        userId: user.id,
+  src\pages\DashboardPage.jsx:1320:      });
+  src\pages\DashboardPage.jsx:1321:
+> src\pages\DashboardPage.jsx:1322:      skipNextAutosaveRef.current = true;
+  src\pages\DashboardPage.jsx:1323:
+  src\pages\DashboardPage.jsx:1324:      updateRowState(itemNumber, {
+  src\pages\DashboardPage.jsx:1325:        actualTime: "",
+  src\pages\DashboardPage.jsx:1326:        status: "pending",
+  src\pages\DashboardPage.jsx:1327:        delaySeconds: null,
+  src\pages\DashboardPage.jsx:1328:        startedAt: null,
+  src\pages\DashboardPage.jsx:1329:        startedBy: null,
+  src\pages\DashboardPage.jsx:1330:        completedAt: null,
+  src\pages\DashboardPage.jsx:1331:        completedBy: null,
+  src\pages\DashboardPage.jsx:1332:        lifecycleVersion: result.nextLifecycleVersion,
+  src\pages\DashboardPage.jsx:1333:        pendingUpload: !result.synchronized,
+  src\pages\DashboardPage.jsx:1334:        syncConflict: false,
+  src\pages\DashboardPage.jsx:1377:        "The completed task could not be returned to pending.\n\n" +
+  src\pages\DashboardPage.jsx:1378:          (error?.message || "Unknown error"),
+  src\pages\DashboardPage.jsx:1379:      );
+  src\pages\DashboardPage.jsx:1380:    } finally {
+> src\pages\DashboardPage.jsx:1381:      setProcessingTaskNumber(null);
+  src\pages\DashboardPage.jsx:1382:    }
+  src\pages\DashboardPage.jsx:1383:  }
+  src\pages\DashboardPage.jsx:1384:  async function markActivity(itemNumber) {
+> src\pages\DashboardPage.jsx:1385:    if (processingTaskNumber !== null) {
+  src\pages\DashboardPage.jsx:1386:      return;
+  src\pages\DashboardPage.jsx:1387:    }
+  src\pages\DashboardPage.jsx:1388:
+  src\pages\DashboardPage.jsx:1389:    if (taskCompletionDisabled) {
+  src\pages\DashboardPage.jsx:1390:      window.alert(
+  src\pages\DashboardPage.jsx:1391:        "Your role cannot complete this task, or the checklist is locked.",
+  src\pages\DashboardPage.jsx:1392:      );
+  src\pages\DashboardPage.jsx:1393:
+  src\pages\DashboardPage.jsx:1394:      return;
+  src\pages\DashboardPage.jsx:1395:    }
+  src\pages\DashboardPage.jsx:1396:
+  src\pages\DashboardPage.jsx:1397:    if (!flightInformationComplete) {
+  src\pages\DashboardPage.jsx:1492:
+  src\pages\DashboardPage.jsx:1493:    const observationText = row.observation?.trim() || "";
+  src\pages\DashboardPage.jsx:1494:
+  src\pages\DashboardPage.jsx:1495:    try {
+> src\pages\DashboardPage.jsx:1496:      setProcessingTaskNumber(itemNumber);
+  src\pages\DashboardPage.jsx:1497:
+  src\pages\DashboardPage.jsx:1498:      setStatusMessage(`Completing: ${item.activity}`);
+  src\pages\DashboardPage.jsx:1499:
+  src\pages\DashboardPage.jsx:1500:      const result = await queueLifecycleAction({
+  src\pages\DashboardPage.jsx:1501:        action: "complete",
+  src\pages\DashboardPage.jsx:1502:        checklistId,
+  src\pages\DashboardPage.jsx:1503:        taskId: row.taskId,
+  src\pages\DashboardPage.jsx:1504:        lifecycleVersion: row.lifecycleVersion ?? 0,
+  src\pages\DashboardPage.jsx:1505:        userId: user.id,
+  src\pages\DashboardPage.jsx:1506:        actualTime,
+  src\pages\DashboardPage.jsx:1507:        delaySeconds,
+  src\pages\DashboardPage.jsx:1508:        operationalStatus: databaseOperationalStatus,
+  src\pages\DashboardPage.jsx:1532:            }
+  src\pages\DashboardPage.jsx:1533:          : currentRow,
+  src\pages\DashboardPage.jsx:1534:      );
+  src\pages\DashboardPage.jsx:1535:
+> src\pages\DashboardPage.jsx:1536:      skipNextAutosaveRef.current = true;
+  src\pages\DashboardPage.jsx:1537:
+  src\pages\DashboardPage.jsx:1538:      setRows(updatedRows);
+  src\pages\DashboardPage.jsx:1539:      setFocusedTaskNumber(null);
+  src\pages\DashboardPage.jsx:1540:
+  src\pages\DashboardPage.jsx:1541:      setStatusMessage(
+  src\pages\DashboardPage.jsx:1542:        result.synchronized
+  src\pages\DashboardPage.jsx:1543:          ? `Completed and synchronized: ${item.activity}`
+  src\pages\DashboardPage.jsx:1544:          : `Completed offline and queued: ${item.activity}`,
+  src\pages\DashboardPage.jsx:1545:      );
+  src\pages\DashboardPage.jsx:1546:
+  src\pages\DashboardPage.jsx:1547:      await refreshPendingSyncCount();
+  src\pages\DashboardPage.jsx:1548:
+  src\pages\DashboardPage.jsx:1558:        "The task could not be completed.\n\n" +
+  src\pages\DashboardPage.jsx:1559:          (error?.message || "Unknown error"),
+  src\pages\DashboardPage.jsx:1560:      );
+  src\pages\DashboardPage.jsx:1561:    } finally {
+> src\pages\DashboardPage.jsx:1562:      setProcessingTaskNumber(null);
+  src\pages\DashboardPage.jsx:1563:    }
+  src\pages\DashboardPage.jsx:1564:  }
+  src\pages\DashboardPage.jsx:1565:  function markLandingRealNow() {
+  src\pages\DashboardPage.jsx:1566:    if (flightInformationDisabled) {
+  src\pages\DashboardPage.jsx:1567:      window.alert(
+  src\pages\DashboardPage.jsx:1568:        "This checklist is read-only for your current role or has already been locked.",
+  src\pages\DashboardPage.jsx:1569:      );
+  src\pages\DashboardPage.jsx:1570:
+  src\pages\DashboardPage.jsx:1571:      return;
+  src\pages\DashboardPage.jsx:1572:    }
+  src\pages\DashboardPage.jsx:1573:
+  src\pages\DashboardPage.jsx:1574:    updateFlight("ata", currentTime());
+  src\pages\DashboardPage.jsx:1783:    setTaskView("outstanding");
+  src\pages\DashboardPage.jsx:1784:    setChecklistId(null);
+  src\pages\DashboardPage.jsx:1785:
+  src\pages\DashboardPage.jsx:1786:    checklistIdRef.current = null;
+> src\pages\DashboardPage.jsx:1787:    skipNextAutosaveRef.current = true;
+  src\pages\DashboardPage.jsx:1788:
+  src\pages\DashboardPage.jsx:1789:    setRecordLocked(false);
+  src\pages\DashboardPage.jsx:1790:    setFocusedTaskNumber(null);
+  src\pages\DashboardPage.jsx:1791:
+  src\pages\DashboardPage.jsx:1792:    setApprovalDetails({
+  src\pages\DashboardPage.jsx:1793:      ...EMPTY_APPROVAL_DETAILS,
+  src\pages\DashboardPage.jsx:1794:    });
+  src\pages\DashboardPage.jsx:1795:
+  src\pages\DashboardPage.jsx:1796:    setAuditRecords([]);
+  src\pages\DashboardPage.jsx:1797:    setStatusMessage(message);
+  src\pages\DashboardPage.jsx:1798:    setActiveView("checklist");
+  src\pages\DashboardPage.jsx:1799:
+  src\pages\DashboardPage.jsx:2064:      if (itemsError) {
+  src\pages\DashboardPage.jsx:2065:        throw itemsError;
+  src\pages\DashboardPage.jsx:2066:      }
+  src\pages\DashboardPage.jsx:2067:
+> src\pages\DashboardPage.jsx:2068:      skipNextAutosaveRef.current = true;
+  src\pages\DashboardPage.jsx:2069:
+  src\pages\DashboardPage.jsx:2070:      checklistIdRef.current = checklist.id;
+  src\pages\DashboardPage.jsx:2071:
+  src\pages\DashboardPage.jsx:2072:      setChecklistId(checklist.id);
+  src\pages\DashboardPage.jsx:2073:
+  src\pages\DashboardPage.jsx:2074:      setRecordLocked(Boolean(checklist.is_locked));
+  src\pages\DashboardPage.jsx:2075:
+  src\pages\DashboardPage.jsx:2076:      setFocusedTaskNumber(null);
+  src\pages\DashboardPage.jsx:2077:
+  src\pages\DashboardPage.jsx:2078:      setApprovalDetails({
+  src\pages\DashboardPage.jsx:2079:        approvedBy: checklist.approved_by || null,
+  src\pages\DashboardPage.jsx:2080:        approvedByName: "",
+  src\pages\DashboardPage.jsx:2389:  }
+  src\pages\DashboardPage.jsx:2390:
+  src\pages\DashboardPage.jsx:2391:  queueChecklistSnapshotRef.current = queueChecklistSnapshot;
+  src\pages\DashboardPage.jsx:2392:
+> src\pages\DashboardPage.jsx:2393:  const persistChecklist = useCallback(
+  src\pages\DashboardPage.jsx:2394:    async ({ silent = false, reason = "manual" } = {}) => {
+> src\pages\DashboardPage.jsx:2395:      if (saveInProgressRef.current) {
+> src\pages\DashboardPage.jsx:2396:        pendingSaveRef.current = true;
+  src\pages\DashboardPage.jsx:2397:
+  src\pages\DashboardPage.jsx:2398:        return {
+  src\pages\DashboardPage.jsx:2399:          saved: false,
+  src\pages\DashboardPage.jsx:2400:          queued: true,
+  src\pages\DashboardPage.jsx:2401:        };
+  src\pages\DashboardPage.jsx:2402:      }
+  src\pages\DashboardPage.jsx:2403:
+  src\pages\DashboardPage.jsx:2404:      if (!roleCanOperate) {
+  src\pages\DashboardPage.jsx:2405:        if (!silent) {
+  src\pages\DashboardPage.jsx:2406:          window.alert(
+  src\pages\DashboardPage.jsx:2407:            "Your role does not have permission to save operational checklists.",
+  src\pages\DashboardPage.jsx:2408:          );
+  src\pages\DashboardPage.jsx:2498:          };
+  src\pages\DashboardPage.jsx:2499:        }
+  src\pages\DashboardPage.jsx:2500:      }
+  src\pages\DashboardPage.jsx:2501:
+> src\pages\DashboardPage.jsx:2502:      saveInProgressRef.current = true;
+  src\pages\DashboardPage.jsx:2503:
+> src\pages\DashboardPage.jsx:2504:      pendingSaveRef.current = false;
+  src\pages\DashboardPage.jsx:2505:
+  src\pages\DashboardPage.jsx:2506:      setSaving(true);
+  src\pages\DashboardPage.jsx:2507:
+  src\pages\DashboardPage.jsx:2508:      setStatusMessage("Saving checklist...");
+  src\pages\DashboardPage.jsx:2509:
+  src\pages\DashboardPage.jsx:2510:      try {
+  src\pages\DashboardPage.jsx:2511:        const checklistRecord = {
+  src\pages\DashboardPage.jsx:2512:          flight_in: flight.flightIn.trim() || null,
+  src\pages\DashboardPage.jsx:2513:          flight_out: flight.flightOut.trim(),
+  src\pages\DashboardPage.jsx:2514:          flight_date: flight.flightDate,
+  src\pages\DashboardPage.jsx:2515:          bay: flight.bay.trim() || null,
+  src\pages\DashboardPage.jsx:2516:          aircraft_type: flight.aircraftType || null,
+  src\pages\DashboardPage.jsx:2730:          error,
+  src\pages\DashboardPage.jsx:2731:          reason,
+  src\pages\DashboardPage.jsx:2732:        };
+  src\pages\DashboardPage.jsx:2733:      } finally {
+> src\pages\DashboardPage.jsx:2734:        saveInProgressRef.current = false;
+  src\pages\DashboardPage.jsx:2735:
+  src\pages\DashboardPage.jsx:2736:        setSaving(false);
+  src\pages\DashboardPage.jsx:2737:
+> src\pages\DashboardPage.jsx:2738:        if (pendingSaveRef.current) {
+> src\pages\DashboardPage.jsx:2739:          pendingSaveRef.current = false;
+  src\pages\DashboardPage.jsx:2740:
+  src\pages\DashboardPage.jsx:2741:          setStatusMessage("Unsaved changes");
+  src\pages\DashboardPage.jsx:2742:        }
+  src\pages\DashboardPage.jsx:2743:      }
+  src\pages\DashboardPage.jsx:2744:    },
+  src\pages\DashboardPage.jsx:2745:    [
+  src\pages\DashboardPage.jsx:2746:      approving,
+  src\pages\DashboardPage.jsx:2747:      checklistId,
+  src\pages\DashboardPage.jsx:2748:      flight,
+  src\pages\DashboardPage.jsx:2749:      metrics.done,
+  src\pages\DashboardPage.jsx:2750:      profile?.full_name,
+  src\pages\DashboardPage.jsx:2751:      recordLocked,
+  src\pages\DashboardPage.jsx:2757:    ],
+  src\pages\DashboardPage.jsx:2758:  );
+  src\pages\DashboardPage.jsx:2759:
+  src\pages\DashboardPage.jsx:2760:  async function saveChecklist() {
+> src\pages\DashboardPage.jsx:2761:    await persistChecklist({
+  src\pages\DashboardPage.jsx:2762:      silent: false,
+  src\pages\DashboardPage.jsx:2763:      reason: "manual",
+  src\pages\DashboardPage.jsx:2764:    });
+  src\pages\DashboardPage.jsx:2765:  }
+  src\pages\DashboardPage.jsx:2766:
+  src\pages\DashboardPage.jsx:2767:  const nextPendingCandidate = CHECKLIST_ITEMS.map((item, index) => {
+  src\pages\DashboardPage.jsx:2768:    const row = rows[index];
+  src\pages\DashboardPage.jsx:2769:
+  src\pages\DashboardPage.jsx:2770:    const plannedDateTime = plannedDateTimeFor(index);
+  src\pages\DashboardPage.jsx:2771:
+  src\pages\DashboardPage.jsx:2772:    const plannedTime = formatDateTimeAsTime(plannedDateTime);
+  src\pages\DashboardPage.jsx:2773:
+
+

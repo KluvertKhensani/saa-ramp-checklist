@@ -6,40 +6,151 @@ import { supabase } from "../lib/supabase";
 
 const PROFILE_TIMEOUT_MS = 12000;
 
+const PROFILE_CACHE_PREFIX =
+  "ops_gru_profile_";
+
+function getProfileCacheKey(userId) {
+  return `${PROFILE_CACHE_PREFIX}${userId}`;
+}
+
+function readCachedProfile(userId) {
+  if (!userId) {
+    return null;
+  }
+
+  try {
+    const storedProfile =
+      window.localStorage.getItem(
+        getProfileCacheKey(userId),
+      );
+
+    if (!storedProfile) {
+      return null;
+    }
+
+    const parsedProfile =
+      JSON.parse(storedProfile);
+
+    if (
+      parsedProfile?.id !== userId ||
+      !parsedProfile?.role
+    ) {
+      return null;
+    }
+
+    return parsedProfile;
+  } catch (error) {
+    console.error(
+      "Cached profile could not be read:",
+      error,
+    );
+
+    return null;
+  }
+}
+
+function storeCachedProfile(profile) {
+  if (!profile?.id || !profile?.role) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      getProfileCacheKey(profile.id),
+      JSON.stringify({
+        id: profile.id,
+        full_name:
+          profile.full_name || "",
+        role: profile.role,
+        cached_at:
+          new Date().toISOString(),
+      }),
+    );
+  } catch (error) {
+    console.error(
+      "Profile could not be cached:",
+      error,
+    );
+  }
+}
+
 async function queryProfile(userId) {
+  const cachedProfile =
+    readCachedProfile(userId);
+
+  if (!window.navigator.onLine) {
+    if (cachedProfile) {
+      return cachedProfile;
+    }
+
+    throw new Error(
+      "No cached operational profile is available for offline access.",
+    );
+  }
+
   let timeoutId;
 
   try {
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutId = window.setTimeout(() => {
-        reject(
-          new Error(
-            "Profile verification timed out. The database service is taking too long to respond.",
-          ),
-        );
-      }, PROFILE_TIMEOUT_MS);
-    });
+    const timeoutPromise =
+      new Promise((_, reject) => {
+        timeoutId =
+          window.setTimeout(() => {
+            reject(
+              new Error(
+                "Profile verification timed out. The database service is taking too long to respond.",
+              ),
+            );
+          }, PROFILE_TIMEOUT_MS);
+      });
 
     const queryPromise = supabase
       .from("profiles")
-      .select(["id", "full_name", "role"].join(","))
+      .select(
+        [
+          "id",
+          "full_name",
+          "role",
+        ].join(","),
+      )
       .eq("id", userId)
       .maybeSingle();
 
-    const result = await Promise.race([queryPromise, timeoutPromise]);
+    const result =
+      await Promise.race([
+        queryPromise,
+        timeoutPromise,
+      ]);
 
     if (result.error) {
       throw result.error;
     }
 
     if (!result.data) {
-      throw new Error("No operational profile was found for this account.");
+      throw new Error(
+        "No operational profile was found for this account.",
+      );
     }
 
+    storeCachedProfile(
+      result.data,
+    );
+
     return result.data;
+  } catch (error) {
+    if (cachedProfile) {
+      console.warn(
+        "Using the cached operational profile because the live profile could not be loaded.",
+      );
+
+      return cachedProfile;
+    }
+
+    throw error;
   } finally {
     if (timeoutId) {
-      window.clearTimeout(timeoutId);
+      window.clearTimeout(
+        timeoutId,
+      );
     }
   }
 }

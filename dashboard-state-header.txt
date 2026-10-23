@@ -1,0 +1,120 @@
+﻿
+  const [activeView, setActiveView] = useState("checklist");
+
+  const [historyRecords, setHistoryRecords] = useState([]);
+
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const [historySearch, setHistorySearch] = useState("");
+
+  const [historyStatus, setHistoryStatus] = useState("all");
+
+  const [recordLocked, setRecordLocked] = useState(false);
+
+  const [approving, setApproving] = useState(false);
+
+  const [approvalDetails, setApprovalDetails] = useState(
+    EMPTY_APPROVAL_DETAILS,
+  );
+
+  const [auditRecords, setAuditRecords] = useState([]);
+
+  const [auditLoading, setAuditLoading] = useState(false);
+
+  const [operationalNow, setOperationalNow] = useState(() => new Date());
+
+  const [focusedTaskNumber, setFocusedTaskNumber] = useState(null);
+
+  const [processingTaskNumber, setProcessingTaskNumber] = useState(null);
+
+  const [operationsMenuOpen, setOperationsMenuOpen] = useState(false);
+
+  const [localDraftRestored, setLocalDraftRestored] = useState(false);
+
+  const [connectionStatus, setConnectionStatus] = useState(
+    navigator.onLine ? "checking" : "offline",
+  );
+
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  const saveInProgressRef = useRef(false);
+
+  const pendingSaveRef = useRef(false);
+
+  const checklistIdRef = useRef(null);
+
+  const skipNextAutosaveRef = useRef(false);
+
+  const plannedTimeForRef = useRef(null);
+
+  const loadAuditHistoryRef = useRef(null);
+
+  const queueChecklistSnapshotRef = useRef(null);
+
+  const suppressDraftPersistenceRef = useRef(false);
+
+  const roleCanCreate = canCreateChecklist(profile?.role);
+
+  const roleCanOperate = canOperateChecklist(profile?.role);
+
+  const roleCanCompleteTask = canCompletePendingTask(profile?.role);
+
+  const roleCanUndoTask = canUndoCompletedTask(profile?.role);
+
+  const roleCanEditFlight = canEditFlightInformation(profile?.role);
+
+  const roleCanEditObservation = canEditObservations(profile?.role);
+
+  const roleCanViewHistory = canViewOperationalHistory(profile?.role);
+
+  const roleCanViewAudit = canViewAuditHistory(profile?.role);
+
+  const roleCanExport = canExportReports(profile?.role);
+
+  const roleIsReadOnly = isReadOnlyRole(profile?.role);
+
+  const checklistReadOnly =
+    recordLocked || approving || roleIsReadOnly || !roleCanOperate;
+
+  const flightInformationDisabled =
+    recordLocked || approving || !roleCanEditFlight;
+
+  const observationsDisabled =
+    recordLocked || approving || !roleCanEditObservation;
+
+  const taskCompletionDisabled =
+    recordLocked || approving || !roleCanCompleteTask;
+
+  const flightInformationComplete = isFlightInformationComplete(flight);
+
+  const checklistActivitiesDisabled =
+    taskCompletionDisabled || !flightInformationComplete;
+
+  useEffect(() => {
+    console.info("OPS permission diagnostic", {
+      userId: user?.id ?? null,
+      email: user?.email ?? null,
+      profileLoaded: Boolean(profile),
+      role: profile?.role ?? null,
+      roleCanCreate,
+      roleCanOperate,
+      roleCanCompleteTask,
+      roleCanUndoTask,
+      roleCanEditFlight,
+      roleCanEditObservation,
+      roleCanViewHistory,
+      roleCanViewAudit,
+      roleCanExport,
+      roleIsReadOnly,
+      recordLocked,
+      approving,
+      flightInformationDisabled,
+      observationsDisabled,
+      taskCompletionDisabled,
+      flightInformationComplete,
+      checklistActivitiesDisabled,
+    });
+  }, [
+    approving,
+    checklistActivitiesDisabled,
+    flightInformationComplete,
