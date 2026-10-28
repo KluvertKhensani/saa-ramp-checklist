@@ -1,6 +1,5 @@
 ﻿import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-
 import PwaUpdatePrompt from "./components/PwaUpdatePrompt";
 import SyncStatusBadge from "./components/SyncStatusBadge";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
