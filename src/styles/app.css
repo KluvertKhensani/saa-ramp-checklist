@@ -2018,3 +2018,354 @@ button.sync-status:disabled {
   font: inherit;
   font-weight: 700;
 }
+
+/* =========================================================
+   Final responsive header and mobile viewport correction
+   ========================================================= */
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+.ramp-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.ramp-header {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ramp-brand,
+.ramp-brand-logo,
+.ramp-header-actions,
+.ramp-content,
+#performance-summary,
+#performance-summary > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Keep the logo aligned to the far-left edge. */
+.ramp-brand {
+  margin: 0;
+  justify-content: flex-start;
+}
+
+.ramp-brand-logo {
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.ramp-brand-logo .saa-app-logo,
+.ramp-brand-logo img,
+.saa-app-logo {
+  display: block;
+  margin: 0;
+  object-fit: contain;
+  object-position: left center;
+}
+
+/* Name and role, clock, and menu remain on one row. */
+.ramp-header-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: stretch;
+  width: 100%;
+  margin: 0;
+}
+
+.ramp-header-actions > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ramp-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  margin: 0;
+}
+
+.ramp-user strong,
+.ramp-user span {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  white-space: normal;
+}
+
+.ramp-header-actions .live-clock,
+.ramp-header-actions [class*="live-clock"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+}
+
+.ramp-header-actions .live-clock *,
+.ramp-header-actions [class*="live-clock"] * {
+  min-width: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.ramp-header-actions button {
+  min-width: 0;
+  margin: 0;
+  align-self: stretch;
+  justify-self: end;
+}
+
+/* Prevent summary cards and grids from extending outside the screen. */
+#performance-summary {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+#performance-summary > *,
+#performance-summary [class*="summary"],
+#performance-summary [class*="metrics"],
+#performance-summary [class*="grid"],
+#performance-summary [class*="card"],
+#performance-summary [class*="metric"] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#performance-summary [class*="grid"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#performance-summary [class*="card"],
+#performance-summary [class*="metric"] {
+  overflow-wrap: anywhere;
+}
+
+/* Mobile portrait and small tablet layout. */
+@media (max-width: 768px) {
+  .ramp-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "brand brand"
+      "actions actions";
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.35rem 0.4rem;
+  }
+
+  .ramp-brand {
+    grid-area: brand;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
+  }
+
+  .ramp-brand-logo {
+    width: 2.75rem;
+    max-width: 2.75rem;
+  }
+
+  .ramp-brand-logo .saa-app-logo,
+  .ramp-brand-logo img,
+  .saa-app-logo {
+    width: 2.75rem;
+    height: auto;
+  }
+
+  .ramp-brand h1 {
+    margin: 0;
+    font-size: clamp(0.76rem, 3.2vw, 0.95rem);
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+
+  .ramp-brand p {
+    margin: 0.08rem 0 0;
+    font-size: clamp(0.58rem, 2.5vw, 0.7rem);
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+
+  .ramp-header-actions {
+    grid-area: actions;
+    grid-template-columns: minmax(0, 1fr) minmax(4.75rem, auto) auto;
+    gap: 0.2rem;
+  }
+
+  .ramp-user {
+    padding: 0.18rem 0.28rem;
+    gap: 0.05rem;
+  }
+
+  .ramp-user strong {
+    font-size: clamp(0.63rem, 2.65vw, 0.76rem);
+    line-height: 1.08;
+  }
+
+  .ramp-user span {
+    font-size: clamp(0.55rem, 2.3vw, 0.66rem);
+    line-height: 1.08;
+  }
+
+  .ramp-header-actions .live-clock,
+  .ramp-header-actions [class*="live-clock"] {
+    width: auto;
+    max-width: 6.25rem;
+    padding: 0.18rem 0.25rem;
+    font-size: clamp(0.55rem, 2.3vw, 0.66rem);
+    line-height: 1.08;
+    white-space: normal;
+  }
+
+  .ramp-header-actions button {
+    width: auto;
+    min-width: 2.25rem;
+    max-width: 4.25rem;
+    min-height: 0;
+    height: auto;
+    padding: 0.2rem 0.35rem;
+  }
+
+  .ramp-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding-left: clamp(0.4rem, 2.5vw, 0.75rem);
+    padding-right: clamp(0.4rem, 2.5vw, 0.75rem);
+    overflow-x: clip;
+  }
+
+  #performance-summary {
+    margin: 0;
+    padding: 0;
+  }
+
+  #performance-summary [class*="grid"] {
+    gap: 0.5rem;
+  }
+}
+
+/* Extra-small portrait phones. */
+@media (max-width: 380px) {
+  .ramp-header {
+    padding: 0.25rem 0.3rem;
+  }
+
+  .ramp-brand-logo,
+  .ramp-brand-logo .saa-app-logo,
+  .ramp-brand-logo img,
+  .saa-app-logo {
+    width: 2.35rem;
+    max-width: 2.35rem;
+  }
+
+  .ramp-header-actions {
+    grid-template-columns: minmax(0, 1fr) minmax(4.15rem, auto) auto;
+    gap: 0.15rem;
+  }
+
+  .ramp-user {
+    padding: 0.15rem 0.2rem;
+  }
+
+  .ramp-header-actions .live-clock,
+  .ramp-header-actions [class*="live-clock"] {
+    max-width: 5.25rem;
+    padding: 0.15rem 0.2rem;
+  }
+
+  .ramp-header-actions button {
+    min-width: 2rem;
+    max-width: 3.5rem;
+    padding: 0.16rem 0.25rem;
+  }
+
+  #performance-summary [class*="grid"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Landscape phones have more horizontal space but less height. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .ramp-header {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.85fr) minmax(0, 1.15fr);
+    grid-template-areas: "brand actions";
+    gap: 0.4rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .ramp-brand {
+    grid-area: brand;
+  }
+
+  .ramp-header-actions {
+    grid-area: actions;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .ramp-brand-logo,
+  .ramp-brand-logo .saa-app-logo,
+  .ramp-brand-logo img,
+  .saa-app-logo {
+    width: 2.25rem;
+    max-width: 2.25rem;
+  }
+
+  .ramp-brand h1 {
+    font-size: 0.72rem;
+  }
+
+  .ramp-brand p {
+    font-size: 0.56rem;
+  }
+
+  .ramp-user,
+  .ramp-header-actions .live-clock,
+  .ramp-header-actions [class*="live-clock"],
+  .ramp-header-actions button {
+    padding-top: 0.12rem;
+    padding-bottom: 0.12rem;
+  }
+
+  #performance-summary [class*="grid"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
