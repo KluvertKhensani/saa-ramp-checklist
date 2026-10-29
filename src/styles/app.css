@@ -2523,3 +2523,627 @@ svg {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
+
+/* =========================================================
+   FINAL HEADER FONT AND TAB FIT
+   Keep this as the last block in app.css
+   ========================================================= */
+
+/* Mobile portrait */
+@media screen and (max-width: 768px) and (orientation: portrait) {
+  .ramp-header-actions {
+    display: grid !important;
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(3.8rem, 4.8rem)
+      auto !important;
+    align-items: stretch !important;
+    gap: 0.1rem !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /*
+   * First tab:
+   * Greeting/name on the first line.
+   * Role directly underneath.
+   */
+  .ramp-user {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-auto-rows: auto !important;
+    align-content: center !important;
+    justify-items: start !important;
+    gap: 0.02rem !important;
+
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+
+    margin: 0 !important;
+    padding: 0.1rem 0.16rem !important;
+
+    overflow: hidden !important;
+  }
+
+  .ramp-user strong {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    font-size: clamp(0.5rem, 2.05vw, 0.62rem) !important;
+    line-height: 1.02 !important;
+    font-weight: 700 !important;
+
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  .ramp-user span {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    font-size: clamp(0.44rem, 1.8vw, 0.54rem) !important;
+    line-height: 1.02 !important;
+    font-weight: 500 !important;
+
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  /*
+   * Second tab:
+   * The clock remains immediately next to the greeting/role tab.
+   */
+  .ramp-header-actions .live-clock,
+  .ramp-header-actions [class*="live-clock"] {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.01rem !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 4.8rem !important;
+    min-height: 0 !important;
+    height: auto !important;
+
+    margin: 0 !important;
+    padding: 0.1rem 0.12rem !important;
+
+    font-size: clamp(0.43rem, 1.75vw, 0.53rem) !important;
+    line-height: 1.02 !important;
+    text-align: center !important;
+
+    white-space: normal !important;
+    overflow: hidden !important;
+  }
+
+  .ramp-header-actions .live-clock *,
+  .ramp-header-actions [class*="live-clock"] * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    font-size: inherit !important;
+    line-height: inherit !important;
+    text-align: center !important;
+
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  /* Third tab: compact menu control */
+  .ramp-header-actions button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.1rem !important;
+
+    width: auto !important;
+    min-width: 1.9rem !important;
+    max-width: 3.2rem !important;
+    min-height: 0 !important;
+    height: auto !important;
+
+    margin: 0 !important;
+    padding: 0.1rem 0.16rem !important;
+
+    font-size: 0.48rem !important;
+    line-height: 1 !important;
+
+    white-space: nowrap !important;
+    overflow: hidden !important;
+  }
+
+  .ramp-header-actions button svg {
+    width: 0.9rem !important;
+    height: 0.9rem !important;
+    min-width: 0.9rem !important;
+  }
+}
+
+/* Extra-small portrait phones such as 320 px and 360 px */
+@media screen and (max-width: 380px) and (orientation: portrait) {
+  .ramp-header-actions {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(3.35rem, 4rem)
+      auto !important;
+    gap: 0.08rem !important;
+  }
+
+  .ramp-user {
+    padding: 0.08rem 0.12rem !important;
+  }
+
+  .ramp-user strong {
+    font-size: clamp(0.46rem, 2vw, 0.55rem) !important;
+  }
+
+  .ramp-user span {
+    font-size: clamp(0.4rem, 1.7vw, 0.48rem) !important;
+  }
+
+  .ramp-header-actions .live-clock,
+  .ramp-header-actions [class*="live-clock"] {
+    max-width: 4rem !important;
+    padding: 0.08rem 0.1rem !important;
+    font-size: clamp(0.39rem, 1.65vw, 0.47rem) !important;
+  }
+
+  .ramp-header-actions button {
+    min-width: 1.75rem !important;
+    max-width: 2.7rem !important;
+    padding: 0.08rem 0.12rem !important;
+    font-size: 0.42rem !important;
+  }
+
+  .ramp-header-actions button svg {
+    width: 0.82rem !important;
+    height: 0.82rem !important;
+    min-width: 0.82rem !important;
+  }
+}
+
+/* Mobile landscape */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  .ramp-header {
+    display: grid !important;
+    grid-template-columns:
+      minmax(8.5rem, 0.85fr)
+      minmax(0, 1.15fr) !important;
+    grid-template-areas: "brand actions" !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+
+    max-height: 20dvh !important;
+    padding: 0.12rem 0.3rem !important;
+  }
+
+  .ramp-header-actions {
+    display: grid !important;
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(3.5rem, 4.5rem)
+      auto !important;
+    align-items: stretch !important;
+    gap: 0.1rem !important;
+
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .ramp-brand h1 {
+    font-size: clamp(0.55rem, 1.45vw, 0.68rem) !important;
+    line-height: 1.02 !important;
+  }
+
+  .ramp-user {
+    padding: 0.07rem 0.12rem !important;
+    gap: 0.01rem !important;
+  }
+
+  .ramp-user strong {
+    font-size: clamp(0.45rem, 1.25vw, 0.56rem) !important;
+    line-height: 1 !important;
+  }
+
+  .ramp-user span {
+    font-size: clamp(0.39rem, 1.05vw, 0.48rem) !important;
+    line-height: 1 !important;
+  }
+
+  .ramp-header-actions .live-clock,
+  .ramp-header-actions [class*="live-clock"] {
+    max-width: 4.5rem !important;
+    padding: 0.07rem 0.1rem !important;
+
+    font-size: clamp(0.38rem, 1vw, 0.47rem) !important;
+    line-height: 1 !important;
+  }
+
+  .ramp-header-actions button {
+    min-width: 1.8rem !important;
+    max-width: 2.9rem !important;
+    padding: 0.07rem 0.12rem !important;
+
+    font-size: 0.42rem !important;
+    line-height: 1 !important;
+  }
+
+  .ramp-header-actions button svg {
+    width: 0.82rem !important;
+    height: 0.82rem !important;
+    min-width: 0.82rem !important;
+  }
+}
+
+/* =========================================================
+   TARGETED MOBILE HEADER AND PERFORMANCE SUMMARY FIX
+   Must remain last in app.css
+   ========================================================= */
+
+@media screen and (max-width: 768px) {
+  /* Header action row */
+  .ramp-header-actions {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(4rem, 4.8rem)
+      minmax(2rem, 2.6rem) !important;
+    grid-template-rows: auto !important;
+    align-items: stretch !important;
+    gap: 0.12rem !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Column 1: greeting and role */
+  .ramp-header-actions > .ramp-user {
+    position: static !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 0.02rem !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+
+    margin: 0 !important;
+    padding: 0.1rem 0.14rem !important;
+
+    overflow: hidden !important;
+  }
+
+  .ramp-user strong,
+  .ramp-user span {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    line-height: 1.02 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  .ramp-user strong {
+    font-size: 0.54rem !important;
+    font-weight: 700 !important;
+  }
+
+  .ramp-user span {
+    font-size: 0.46rem !important;
+    font-weight: 500 !important;
+  }
+
+  /* Column 2: date and time */
+  .ramp-header-actions > .live-clock {
+    position: static !important;
+    inset: auto !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.01rem !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 4.8rem !important;
+    min-height: 0 !important;
+    height: auto !important;
+
+    margin: 0 !important;
+    padding: 0.1rem !important;
+
+    font-size: 0.43rem !important;
+    line-height: 1.02 !important;
+    text-align: center !important;
+
+    white-space: normal !important;
+    overflow: hidden !important;
+  }
+
+  .ramp-header-actions > .live-clock * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    font-size: inherit !important;
+    line-height: inherit !important;
+    text-align: center !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  /* Column 3: menu button */
+  .ramp-header-actions > button {
+    position: static !important;
+    inset: auto !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    justify-self: stretch !important;
+    align-self: stretch !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 2.6rem !important;
+    min-height: 0 !important;
+    height: auto !important;
+
+    margin: 0 !important;
+    padding: 0.1rem !important;
+
+    font-size: 0 !important;
+    line-height: 1 !important;
+    overflow: hidden !important;
+  }
+
+  .ramp-header-actions > button svg {
+    width: 0.9rem !important;
+    height: 0.9rem !important;
+    min-width: 0.9rem !important;
+    max-width: 0.9rem !important;
+  }
+
+  /* Remove duplicate mobile identity area */
+  .mobile-user-identity {
+    display: none !important;
+  }
+
+  /* Actual Performance Summary root */
+  .performance-summary-view {
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: visible !important;
+  }
+
+  .performance-summary-navigation,
+  .performance-summary-header,
+  .performance-summary-cards,
+  .performance-analysis-section,
+  .performance-analysis-grid,
+  .power-bi-model-grid,
+  .performance-completion-ring {
+    position: relative !important;
+    inset: auto !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .performance-summary-navigation {
+    display: flex !important;
+  }
+
+  .performance-summary-navigation .ramp-button {
+    width: auto !important;
+    max-width: 100% !important;
+  }
+
+  .performance-summary-header {
+    display: block !important;
+  }
+
+  .performance-summary-cards {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0.45rem !important;
+  }
+
+  .performance-summary-card {
+    position: relative !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .performance-analysis-grid,
+  .power-bi-model-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0.45rem !important;
+  }
+
+  .performance-analysis-grid > *,
+  .power-bi-model-grid > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+
+    margin: 0 !important;
+  }
+
+  .performance-section-heading {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 0.25rem !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .performance-section-heading > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .performance-summary-view h1,
+  .performance-summary-view h2,
+  .performance-summary-view h3,
+  .performance-summary-view h4,
+  .performance-summary-view p,
+  .performance-summary-view span,
+  .performance-summary-view strong,
+  .performance-summary-view small {
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  .performance-summary-view table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .performance-summary-view th,
+  .performance-summary-view td {
+    min-width: 0 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .performance-summary-view canvas,
+  .performance-summary-view svg {
+    display: block !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Landscape: smaller text while retaining all three tabs */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  .ramp-header-actions {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(3.5rem, 4.2rem)
+      minmax(1.8rem, 2.3rem) !important;
+  }
+
+  .ramp-user strong {
+    font-size: 0.47rem !important;
+  }
+
+  .ramp-user span {
+    font-size: 0.4rem !important;
+  }
+
+  .ramp-header-actions > .live-clock {
+    max-width: 4.2rem !important;
+    font-size: 0.38rem !important;
+  }
+
+  .ramp-header-actions > button {
+    max-width: 2.3rem !important;
+  }
+
+  .ramp-header-actions > button svg {
+    width: 0.8rem !important;
+    height: 0.8rem !important;
+    min-width: 0.8rem !important;
+  }
+}
