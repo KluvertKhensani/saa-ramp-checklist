@@ -12,7 +12,6 @@ import {
   Plane,
   RefreshCw,
   Save,
-  ShieldCheck,
   X,
 } from "lucide-react";
 
