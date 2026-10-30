@@ -5655,3 +5655,242 @@ body,
     font-size: clamp(18px, 8vw, 28px) !important;
   }
 }
+
+/* Mobile Performance Detail status column */
+@media screen and (max-width: 768px) {
+  .performance-summary-view {
+    overflow-x: hidden !important;
+  }
+
+  .performance-analysis-section {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /*
+   * Performance Detail can scroll horizontally without
+   * making the complete application scroll.
+   */
+  .performance-analysis-section:has(table) {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: thin !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .performance-analysis-section table {
+    width: 100% !important;
+    min-width: 620px !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+
+  .performance-analysis-section th,
+  .performance-analysis-section td {
+    padding: 10px 8px !important;
+    vertical-align: middle !important;
+    white-space: normal !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+
+  /* Impact */
+  .performance-analysis-section th:nth-child(1),
+  .performance-analysis-section td:nth-child(1) {
+    width: 16% !important;
+  }
+
+  /* Planned */
+  .performance-analysis-section th:nth-child(2),
+  .performance-analysis-section td:nth-child(2) {
+    width: 14% !important;
+  }
+
+  /* Actual */
+  .performance-analysis-section th:nth-child(3),
+  .performance-analysis-section td:nth-child(3) {
+    width: 14% !important;
+  }
+
+  /* Variance */
+  .performance-analysis-section th:nth-child(4),
+  .performance-analysis-section td:nth-child(4) {
+    width: 15% !important;
+  }
+
+  /* Status */
+  .performance-analysis-section th:nth-child(5),
+  .performance-analysis-section td:nth-child(5) {
+    width: 17% !important;
+    min-width: 100px !important;
+    text-align: center !important;
+  }
+
+  /* Comment */
+  .performance-analysis-section th:nth-child(6),
+  .performance-analysis-section td:nth-child(6) {
+    width: 24% !important;
+  }
+
+  .performance-analysis-section .activity-status {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: auto !important;
+    min-width: 82px !important;
+    max-width: 100% !important;
+    min-height: 30px !important;
+
+    padding: 5px 9px !important;
+    margin: 0 auto !important;
+
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    text-align: center !important;
+
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+    word-break: keep-all !important;
+  }
+}
+
+/* Mobile Power BI Reporting Model */
+@media screen and (max-width: 768px) {
+  .power-bi-model-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    overflow: visible !important;
+  }
+
+  .power-bi-model-grid > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+
+    margin: 0 !important;
+    padding: 12px !important;
+
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .power-bi-model-grid h3,
+  .power-bi-model-grid p,
+  .power-bi-model-grid span,
+  .power-bi-model-grid strong {
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .performance-summary-view button {
+    max-width: 100% !important;
+    white-space: normal !important;
+  }
+}
+
+/* Mobile Performance Detail table */
+@media screen and (max-width: 768px) {
+  .performance-table-wrapper {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .performance-detail-table {
+    width: 920px !important;
+    min-width: 920px !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+
+  .performance-detail-table th,
+  .performance-detail-table td {
+    padding: 10px 8px !important;
+    vertical-align: middle !important;
+    white-space: normal !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+
+  .performance-detail-table th:nth-child(1),
+  .performance-detail-table td:nth-child(1) {
+    width: 40px !important;
+  }
+
+  .performance-detail-table th:nth-child(2),
+  .performance-detail-table td:nth-child(2) {
+    width: 80px !important;
+  }
+
+  .performance-detail-table th:nth-child(3),
+  .performance-detail-table td:nth-child(3) {
+    width: 95px !important;
+  }
+
+  .performance-detail-table th:nth-child(4),
+  .performance-detail-table td:nth-child(4) {
+    width: 190px !important;
+  }
+
+  .performance-detail-table th:nth-child(5),
+  .performance-detail-table td:nth-child(5) {
+    width: 105px !important;
+  }
+
+  .performance-detail-table th:nth-child(6),
+  .performance-detail-table td:nth-child(6),
+  .performance-detail-table th:nth-child(7),
+  .performance-detail-table td:nth-child(7) {
+    width: 75px !important;
+  }
+
+  .performance-detail-table th:nth-child(8),
+  .performance-detail-table td:nth-child(8) {
+    width: 85px !important;
+  }
+
+  .performance-detail-table th:nth-child(9),
+  .performance-detail-table td:nth-child(9) {
+    width: 115px !important;
+    min-width: 115px !important;
+    text-align: center !important;
+  }
+
+  .performance-detail-table th:nth-child(10),
+  .performance-detail-table td:nth-child(10) {
+    width: 140px !important;
+  }
+
+  .performance-detail-table td:nth-child(9) .activity-status {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: auto !important;
+    min-width: 88px !important;
+    max-width: 105px !important;
+    min-height: 30px !important;
+    margin: 0 auto !important;
+    padding: 5px 8px !important;
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    text-align: center !important;
+    white-space: normal !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+}

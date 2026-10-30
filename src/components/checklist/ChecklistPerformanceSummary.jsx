@@ -86,16 +86,22 @@ export default function ChecklistPerformanceSummary({
           Back to Checklist
         </button>
 
-        {canExport && flight.flightOut ? (
-          <button
-            type="button"
-            className="ramp-button ramp-button-primary"
-            onClick={onExport}
-          >
-            <Download size={17} aria-hidden="true" />
-            Export Reporting Data
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className="ramp-button ramp-button-primary"
+          onClick={onExport}
+          disabled={!canExport || !flight.flightOut}
+          title={
+            !flight.flightOut
+              ? "Save or open a checklist before exporting reporting data."
+              : !canExport
+                ? "Your role does not have permission to export reporting data."
+                : "Export Power BI reporting data."
+          }
+        >
+          <Download size={17} aria-hidden="true" />
+          Export Power BI Data
+        </button>
       </div>
 
       <header className="performance-summary-header">
