@@ -5324,3 +5324,334 @@ body,
     min-height: 0;
   }
 }
+
+/* Final compact mobile header correction */
+@media screen and (max-width: 768px) {
+  .ramp-header .ramp-header-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 4.8rem 2.6rem !important;
+    grid-template-areas: "user clock menu" !important;
+    align-items: stretch !important;
+    gap: 2px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .ramp-header .ramp-user {
+    grid-area: user !important;
+    position: static !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 4px 5px !important;
+    overflow: hidden !important;
+  }
+
+  .ramp-header .ramp-user strong {
+    margin: 0 !important;
+    font-size: 9px !important;
+    line-height: 1.05 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .ramp-header .ramp-user span {
+    margin: 0 !important;
+    font-size: 8px !important;
+    line-height: 1.05 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .ramp-header .live-clock {
+    grid-area: clock !important;
+    position: static !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 1px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 4.8rem !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 3px !important;
+    overflow: hidden !important;
+    transform: none !important;
+  }
+
+  .ramp-header .live-clock-icon {
+    display: none !important;
+  }
+
+  .ramp-header .live-clock-content {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 1px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .ramp-header .live-clock-date {
+    width: 100% !important;
+    margin: 0 !important;
+    font-size: 7px !important;
+    line-height: 1.05 !important;
+    text-align: center !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .ramp-header .live-clock-time {
+    width: 100% !important;
+    margin: 0 !important;
+    font-size: 9px !important;
+    line-height: 1.05 !important;
+    letter-spacing: 0 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+
+  .ramp-header .operations-menu-trigger {
+    grid-area: menu !important;
+    position: static !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 2.6rem !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 3px !important;
+    transform: none !important;
+  }
+
+  .ramp-header .operations-menu-trigger svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .mobile-user-identity {
+    display: none !important;
+  }
+}
+
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  .ramp-header .ramp-header-actions {
+    grid-template-columns: minmax(0, 1fr) 4.2rem 2.3rem !important;
+  }
+
+  .ramp-header .ramp-user strong {
+    font-size: 8px !important;
+  }
+
+  .ramp-header .ramp-user span {
+    font-size: 7px !important;
+  }
+
+  .ramp-header .live-clock-date {
+    font-size: 6px !important;
+  }
+
+  .ramp-header .live-clock-time {
+    font-size: 8px !important;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .pts-task-header {
+    display: none !important;
+  }
+
+  .pts-task-table,
+  .checklist-list {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .checklist-list > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Final mobile Performance Summary layout */
+@media screen and (max-width: 768px) {
+  .performance-summary-view {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+  }
+
+  .performance-summary-navigation,
+  .performance-summary-header,
+  .performance-summary-cards,
+  .performance-analysis-section {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .performance-summary-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .performance-summary-header > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .performance-summary-cards {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .performance-summary-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 14px !important;
+    overflow: hidden !important;
+  }
+
+  .performance-analysis-section {
+    padding: 14px !important;
+    overflow: hidden !important;
+  }
+
+  .performance-section-heading {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .performance-section-heading > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .performance-analysis-grid,
+  .power-bi-model-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .performance-analysis-grid > *,
+  .power-bi-model-grid > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .performance-summary-view h1,
+  .performance-summary-view h2,
+  .performance-summary-view h3,
+  .performance-summary-view h4,
+  .performance-summary-view p,
+  .performance-summary-view span,
+  .performance-summary-view strong,
+  .performance-summary-view small {
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  .performance-completion-ring {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: hidden !important;
+  }
+
+  .performance-completion-ring svg,
+  .performance-completion-ring canvas {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /*
+   * Tables remain readable through internal horizontal scrolling.
+   * The complete application page does not scroll sideways.
+   */
+  .performance-summary-view table {
+    width: max-content !important;
+    min-width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .performance-summary-view th,
+  .performance-summary-view td {
+    white-space: nowrap !important;
+  }
+
+  .performance-summary-view .table-scroll,
+  .performance-summary-view [class*="table-wrapper"],
+  .performance-summary-view [class*="table-container"] {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: thin !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+/* Very narrow portrait screens */
+@media screen and (max-width: 380px) {
+  .performance-summary-card,
+  .performance-analysis-section {
+    padding: 10px !important;
+  }
+
+  .performance-summary-header h1,
+  .performance-summary-header h2 {
+    font-size: 20px !important;
+    line-height: 1.15 !important;
+  }
+
+  .performance-summary-card strong {
+    font-size: clamp(18px, 8vw, 28px) !important;
+  }
+}
