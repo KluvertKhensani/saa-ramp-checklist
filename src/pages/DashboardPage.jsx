@@ -1239,7 +1239,34 @@ export default function DashboardPage() {
     }
 
     if (!checklistId) {
-      window.alert("Save the new checklist before starting tasks.");
+      setStatusMessage(
+        "Save the checklist before starting the selected task.",
+      );
+
+      setOperationsMenuOpen(true);
+
+      window.setTimeout(() => {
+        const saveButton = document.getElementById(
+          "operations-save-checklist-button",
+        );
+
+        if (!saveButton) {
+          return;
+        }
+
+        saveButton.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+
+        saveButton.focus();
+
+        saveButton.classList.add("save-button-focus");
+
+        window.setTimeout(() => {
+          saveButton.classList.remove("save-button-focus");
+        }, 1800);
+      }, 200);
 
       return;
     }
@@ -2373,7 +2400,7 @@ export default function DashboardPage() {
     }
   }
 
-    async function queueChecklistSnapshot(reason) {
+  async function queueChecklistSnapshot(reason) {
     if (!user?.id) {
       throw new Error(
         "A signed-in user is required to store a local draft.",
@@ -2413,9 +2440,8 @@ export default function DashboardPage() {
 
     setStatusMessage(
       pendingLifecycleCount > 0
-        ? `${pendingLifecycleCount} lifecycle ${
-            pendingLifecycleCount === 1 ? "change" : "changes"
-          } awaiting synchronization`
+        ? `${pendingLifecycleCount} lifecycle ${pendingLifecycleCount === 1 ? "change" : "changes"
+        } awaiting synchronization`
         : "Local checklist draft stored on this device",
     );
 

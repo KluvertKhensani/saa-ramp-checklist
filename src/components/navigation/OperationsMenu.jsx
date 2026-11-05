@@ -44,6 +44,7 @@ const NAVIGATION_ITEMS = [
 ];
 
 function MenuButton({
+  id,
   icon: Icon,
   label,
   onClick,
@@ -52,6 +53,7 @@ function MenuButton({
 }) {
   return (
     <button
+      id={id}
       type="button"
       className={
         danger
@@ -308,11 +310,10 @@ export default function OperationsMenu({
 
           {canSave ? (
             <MenuButton
+              id="operations-save-checklist-button"
               icon={Save}
               label="Save Checklist"
-              onClick={() =>
-                handleAction(onSave)
-              }
+              onClick={() => handleAction(onSave)}
               disabled={saveDisabled}
             />
           ) : null}

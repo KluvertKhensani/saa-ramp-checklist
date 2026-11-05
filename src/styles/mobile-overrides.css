@@ -5894,3 +5894,27 @@ body,
     word-break: normal !important;
   }
 }
+
+#operations-save-checklist-button.save-button-focus {
+  outline: 3px solid #ffc400;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(255, 196, 0, 0.2);
+  animation: save-button-focus-pulse 0.9s ease-in-out 2;
+}
+
+@keyframes save-button-focus-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #operations-save-checklist-button.save-button-focus {
+    animation: none;
+  }
+}
