@@ -12,6 +12,7 @@ import { ArrowLeft, ClipboardCheck } from "lucide-react";
 
 import AppLogo from "../components/AppLogo";
 import LiveClock from "../components/LiveClock";
+import TermsOfUseModal from "../components/TermsOfUseModal";
 import ChecklistActivity from "../components/checklist/ChecklistActivity";
 import ChecklistMetrics from "../components/checklist/ChecklistMetrics";
 import ChecklistPrintReport from "../components/checklist/ChecklistPrintReport";
@@ -76,6 +77,13 @@ const ChecklistHistory = lazy(
 
 const ChecklistPerformanceSummary = lazy(
   () => import("../components/checklist/ChecklistPerformanceSummary"),
+);
+
+const ManagementReportingDashboard = lazy(
+  () =>
+    import(
+      "../components/reporting/ManagementReportingDashboard"
+    ),
 );
 
 function SecondaryViewLoading({ label = "Loading view..." }) {
@@ -255,8 +263,70 @@ function getTimeBasedGreeting(date = new Date()) {
   return "Good Evening";
 }
 
+const TERMS_VERSION = "2026-11-09";
+
+function getTermsAcceptanceKey(userId) {
+  if (!userId) {
+    return null;
+  }
+
+  return `saa-application-terms:${userId}:${TERMS_VERSION}`;
+}
+
+function hasValidTermsAcceptance(userId) {
+  const acceptanceKey = getTermsAcceptanceKey(userId);
+
+  if (!acceptanceKey) {
+    return false;
+  }
+
+  try {
+    const storedAcceptance =
+      window.localStorage.getItem(acceptanceKey);
+
+    if (!storedAcceptance) {
+      return false;
+    }
+
+    const parsedAcceptance = JSON.parse(storedAcceptance);
+
+    return (
+      parsedAcceptance?.accepted === true &&
+      parsedAcceptance?.termsVersion === TERMS_VERSION &&
+      parsedAcceptance?.userId === userId
+    );
+  } catch (error) {
+    console.error(
+      "Terms of Use acceptance check failed:",
+      error,
+    );
+
+    window.localStorage.removeItem(acceptanceKey);
+
+    return false;
+  }
+}
+
 export default function DashboardPage() {
   const { user, profile, signOut } = useAuth();
+
+  const [acceptedTermsUserId, setAcceptedTermsUserId] = useState(
+    () => {
+      if (!user?.id) {
+        return null;
+      }
+
+      return hasValidTermsAcceptance(user.id)
+        ? user.id
+        : null;
+    },
+  );
+
+  const hasAcceptedTerms =
+    Boolean(user?.id) &&
+    acceptedTermsUserId === user.id;
+
+  const termsStatusChecked = Boolean(user?.id);
 
   const [flight, setFlight] = useState(() =>
     createInitialFlight(profile?.full_name || ""),
@@ -1893,6 +1963,18 @@ export default function DashboardPage() {
     }, 150);
   }
 
+  function handleTermsAccepted(acceptanceRecord) {
+    if (
+      !acceptanceRecord?.accepted ||
+      acceptanceRecord.termsVersion !== TERMS_VERSION ||
+      acceptanceRecord.userId !== user?.id
+    ) {
+      return;
+    }
+
+    setAcceptedTermsUserId(user.id);
+  }
+
   async function handleSignOut() {
     const { error } = await signOut();
 
@@ -2039,6 +2121,25 @@ export default function DashboardPage() {
 
     setActiveView("performance");
 
+    setOperationsMenuOpen(false);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  function showManagementReporting() {
+    if (!roleCanExport) {
+      window.alert(
+        "Your role does not have permission to access management reporting.",
+      );
+
+      return;
+    }
+
+    setFocusedTaskNumber(null);
+    setActiveView("management-reporting");
     setOperationsMenuOpen(false);
 
     window.scrollTo({
@@ -3032,522 +3133,565 @@ export default function DashboardPage() {
     ? nextPendingCandidate.item.activity
     : "All activities complete";
 
-  return (
-    <main className="ramp-page">
-      <ChecklistPrintReport
-        flight={flight}
-        rows={rows}
-        metrics={metrics}
-        operationalMetrics={operationalMetrics}
-        preArrivalMetrics={preArrivalMetrics}
-        plannedTimeFor={plannedTimeFor}
-        profile={profile}
-      />
+  if (!termsStatusChecked) {
+    return (
+      <main className="terms-loading-page">
+        <div className="terms-loading-card" role="status">
+          <AppLogo
+            className="saa-app-logo"
+            alt="South African Airways"
+          />
 
-      <OperationsMenu
-        open={operationsMenuOpen}
-        onClose={() => setOperationsMenuOpen(false)}
-        flight={flight}
-        profile={profile}
-        completedCount={metrics.done}
-        totalCount={CHECKLIST_ITEMS.length}
-        nextTaskLabel={nextTaskLabel}
-        phases={CHECKLIST_PHASES}
-        activePhase={activePhase}
-        onPhaseChange={navigateToPhase}
-        onNavigate={navigateToSection}
-        onNextTask={() => openNextPendingTask()}
-        onHistory={showHistory}
-        onSave={saveChecklist}
-        onReset={resetChecklist}
-        onPrint={() => window.print()}
-        onExport={openExcelExport}
-        onSignOut={handleSignOut}
-        canSave={roleCanOperate}
-        canExport={roleCanExport && Boolean(checklistId)}
-        saveDisabled={saving || approving || recordLocked}
-        resetDisabled={checklistReadOnly}
-      />
-      <header className="ramp-header">
-        <div className="ramp-brand">
-          <div className="ramp-brand-logo">
-            <AppLogo
-              className="saa-app-logo"
-              alt="OPS Check-List GRU - Turnaround Report"
-            />
-          </div>
-
-          <div>
-            <h1>OPS Check-List GRU - Turnaround Report</h1>
-
-            <p>PTS Turnaround Performance Report</p>
-          </div>
+          <strong>Loading application access requirements...</strong>
         </div>
+      </main>
+    );
+  }
 
-        <div className="ramp-header-actions">
-          <div className="ramp-user">
+  return (
+    <>
+      {!hasAcceptedTerms ? (
+        <TermsOfUseModal
+          userId={user?.id}
+          userEmail={user?.email || ""}
+          onAccepted={handleTermsAccepted}
+        />
+      ) : null}
+
+      <main
+        className="ramp-page"
+        aria-hidden={!hasAcceptedTerms}
+      >
+        <ChecklistPrintReport
+          flight={flight}
+          rows={rows}
+          metrics={metrics}
+          operationalMetrics={operationalMetrics}
+          preArrivalMetrics={preArrivalMetrics}
+          plannedTimeFor={plannedTimeFor}
+          profile={profile}
+        />
+
+        <OperationsMenu
+          open={operationsMenuOpen}
+          onClose={() => setOperationsMenuOpen(false)}
+          flight={flight}
+          profile={profile}
+          onManagementReporting={showManagementReporting}
+          canViewManagementReporting={roleCanExport}
+          completedCount={metrics.done}
+          totalCount={CHECKLIST_ITEMS.length}
+          nextTaskLabel={nextTaskLabel}
+          phases={CHECKLIST_PHASES}
+          activePhase={activePhase}
+          onPhaseChange={navigateToPhase}
+          onNavigate={navigateToSection}
+          onNextTask={() => openNextPendingTask()}
+          onHistory={showHistory}
+          onSave={saveChecklist}
+          onReset={resetChecklist}
+          onPrint={() => window.print()}
+          onExport={openExcelExport}
+          onSignOut={handleSignOut}
+          canSave={roleCanOperate}
+          canExport={roleCanExport && Boolean(checklistId)}
+          saveDisabled={saving || approving || recordLocked}
+          resetDisabled={checklistReadOnly}
+        />
+        <header className="ramp-header">
+          <div className="ramp-brand">
+            <div className="ramp-brand-logo">
+              <AppLogo
+                className="saa-app-logo"
+                alt="OPS Check-List GRU - Turnaround Report"
+              />
+            </div>
+
+            <div>
+              <h1>OPS Check-List GRU - Turnaround Report</h1>
+
+              <p>PTS Turnaround Performance Report</p>
+            </div>
+          </div>
+
+          <div className="ramp-header-actions">
+            <div className="ramp-user">
+              <strong>{signedInGreeting}</strong>
+
+              <span>{getRoleLabel(profile?.role)}</span>
+            </div>
+
+            <LiveClock />
+
+            <OperationsMenuButton onClick={() => setOperationsMenuOpen(true)} />
+          </div>
+        </header>
+
+        <section className="ramp-content">
+          <div className="mobile-user-identity">
+            <span>Welcome</span>
+
             <strong>{signedInGreeting}</strong>
 
-            <span>{getRoleLabel(profile?.role)}</span>
+            <small>{getRoleLabel(profile?.role)}</small>
           </div>
+          <div className="ramp-status-bar">
+            <div
+              className={`connection-indicator connection-${connectionStatus}`}
+              role="status"
+              aria-live="polite"
+            >
+              <span className="connection-indicator-dot" aria-hidden="true" />
 
-          <LiveClock />
-
-          <OperationsMenuButton onClick={() => setOperationsMenuOpen(true)} />
-        </div>
-      </header>
-
-      <section className="ramp-content">
-        <div className="mobile-user-identity">
-          <span>Welcome</span>
-
-          <strong>{signedInGreeting}</strong>
-
-          <small>{getRoleLabel(profile?.role)}</small>
-        </div>
-        <div className="ramp-status-bar">
-          <div
-            className={`connection-indicator connection-${connectionStatus}`}
-            role="status"
-            aria-live="polite"
-          >
-            <span className="connection-indicator-dot" aria-hidden="true" />
-
-            <span>
-              {getConnectionLabel(connectionStatus, pendingSyncCount)}
-            </span>
-          </div>
-
-          <span className="ramp-status-divider">|</span>
-
-          <span className="ramp-status-message">
-            {loadingRecord
-              ? "Loading checklist..."
-              : !flightInformationComplete && activeView === "checklist"
-                ? "Complete the required Flight Information to enable the checklist. Changes are protected locally until you select Save."
-                : statusMessage}
-          </span>
-        </div>
-
-        {pendingSyncCount > 0 ? (
-          <div className="local-draft-notice" role="status">
-            <strong>Local draft protection active</strong>
-
-            <span>
-              The latest checklist draft is stored on this device. Lifecycle
-              changes for existing saved tasks use the synchronization queue and
-              retry when connectivity returns.
-            </span>
-          </div>
-        ) : null}
-
-        {activeView === "history" ? (
-          <div className="history-view">
-            <div className="history-navigation">
-              <button
-                type="button"
-                className="ramp-button ramp-button-light"
-                onClick={returnToChecklist}
-              >
-                <ArrowLeft size={17} aria-hidden="true" />
-                Back to Checklist
-              </button>
+              <span>
+                {getConnectionLabel(connectionStatus, pendingSyncCount)}
+              </span>
             </div>
 
-            {roleCanExport ? (
-              <div id="excel-export">
-                <Suspense
-                  fallback={
-                    <SecondaryViewLoading label="Loading report export..." />
-                  }
-                >
-                  <ChecklistExport profile={profile} />
-                </Suspense>
-              </div>
-            ) : null}
+            <span className="ramp-status-divider">|</span>
 
+            <span className="ramp-status-message">
+              {loadingRecord
+                ? "Loading checklist..."
+                : !flightInformationComplete && activeView === "checklist"
+                  ? "Complete the required Flight Information to enable the checklist. Changes are protected locally until you select Save."
+                  : statusMessage}
+            </span>
+          </div>
+
+          {pendingSyncCount > 0 ? (
+            <div className="local-draft-notice" role="status">
+              <strong>Local draft protection active</strong>
+
+              <span>
+                The latest checklist draft is stored on this device. Lifecycle
+                changes for existing saved tasks use the synchronization queue and
+                retry when connectivity returns.
+              </span>
+            </div>
+          ) : null}
+
+          {activeView === "history" ? (
+            <div className="history-view">
+              <div className="history-navigation">
+                <button
+                  type="button"
+                  className="ramp-button ramp-button-light"
+                  onClick={returnToChecklist}
+                >
+                  <ArrowLeft size={17} aria-hidden="true" />
+                  Back to Checklist
+                </button>
+              </div>
+
+              {roleCanExport ? (
+                <div id="excel-export">
+                  <Suspense
+                    fallback={
+                      <SecondaryViewLoading label="Loading report export..." />
+                    }
+                  >
+                    <ChecklistExport profile={profile} />
+                  </Suspense>
+                </div>
+              ) : null}
+
+              <Suspense
+                fallback={
+                  <SecondaryViewLoading label="Loading checklist history..." />
+                }
+              >
+                <ChecklistHistory
+                  records={historyRecords}
+                  loading={historyLoading}
+                  searchValue={historySearch}
+                  statusValue={historyStatus}
+                  onSearchChange={setHistorySearch}
+                  onStatusChange={setHistoryStatus}
+                  onRefresh={loadChecklistHistory}
+                  onOpen={openChecklist}
+                  onNew={createNewChecklist}
+                  canCreate={roleCanCreate}
+                />
+              </Suspense>
+            </div>
+          ) : null}
+
+          {activeView === "performance" ? (
             <Suspense
               fallback={
-                <SecondaryViewLoading label="Loading checklist history..." />
+                <SecondaryViewLoading label="Loading performance summary..." />
               }
             >
-              <ChecklistHistory
-                records={historyRecords}
-                loading={historyLoading}
-                searchValue={historySearch}
-                statusValue={historyStatus}
-                onSearchChange={setHistorySearch}
-                onStatusChange={setHistoryStatus}
-                onRefresh={loadChecklistHistory}
-                onOpen={openChecklist}
-                onNew={createNewChecklist}
-                canCreate={roleCanCreate}
+              <ChecklistPerformanceSummary
+                flight={flight}
+                rows={rows}
+                metrics={metrics}
+                operationalMetrics={operationalMetrics}
+                preArrivalMetrics={preArrivalMetrics}
+                plannedTimeFor={plannedTimeFor}
+                canExport={roleCanExport && Boolean(checklistId)}
+                onBack={returnToChecklist}
+                onExport={exportCurrentPowerBiData}
               />
             </Suspense>
-          </div>
-        ) : null}
+          ) : null}
 
-        {activeView === "performance" ? (
-          <Suspense
-            fallback={
-              <SecondaryViewLoading label="Loading performance summary..." />
-            }
-          >
-            <ChecklistPerformanceSummary
-              flight={flight}
-              rows={rows}
-              metrics={metrics}
-              operationalMetrics={operationalMetrics}
-              preArrivalMetrics={preArrivalMetrics}
-              plannedTimeFor={plannedTimeFor}
-              canExport={roleCanExport && Boolean(checklistId)}
-              onBack={returnToChecklist}
-              onExport={exportCurrentPowerBiData}
-            />
-          </Suspense>
-        ) : null}
+          {activeView === "management-reporting" && roleCanExport ? (
+            <Suspense
+              fallback={
+                <SecondaryViewLoading label="Loading management reporting..." />
+              }
+            >
+              <ManagementReportingDashboard
+                profile={profile}
+                onBack={returnToChecklist}
+              />
+            </Suspense>
+          ) : null}
+
+          {activeView === "checklist" ? (
+            <>
+              {recordLocked ? (
+                <div className="locked-banner">
+                  This checklist has been approved and locked. It is available for
+                  review but cannot be saved again.
+                </div>
+              ) : null}
+
+              {!recordLocked && roleIsReadOnly ? (
+                <div className="readonly-banner">
+                  You are viewing this checklist in read-only mode as{" "}
+                  {getRoleLabel(profile?.role)}.
+                </div>
+              ) : null}
+
+              <div id="flight-information">
+                <FlightInformation
+                  flight={flight}
+                  coordinatorName={profile?.full_name || user?.email || ""}
+                  onChange={updateFlight}
+                  onLandingNow={markLandingRealNow}
+                  onChocksNow={markChocksOnNow}
+                  disabled={flightInformationDisabled}
+                />
+              </div>
+
+              <div id="pushback-countdown">
+                <PushbackCountdown
+                  chocksOn={flight.chocksOn}
+                  definedPushTime={flight.definedPushTime}
+                  disabled={checklistReadOnly}
+                />
+              </div>
+
+              <section className="pre-arrival-readiness-summary">
+                <div className="readiness-summary-heading">
+                  <div>
+                    <span className="readiness-summary-eyebrow">Pre-Arrival</span>
+
+                    <h2>Readiness Summary</h2>
+                  </div>
+
+                  <strong>
+                    {preArrivalMetrics.done}/{preArrivalMetrics.total}
+                  </strong>
+                </div>
+
+                <div className="readiness-summary-grid">
+                  <div>
+                    <span>Pending</span>
+
+                    <strong>{preArrivalMetrics.pending}</strong>
+                  </div>
+
+                  <div>
+                    <span>Ready on Time</span>
+
+                    <strong>{preArrivalMetrics.ontime}</strong>
+                  </div>
+
+                  <div>
+                    <span>Slightly Delayed</span>
+
+                    <strong>{preArrivalMetrics.light}</strong>
+                  </div>
+
+                  <div>
+                    <span>Delayed</span>
+
+                    <strong>{preArrivalMetrics.delay}</strong>
+                  </div>
+
+                  <div>
+                    <span>High-Impact Exceptions</span>
+
+                    <strong>{preArrivalMetrics.highImpactDelay}</strong>
+                  </div>
+                </div>
+
+                <p className="readiness-summary-note">
+                  Pre-Arrival activities are monitored against STA for station
+                  readiness and are reported separately from turnaround
+                  operational performance.
+                </p>
+              </section>
+
+              <div id="performance-summary">
+                <ChecklistMetrics
+                  metrics={operationalMetrics}
+                  totalItems={operationalMetrics.total}
+                />
+              </div>
+
+              {SHOW_SUPERVISOR_APPROVAL ? (
+                <div id="approval-section">
+                  <Suspense
+                    fallback={
+                      <SecondaryViewLoading label="Loading supervisor approval..." />
+                    }
+                  >
+                    <ChecklistApproval
+                      checklistId={checklistId}
+                      profile={profile}
+                      locked={recordLocked}
+                      approvalDetails={approvalDetails}
+                      approving={approving}
+                      onApprove={approveChecklist}
+                    />
+                  </Suspense>
+                </div>
+              ) : null}
+
+              {checklistId && roleCanViewAudit ? (
+                <div id="audit-history">
+                  <Suspense
+                    fallback={
+                      <SecondaryViewLoading label="Loading audit history..." />
+                    }
+                  >
+                    <ChecklistAuditHistory
+                      records={auditRecords}
+                      loading={auditLoading}
+                      onRefresh={() => loadAuditHistory(checklistId)}
+                    />
+                  </Suspense>
+                </div>
+              ) : null}
+
+              <section
+                className="task-view-controls"
+                aria-label="Checklist task view"
+              >
+                <div className="task-view-heading">
+                  <div>
+                    <span>Activity View</span>
+
+                    <strong>Choose which checklist activities to display</strong>
+                  </div>
+
+                  <span className="task-view-result-count">
+                    {visibleItems.length} shown
+                  </span>
+                </div>
+
+                <div className="task-view-buttons">
+                  <button
+                    type="button"
+                    className={
+                      taskView === "outstanding"
+                        ? "task-view-button active"
+                        : "task-view-button"
+                    }
+                    onClick={() => {
+                      setTaskView("outstanding");
+                      setFocusedTaskNumber(null);
+                    }}
+                    aria-pressed={taskView === "outstanding"}
+                  >
+                    Outstanding
+                    <span>{metrics.pending}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      taskView === "completed"
+                        ? "task-view-button active"
+                        : "task-view-button"
+                    }
+                    onClick={() => {
+                      setTaskView("completed");
+                      setFocusedTaskNumber(null);
+                    }}
+                    aria-pressed={taskView === "completed"}
+                  >
+                    Completed
+                    <span>{metrics.done}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      taskView === "all"
+                        ? "task-view-button active"
+                        : "task-view-button"
+                    }
+                    onClick={() => {
+                      setTaskView("all");
+                      setFocusedTaskNumber(null);
+                    }}
+                    aria-pressed={taskView === "all"}
+                  >
+                    All
+                    <span>{metrics.total}</span>
+                  </button>
+                </div>
+              </section>
+
+              <section
+                id="checklist-tasks"
+                className="phase-tabs"
+                aria-label="Checklist phases"
+              >
+                {CHECKLIST_PHASES.map((phase) => (
+                  <button
+                    key={phase}
+                    type="button"
+                    className={
+                      activePhase === phase ? "phase-tab active" : "phase-tab"
+                    }
+                    onClick={() => {
+                      setActivePhase(phase);
+
+                      setFocusedTaskNumber(null);
+                    }}
+                  >
+                    <span>{phase}</span>
+
+                    <span className="phase-tab-count">
+                      {getIncompletePhaseCount(phase)}
+                    </span>
+                  </button>
+                ))}
+              </section>
+
+              <section
+                className="pts-task-table"
+                aria-label="PTS checklist activities"
+                data-focused-task={focusedTaskNumber || ""}
+              >
+                <div className="pts-task-header" role="row">
+                  <span>#</span>
+                  <span>Phase</span>
+                  <span>Activity</span>
+                  <span>Reference</span>
+                  <span>Planned</span>
+                  <span>Actual</span>
+                  <span>Delay</span>
+                  <span>Status</span>
+                  <span>Action</span>
+                  <span>Comment</span>
+                </div>
+
+                <div className="checklist-list">
+                  {visibleItems.length === 0 ? (
+                    <div className="checklist-empty-state">
+                      <ClipboardCheck size={28} aria-hidden="true" />
+
+                      <strong>
+                        {taskView === "outstanding"
+                          ? "No outstanding activities"
+                          : taskView === "completed"
+                            ? "No completed activities"
+                            : "No activities available"}
+                      </strong>
+
+                      <span>
+                        {taskView === "outstanding"
+                          ? "All activities in this phase have been completed."
+                          : taskView === "completed"
+                            ? "No activities in this phase have been completed yet."
+                            : "No checklist activities match the selected phase."}
+                      </span>
+                    </div>
+                  ) : null}
+                  {visibleItems.map((item) => {
+                    const index = item.itemNumber - 1;
+
+                    const row = rows[index];
+
+                    if (!row) {
+                      return null;
+                    }
+
+                    const plannedDateTime = plannedDateTimeFor(index);
+
+                    const plannedTime = formatDateTimeAsTime(plannedDateTime);
+
+                    const pendingTiming =
+                      row.status === "pending"
+                        ? getPendingTaskTiming(
+                          plannedDateTime,
+                          operationalNow,
+                          `Awaiting ${requiredTimeLabelFor(item)}`,
+                        )
+                        : {
+                          overdue: false,
+                          overdueSeconds: 0,
+                          remainingSeconds: 0,
+                          progressPercent: 100,
+                          label: "",
+                        };
+
+                    return (
+                      <ChecklistActivity
+                        key={item.taskCode}
+                        item={item}
+                        row={row}
+                        plannedTime={plannedTime}
+                        processing={isTaskProcessing(item.itemNumber)}
+                        overdue={pendingTiming.overdue}
+                        remainingSeconds={pendingTiming.remainingSeconds}
+                        timingLabel={pendingTiming.label}
+                        onObservationChange={(value) =>
+                          updateObservation(item.itemNumber, value)
+                        }
+                        onStart={() => startActivity(item.itemNumber)}
+                        onMark={() => markActivity(item.itemNumber)}
+                        observationDisabled={observationsDisabled}
+                        completeDisabled={checklistActivitiesDisabled}
+                        canUndo={roleCanUndoTask}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            </>
+          ) : null}
+        </section>
 
         {activeView === "checklist" ? (
-          <>
-            {recordLocked ? (
-              <div className="locked-banner">
-                This checklist has been approved and locked. It is available for
-                review but cannot be saved again.
-              </div>
-            ) : null}
+          <button
+            type="button"
+            className="standalone-checklist-button"
+            onClick={() => openNextPendingTask()}
+            disabled={
+              loadingRecord || historyLoading || !flightInformationComplete
+            }
+            aria-label="Open next checklist task"
+            title={
+              flightInformationComplete
+                ? "Open next checklist task"
+                : "Complete Flight Information first"
+            }
+          >
+            <ClipboardCheck size={20} aria-hidden="true" />
 
-            {!recordLocked && roleIsReadOnly ? (
-              <div className="readonly-banner">
-                You are viewing this checklist in read-only mode as{" "}
-                {getRoleLabel(profile?.role)}.
-              </div>
-            ) : null}
-
-            <div id="flight-information">
-              <FlightInformation
-                flight={flight}
-                coordinatorName={profile?.full_name || user?.email || ""}
-                onChange={updateFlight}
-                onLandingNow={markLandingRealNow}
-                onChocksNow={markChocksOnNow}
-                disabled={flightInformationDisabled}
-              />
-            </div>
-
-            <div id="pushback-countdown">
-              <PushbackCountdown
-                chocksOn={flight.chocksOn}
-                definedPushTime={flight.definedPushTime}
-                disabled={checklistReadOnly}
-              />
-            </div>
-
-            <section className="pre-arrival-readiness-summary">
-              <div className="readiness-summary-heading">
-                <div>
-                  <span className="readiness-summary-eyebrow">Pre-Arrival</span>
-
-                  <h2>Readiness Summary</h2>
-                </div>
-
-                <strong>
-                  {preArrivalMetrics.done}/{preArrivalMetrics.total}
-                </strong>
-              </div>
-
-              <div className="readiness-summary-grid">
-                <div>
-                  <span>Pending</span>
-
-                  <strong>{preArrivalMetrics.pending}</strong>
-                </div>
-
-                <div>
-                  <span>Ready on Time</span>
-
-                  <strong>{preArrivalMetrics.ontime}</strong>
-                </div>
-
-                <div>
-                  <span>Slightly Delayed</span>
-
-                  <strong>{preArrivalMetrics.light}</strong>
-                </div>
-
-                <div>
-                  <span>Delayed</span>
-
-                  <strong>{preArrivalMetrics.delay}</strong>
-                </div>
-
-                <div>
-                  <span>High-Impact Exceptions</span>
-
-                  <strong>{preArrivalMetrics.highImpactDelay}</strong>
-                </div>
-              </div>
-
-              <p className="readiness-summary-note">
-                Pre-Arrival activities are monitored against STA for station
-                readiness and are reported separately from turnaround
-                operational performance.
-              </p>
-            </section>
-
-            <div id="performance-summary">
-              <ChecklistMetrics
-                metrics={operationalMetrics}
-                totalItems={operationalMetrics.total}
-              />
-            </div>
-
-            {SHOW_SUPERVISOR_APPROVAL ? (
-              <div id="approval-section">
-                <Suspense
-                  fallback={
-                    <SecondaryViewLoading label="Loading supervisor approval..." />
-                  }
-                >
-                  <ChecklistApproval
-                    checklistId={checklistId}
-                    profile={profile}
-                    locked={recordLocked}
-                    approvalDetails={approvalDetails}
-                    approving={approving}
-                    onApprove={approveChecklist}
-                  />
-                </Suspense>
-              </div>
-            ) : null}
-
-            {checklistId && roleCanViewAudit ? (
-              <div id="audit-history">
-                <Suspense
-                  fallback={
-                    <SecondaryViewLoading label="Loading audit history..." />
-                  }
-                >
-                  <ChecklistAuditHistory
-                    records={auditRecords}
-                    loading={auditLoading}
-                    onRefresh={() => loadAuditHistory(checklistId)}
-                  />
-                </Suspense>
-              </div>
-            ) : null}
-
-            <section
-              className="task-view-controls"
-              aria-label="Checklist task view"
-            >
-              <div className="task-view-heading">
-                <div>
-                  <span>Activity View</span>
-
-                  <strong>Choose which checklist activities to display</strong>
-                </div>
-
-                <span className="task-view-result-count">
-                  {visibleItems.length} shown
-                </span>
-              </div>
-
-              <div className="task-view-buttons">
-                <button
-                  type="button"
-                  className={
-                    taskView === "outstanding"
-                      ? "task-view-button active"
-                      : "task-view-button"
-                  }
-                  onClick={() => {
-                    setTaskView("outstanding");
-                    setFocusedTaskNumber(null);
-                  }}
-                  aria-pressed={taskView === "outstanding"}
-                >
-                  Outstanding
-                  <span>{metrics.pending}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className={
-                    taskView === "completed"
-                      ? "task-view-button active"
-                      : "task-view-button"
-                  }
-                  onClick={() => {
-                    setTaskView("completed");
-                    setFocusedTaskNumber(null);
-                  }}
-                  aria-pressed={taskView === "completed"}
-                >
-                  Completed
-                  <span>{metrics.done}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className={
-                    taskView === "all"
-                      ? "task-view-button active"
-                      : "task-view-button"
-                  }
-                  onClick={() => {
-                    setTaskView("all");
-                    setFocusedTaskNumber(null);
-                  }}
-                  aria-pressed={taskView === "all"}
-                >
-                  All
-                  <span>{metrics.total}</span>
-                </button>
-              </div>
-            </section>
-
-            <section
-              id="checklist-tasks"
-              className="phase-tabs"
-              aria-label="Checklist phases"
-            >
-              {CHECKLIST_PHASES.map((phase) => (
-                <button
-                  key={phase}
-                  type="button"
-                  className={
-                    activePhase === phase ? "phase-tab active" : "phase-tab"
-                  }
-                  onClick={() => {
-                    setActivePhase(phase);
-
-                    setFocusedTaskNumber(null);
-                  }}
-                >
-                  <span>{phase}</span>
-
-                  <span className="phase-tab-count">
-                    {getIncompletePhaseCount(phase)}
-                  </span>
-                </button>
-              ))}
-            </section>
-
-            <section
-              className="pts-task-table"
-              aria-label="PTS checklist activities"
-              data-focused-task={focusedTaskNumber || ""}
-            >
-              <div className="pts-task-header" role="row">
-                <span>#</span>
-                <span>Phase</span>
-                <span>Activity</span>
-                <span>Reference</span>
-                <span>Planned</span>
-                <span>Actual</span>
-                <span>Delay</span>
-                <span>Status</span>
-                <span>Action</span>
-                <span>Comment</span>
-              </div>
-
-              <div className="checklist-list">
-                {visibleItems.length === 0 ? (
-                  <div className="checklist-empty-state">
-                    <ClipboardCheck size={28} aria-hidden="true" />
-
-                    <strong>
-                      {taskView === "outstanding"
-                        ? "No outstanding activities"
-                        : taskView === "completed"
-                          ? "No completed activities"
-                          : "No activities available"}
-                    </strong>
-
-                    <span>
-                      {taskView === "outstanding"
-                        ? "All activities in this phase have been completed."
-                        : taskView === "completed"
-                          ? "No activities in this phase have been completed yet."
-                          : "No checklist activities match the selected phase."}
-                    </span>
-                  </div>
-                ) : null}
-                {visibleItems.map((item) => {
-                  const index = item.itemNumber - 1;
-
-                  const row = rows[index];
-
-                  if (!row) {
-                    return null;
-                  }
-
-                  const plannedDateTime = plannedDateTimeFor(index);
-
-                  const plannedTime = formatDateTimeAsTime(plannedDateTime);
-
-                  const pendingTiming =
-                    row.status === "pending"
-                      ? getPendingTaskTiming(
-                        plannedDateTime,
-                        operationalNow,
-                        `Awaiting ${requiredTimeLabelFor(item)}`,
-                      )
-                      : {
-                        overdue: false,
-                        overdueSeconds: 0,
-                        remainingSeconds: 0,
-                        progressPercent: 100,
-                        label: "",
-                      };
-
-                  return (
-                    <ChecklistActivity
-                      key={item.taskCode}
-                      item={item}
-                      row={row}
-                      plannedTime={plannedTime}
-                      processing={isTaskProcessing(item.itemNumber)}
-                      overdue={pendingTiming.overdue}
-                      remainingSeconds={pendingTiming.remainingSeconds}
-                      timingLabel={pendingTiming.label}
-                      onObservationChange={(value) =>
-                        updateObservation(item.itemNumber, value)
-                      }
-                      onStart={() => startActivity(item.itemNumber)}
-                      onMark={() => markActivity(item.itemNumber)}
-                      observationDisabled={observationsDisabled}
-                      completeDisabled={checklistActivitiesDisabled}
-                      canUndo={roleCanUndoTask}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          </>
+            <span>Checklist</span>
+          </button>
         ) : null}
-      </section>
-
-      {activeView === "checklist" ? (
-        <button
-          type="button"
-          className="standalone-checklist-button"
-          onClick={() => openNextPendingTask()}
-          disabled={
-            loadingRecord || historyLoading || !flightInformationComplete
-          }
-          aria-label="Open next checklist task"
-          title={
-            flightInformationComplete
-              ? "Open next checklist task"
-              : "Complete Flight Information first"
-          }
-        >
-          <ClipboardCheck size={20} aria-hidden="true" />
-
-          <span>Checklist</span>
-        </button>
-      ) : null}
-    </main>
+      </main>
+    </>
   );
 }

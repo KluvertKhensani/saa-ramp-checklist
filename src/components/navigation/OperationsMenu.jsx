@@ -1,4 +1,5 @@
 import {
+  ChartNoAxesCombined,
   BarChart3,
   ChevronRight,
   ClipboardCheck,
@@ -101,6 +102,8 @@ export default function OperationsMenu({
   canExport = false,
   saveDisabled = false,
   resetDisabled = false,
+  onManagementReporting,
+  canViewManagementReporting = false,
 }) {
   if (!open) {
     return null;
@@ -121,6 +124,10 @@ export default function OperationsMenu({
   }
 
   function handleAction(action) {
+    if (typeof action !== "function") {
+      return;
+    }
+
     action();
     onClose();
   }
@@ -325,6 +332,16 @@ export default function OperationsMenu({
               handleAction(onHistory)
             }
           />
+
+          {canViewManagementReporting ? (
+            <MenuButton
+              icon={ChartNoAxesCombined}
+              label="Management Reporting"
+              onClick={() =>
+                handleAction(onManagementReporting)
+              }
+            />
+          ) : null}
 
           <MenuButton
             icon={RefreshCw}
