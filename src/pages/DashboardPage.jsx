@@ -263,6 +263,19 @@ function getTimeBasedGreeting(date = new Date()) {
   return "Good Evening";
 }
 
+function normalizeDashboardRole(role) {
+  return String(role || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+}
+
+function getDefaultDashboardView(role) {
+  return normalizeDashboardRole(role) === "senior_manager"
+    ? "management-reporting"
+    : "checklist";
+}
+
 const TERMS_VERSION = "2026-11-09";
 
 function getTermsAcceptanceKey(userId) {
@@ -397,6 +410,9 @@ export default function DashboardPage() {
 
   const checklistIdRef = useRef(null);
 
+  const initialRoleLandingAppliedRef =
+    useRef(false);
+
   const skipNextAutosaveRef = useRef(false);
 
   const plannedTimeForRef = useRef(null);
@@ -411,6 +427,28 @@ export default function DashboardPage() {
 
   const serverSyncNeededRef =
     useRef(false);
+
+  useEffect(() => {
+    if (
+      initialRoleLandingAppliedRef.current ||
+      !profile?.role
+    ) {
+      return undefined;
+    }
+
+    const landingTimer = window.setTimeout(() => {
+      const defaultView = getDefaultDashboardView(
+        profile.role,
+      );
+
+      setActiveView(defaultView);
+      initialRoleLandingAppliedRef.current = true;
+    }, 0);
+
+    return () => {
+      window.clearTimeout(landingTimer);
+    };
+  }, [profile?.role]);
 
   const roleCanCreate = canCreateChecklist(profile?.role);
 
@@ -429,6 +467,9 @@ export default function DashboardPage() {
   const roleCanViewAudit = canViewAuditHistory(profile?.role);
 
   const roleCanExport = canExportReports(profile?.role);
+
+  const roleCanViewManagementReporting =
+    Boolean(user?.id);
 
   const roleIsReadOnly = isReadOnlyRole(profile?.role);
 
@@ -2130,9 +2171,9 @@ export default function DashboardPage() {
   }
 
   function showManagementReporting() {
-    if (!roleCanExport) {
+    if (!roleCanViewManagementReporting) {
       window.alert(
-        "Your role does not have permission to access management reporting.",
+        "Management Reporting is available only to authenticated application users.",
       );
 
       return;
@@ -3178,7 +3219,9 @@ export default function DashboardPage() {
           flight={flight}
           profile={profile}
           onManagementReporting={showManagementReporting}
-          canViewManagementReporting={roleCanExport}
+          canViewManagementReporting={
+            roleCanViewManagementReporting
+          }
           completedCount={metrics.done}
           totalCount={CHECKLIST_ITEMS.length}
           nextTaskLabel={nextTaskLabel}
@@ -3337,7 +3380,8 @@ export default function DashboardPage() {
             </Suspense>
           ) : null}
 
-          {activeView === "management-reporting" && roleCanExport ? (
+          {activeView === "management-reporting" &&
+            roleCanViewManagementReporting ? (
             <Suspense
               fallback={
                 <SecondaryViewLoading label="Loading management reporting..." />
@@ -3345,6 +3389,7 @@ export default function DashboardPage() {
             >
               <ManagementReportingDashboard
                 profile={profile}
+                canExport={roleCanExport}
                 onBack={returnToChecklist}
               />
             </Suspense>

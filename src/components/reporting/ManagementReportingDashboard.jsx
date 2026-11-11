@@ -51,6 +51,7 @@ function createEmptyReportingData() {
 
 export default function ManagementReportingDashboard({
     profile,
+    canExport = false,
     onBack,
 }) {
     const [fromDate, setFromDate] = useState(
@@ -520,6 +521,13 @@ export default function ManagementReportingDashboard({
     }
 
     function exportReportingData() {
+        if (!canExport) {
+            window.alert(
+                "Your role can view Management Reporting but does not have permission to export reporting data.",
+            );
+
+            return;
+        }
         if (filteredChecklists.length === 0) {
             window.alert(
                 "No reporting records match the selected filters.",
@@ -539,19 +547,19 @@ export default function ManagementReportingDashboard({
             });
 
             window.alert(
-                "Power BI reporting data created successfully.\n\n" +
+                "Power BI dataset files created successfully.\n\n" +
                 `Flights: ${result.flights.length}\n` +
                 `Activities: ${result.activities.length}\n` +
                 `Files downloaded: ${result.downloadedFiles}`,
             );
         } catch (error) {
             console.error(
-                "Aggregated Power BI export failed:",
+                "Aggregated Power BI dataset export failed:",
                 error,
             );
 
             window.alert(
-                "The Power BI reporting files could not be created.\n\n" +
+                "The Power BI dataset files could not be created.\n\n" +
                 (error?.message || "Unknown export error"),
             );
         } finally {
@@ -579,9 +587,18 @@ export default function ManagementReportingDashboard({
                     className="ramp-button ramp-button-primary"
                     onClick={exportReportingData}
                     disabled={
+                        !canExport ||
                         exporting ||
                         loading ||
                         filteredChecklists.length === 0
+                    }
+
+                    title={
+                        !canExport
+                            ? "Your role can view Management Reporting but cannot export reporting data."
+                            : filteredChecklists.length === 0
+                                ? "No reporting records match the selected filters."
+                                : "Export interconnected Power BI dataset files."
                     }
                 >
                     {exporting ? (
@@ -595,8 +612,8 @@ export default function ManagementReportingDashboard({
                     )}
 
                     {exporting
-                        ? "Creating Power BI Files..."
-                        : "Export Power BI Data"}
+                        ? "Creating Power BI Dataset..."
+                        : "Export Power BI Dataset"}
                 </button>
             </div>
 
