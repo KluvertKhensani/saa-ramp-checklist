@@ -39,11 +39,12 @@ function normalizeTimeValue(value) {
 
 export default function FlightInformation({
   flight,
-  coordinatorName = "",
+  coordinatorName,
   onChange,
   onLandingNow,
   onChocksNow,
   disabled = false,
+  lockedFields = {},
 }) {
   const availableRegistrations =
     AIRCRAFT_REGISTRATIONS[flight.aircraftType] || [];
@@ -99,7 +100,7 @@ export default function FlightInformation({
   }
 
   return (
-    <section className="ramp-card">
+    <section className="ramp-card flight-information-card">
       <div className="ramp-section-heading">
         <div>
           <p className="ramp-eyebrow">Operational record</p>
@@ -115,7 +116,7 @@ export default function FlightInformation({
         className="flight-information-guidance"
       >
         Complete all fields marked with an asterisk before starting checklist
-        activities. Pre-Arrival planned times remain based on STA Scheduled,
+        activities. Pre-Arrival planned times remain based on STA,
         even when an aircraft arrives before STA.
       </p>
 
@@ -131,7 +132,9 @@ export default function FlightInformation({
             value={flight.flightIn}
             onChange={(event) => change("flightIn", event.target.value)}
             placeholder="SA226"
-            disabled={disabled}
+            disabled={
+              disabled || lockedFields.flightIn
+            }
             inputMode="text"
             autoComplete="off"
             autoCapitalize="characters"
@@ -149,7 +152,9 @@ export default function FlightInformation({
             value={flight.flightOut}
             onChange={(event) => change("flightOut", event.target.value)}
             placeholder="SA227"
-            disabled={disabled}
+            disabled={
+              disabled || lockedFields.flightOut
+            }
             inputMode="text"
             autoComplete="off"
             autoCapitalize="characters"
@@ -245,14 +250,16 @@ export default function FlightInformation({
         </label>
 
         <label>
-          <span>STA Scheduled *</span>
+          <span>STA *</span>
 
           <input
             type="time"
             step="60"
             value={flight.sta}
             onChange={(event) => change("sta", event.target.value)}
-            disabled={disabled}
+            disabled={
+              disabled || lockedFields.sta
+            }
             required
             aria-required="true"
             aria-describedby="sta-scheduled-help"
@@ -271,14 +278,24 @@ export default function FlightInformation({
             type="time"
             step="60"
             value={flight.eta}
-            onChange={(event) => change("eta", event.target.value)}
+            onChange={(event) =>
+              change("eta", event.target.value)
+            }
             disabled={disabled}
+            aria-describedby="eta-update-help"
             aria-label="Estimated time of arrival movement update"
           />
+
+          <small
+            id="eta-update-help"
+            className="flight-field-note"
+          >
+            Updating ETA automatically updates STA.
+          </small>
         </label>
 
         <label>
-          <span>STD Scheduled *</span>
+          <span>STD *</span>
 
           <input
             type="time"
@@ -305,15 +322,23 @@ export default function FlightInformation({
               onChange={(event) =>
                 change("definedPushTime", event.target.value)
               }
-              disabled={disabled}
+              disabled={
+                disabled || Boolean(flight.chocksOn)
+              }
               aria-describedby="defined-push-help"
               aria-label="Defined push time"
             />
           </div>
 
-          <small id="defined-push-help" className="flight-field-help">
-            STD is used when no separate Defined Push Time is entered.
+          <small
+            id="defined-push-help"
+            className="flight-field-note"
+          >
+            {flight.chocksOn
+              ? "Calculated automatically as Chocks On plus 90 minutes."
+              : "STD is used until Chocks On is recorded."}
           </small>
+
         </label>
 
         <label>
@@ -356,6 +381,7 @@ export default function FlightInformation({
               value={flight.chocksOn || "Not recorded"}
               readOnly
               disabled
+              aria-describedby="chocks-on-help"
               aria-label="Recorded actual chocks on time"
             />
 
@@ -373,9 +399,19 @@ export default function FlightInformation({
             >
               <Clock3 size={17} aria-hidden="true" />
 
-              <span className="time-now-button-label">Now</span>
+              <span className="time-now-button-label">
+                Now
+              </span>
             </button>
           </div>
+
+          <small
+            id="chocks-on-help"
+            className="flight-field-note"
+          >
+            Recording Chocks On automatically sets Defined Push
+            Time to 90 minutes later.
+          </small>
         </label>
 
         <label>

@@ -96,6 +96,58 @@ function SecondaryViewLoading({ label = "Loading view..." }) {
   );
 }
 
+function addMinutesToTime(timeValue, minutesToAdd) {
+  if (!timeValue) {
+    return "";
+  }
+
+  const normalizedTime = String(timeValue).slice(0, 5);
+
+  const [hoursText, minutesText] =
+    normalizedTime.split(":");
+
+  const hours = Number(hoursText);
+  const minutes = Number(minutesText);
+
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return "";
+  }
+
+  const minutesInDay = 24 * 60;
+
+  const currentTotalMinutes =
+    hours * 60 + minutes;
+
+  const updatedTotalMinutes =
+    (
+      currentTotalMinutes +
+      minutesToAdd +
+      minutesInDay
+    ) % minutesInDay;
+
+  const updatedHours = Math.floor(
+    updatedTotalMinutes / 60,
+  );
+
+  const updatedMinutes =
+    updatedTotalMinutes % 60;
+
+  return `${String(updatedHours).padStart(
+    2,
+    "0",
+  )}:${String(updatedMinutes).padStart(
+    2,
+    "0",
+  )}`;
+}
+
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -485,7 +537,11 @@ export default function DashboardPage() {
   const taskCompletionDisabled =
     recordLocked || approving || !roleCanCompleteTask;
 
+  const coreFlightFieldsLocked =
+    Boolean(checklistIdRef.current ?? checklistId);
+
   const flightInformationComplete = isFlightInformationComplete(flight);
+
 
   const checklistActivitiesDisabled =
     taskCompletionDisabled || !flightInformationComplete;
@@ -1126,13 +1182,13 @@ export default function DashboardPage() {
   function requiredTimeLabelFor(item) {
     switch (item?.base) {
       case "sta":
-        return "Flight Date and STA Scheduled";
+        return "Flight Date and STA";
 
       case "std":
-        return "Flight Date and STD Scheduled";
+        return "Flight Date and STD";
 
       case "defined_push":
-        return "Flight Date and Defined Push Time or STD Scheduled";
+        return "Flight Date and Defined Push Time or STD";
 
       case "chocks_on":
         return "Flight Date and Chocks On Real";
@@ -1268,6 +1324,23 @@ export default function DashboardPage() {
       return;
     }
 
+    const protectedFields = [
+      "flightIn",
+      "flightOut",
+      "sta",
+    ];
+
+    const checklistHasBeenSaved = Boolean(
+      checklistIdRef.current ?? checklistId,
+    );
+
+    if (
+      checklistHasBeenSaved &&
+      protectedFields.includes(field)
+    ) {
+      return;
+    }
+
     autosaveFailureRef.current = false;
 
     serverSyncNeededRef.current = Boolean(
@@ -1275,10 +1348,23 @@ export default function DashboardPage() {
       checklistId,
     );
 
-    setFlight(currentFlight => ({
-      ...currentFlight,
-      [field]: value,
-    }));
+    setFlight((currentFlight) => {
+      const updatedFlight = {
+        ...currentFlight,
+        [field]: value,
+      };
+
+      if (field === "eta") {
+        updatedFlight.sta = value;
+      }
+
+      if (field === "chocksOn") {
+        updatedFlight.definedPushTime =
+          addMinutesToTime(value, 90);
+      }
+
+      return updatedFlight;
+    });
 
     setFocusedTaskNumber(null);
     setStatusMessage("Not saved");
@@ -1342,8 +1428,8 @@ export default function DashboardPage() {
         "- Flight Date\n" +
         "- Aircraft Type\n" +
         "- Registration\n" +
-        "- STA Scheduled\n" +
-        "- STD Scheduled",
+        "- STA\n" +
+        "- STD",
       );
 
       return;
@@ -2661,8 +2747,8 @@ export default function DashboardPage() {
             "- Flight Date\n" +
             "- Aircraft Type\n" +
             "- Registration\n" +
-            "- STA Scheduled\n" +
-            "- STD Scheduled",
+            "- STA\n" +
+            "- STD",
           );
         }
 
@@ -3419,6 +3505,11 @@ export default function DashboardPage() {
                   onLandingNow={markLandingRealNow}
                   onChocksNow={markChocksOnNow}
                   disabled={flightInformationDisabled}
+                  lockedFields={{
+                    flightIn: coreFlightFieldsLocked,
+                    flightOut: coreFlightFieldsLocked,
+                    sta: coreFlightFieldsLocked,
+                  }}
                 />
               </div>
 

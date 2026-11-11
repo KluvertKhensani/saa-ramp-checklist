@@ -1,4 +1,4 @@
-import AppLogo from "../AppLogo";
+﻿import AppLogo from "../AppLogo";
 
 import { CHECKLIST_ITEMS } from "../../data/checklistItems";
 
@@ -149,7 +149,7 @@ export default function ChecklistPrintReport({
           </div>
 
           <div>
-            <span>STA Scheduled</span>
+            <span>STA</span>
 
             <strong>{displayTime(flight.sta)}</strong>
           </div>
@@ -173,7 +173,7 @@ export default function ChecklistPrintReport({
           </div>
 
           <div>
-            <span>STD Scheduled</span>
+            <span>STD</span>
 
             <strong>{displayTime(flight.std)}</strong>
           </div>
@@ -355,3 +355,4 @@ export default function ChecklistPrintReport({
     </article>
   );
 }
+

@@ -30,11 +30,9 @@
   padding: clamp(38px, 7vw, 96px);
   color: white;
   background:
-    radial-gradient(
-      circle at 78% 20%,
+    radial-gradient(circle at 78% 20%,
       rgba(245, 183, 0, 0.28),
-      transparent 28%
-    ),
+      transparent 28%),
     linear-gradient(145deg, #071a32 0%, #0b2545 55%, #123f78 100%);
 }
 
@@ -210,7 +208,7 @@
   gap: 7px;
 }
 
-.input-group > span {
+.input-group>span {
   color: var(--ink);
   font-size: 0.78rem;
   font-weight: 800;
@@ -1104,6 +1102,7 @@
 }
 
 @media print {
+
   .ramp-header-actions,
   .phase-tabs,
   .bottom-actions,
@@ -1585,9 +1584,7 @@
 .approval-details {
   display: grid;
   grid-template-columns:
-    minmax(160px, 1fr)
-    minmax(180px, 1fr)
-    minmax(220px, 2fr);
+    minmax(160px, 1fr) minmax(180px, 1fr) minmax(220px, 2fr);
   gap: 12px;
   margin: 18px 0 0;
 }
@@ -1634,6 +1631,7 @@
 }
 
 @media print {
+
   .approval-notes,
   .approval-panel .ramp-button {
     display: none !important;
@@ -1692,7 +1690,7 @@
   cursor: pointer;
 }
 
-.audit-record-summary > div:first-child {
+.audit-record-summary>div:first-child {
   display: grid;
   gap: 6px;
 }
@@ -1746,16 +1744,14 @@
 .audit-change {
   display: grid;
   grid-template-columns:
-    minmax(140px, 0.8fr)
-    minmax(180px, 1fr)
-    minmax(180px, 1fr);
+    minmax(140px, 0.8fr) minmax(180px, 1fr) minmax(180px, 1fr);
   gap: 12px;
   padding: 12px;
   background: #f8fafe;
   border-radius: 9px;
 }
 
-.audit-change > strong {
+.audit-change>strong {
   color: #0b2545;
 }
 
@@ -2063,6 +2059,7 @@ svg {
    --------------------------------------------------------- */
 
 @media screen and (max-width: 768px) and (orientation: portrait) {
+
   /*
    * The complete header stays compact and should not consume
    * more than approximately 20% of the visible screen.
@@ -2130,7 +2127,7 @@ svg {
     object-position: left center !important;
   }
 
-  .ramp-brand > div:last-child {
+  .ramp-brand>div:last-child {
     min-width: 0 !important;
     max-width: 100% !important;
     overflow: hidden !important;
@@ -2176,7 +2173,7 @@ svg {
     padding: 0 !important;
   }
 
-  .ramp-header-actions > * {
+  .ramp-header-actions>* {
     min-width: 0 !important;
     max-width: 100% !important;
     margin: 0 !important;
@@ -2310,8 +2307,7 @@ svg {
 
     margin: 0 !important;
     padding:
-      clamp(0.4rem, 2vw, 0.65rem)
-      clamp(0.4rem, 2.5vw, 0.75rem) !important;
+      clamp(0.4rem, 2vw, 0.65rem) clamp(0.4rem, 2.5vw, 0.75rem) !important;
 
     overflow-x: clip !important;
   }
@@ -2440,7 +2436,7 @@ svg {
   contain: layout !important;
 }
 
-#performance-summary > * {
+#performance-summary>* {
   position: relative !important;
 
   width: 100% !important;
@@ -2456,8 +2452,9 @@ svg {
 }
 
 @media screen and (max-width: 768px) {
+
   #performance-summary,
-  #performance-summary > *,
+  #performance-summary>*,
   #performance-summary [class*="summary"],
   #performance-summary [class*="metrics"],
   #performance-summary [class*="grid"],
@@ -2534,9 +2531,7 @@ svg {
   .ramp-header-actions {
     display: grid !important;
     grid-template-columns:
-      minmax(0, 1fr)
-      minmax(3.8rem, 4.8rem)
-      auto !important;
+      minmax(0, 1fr) minmax(3.8rem, 4.8rem) auto !important;
     align-items: stretch !important;
     gap: 0.1rem !important;
 
@@ -2685,9 +2680,7 @@ svg {
 @media screen and (max-width: 380px) and (orientation: portrait) {
   .ramp-header-actions {
     grid-template-columns:
-      minmax(0, 1fr)
-      minmax(3.35rem, 4rem)
-      auto !important;
+      minmax(0, 1fr) minmax(3.35rem, 4rem) auto !important;
     gap: 0.08rem !important;
   }
 
@@ -2729,8 +2722,7 @@ svg {
   .ramp-header {
     display: grid !important;
     grid-template-columns:
-      minmax(8.5rem, 0.85fr)
-      minmax(0, 1.15fr) !important;
+      minmax(8.5rem, 0.85fr) minmax(0, 1.15fr) !important;
     grid-template-areas: "brand actions" !important;
     align-items: center !important;
     gap: 0.25rem !important;
@@ -2742,9 +2734,7 @@ svg {
   .ramp-header-actions {
     display: grid !important;
     grid-template-columns:
-      minmax(0, 1fr)
-      minmax(3.5rem, 4.5rem)
-      auto !important;
+      minmax(0, 1fr) minmax(3.5rem, 4.5rem) auto !important;
     align-items: stretch !important;
     gap: 0.1rem !important;
 
@@ -2804,14 +2794,13 @@ svg {
    ========================================================= */
 
 @media screen and (max-width: 768px) {
+
   /* Header action row */
   .ramp-header-actions {
     position: static !important;
     display: grid !important;
     grid-template-columns:
-      minmax(0, 1fr)
-      minmax(4rem, 4.8rem)
-      minmax(2rem, 2.6rem) !important;
+      minmax(0, 1fr) minmax(4rem, 4.8rem) minmax(2rem, 2.6rem) !important;
     grid-template-rows: auto !important;
     align-items: stretch !important;
     gap: 0.12rem !important;
@@ -2826,7 +2815,7 @@ svg {
   }
 
   /* Column 1: greeting and role */
-  .ramp-header-actions > .ramp-user {
+  .ramp-header-actions>.ramp-user {
     position: static !important;
     grid-column: 1 !important;
     grid-row: 1 !important;
@@ -2876,7 +2865,7 @@ svg {
   }
 
   /* Column 2: date and time */
-  .ramp-header-actions > .live-clock {
+  .ramp-header-actions>.live-clock {
     position: static !important;
     inset: auto !important;
     left: auto !important;
@@ -2911,7 +2900,7 @@ svg {
     overflow: hidden !important;
   }
 
-  .ramp-header-actions > .live-clock * {
+  .ramp-header-actions>.live-clock * {
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
@@ -2927,7 +2916,7 @@ svg {
   }
 
   /* Column 3: menu button */
-  .ramp-header-actions > button {
+  .ramp-header-actions>button {
     position: static !important;
     inset: auto !important;
     left: auto !important;
@@ -2959,7 +2948,7 @@ svg {
     overflow: hidden !important;
   }
 
-  .ramp-header-actions > button svg {
+  .ramp-header-actions>button svg {
     width: 0.9rem !important;
     height: 0.9rem !important;
     min-width: 0.9rem !important;
@@ -3053,8 +3042,8 @@ svg {
     gap: 0.45rem !important;
   }
 
-  .performance-analysis-grid > *,
-  .power-bi-model-grid > * {
+  .performance-analysis-grid>*,
+  .power-bi-model-grid>* {
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
@@ -3075,7 +3064,7 @@ svg {
     max-width: 100% !important;
   }
 
-  .performance-section-heading > * {
+  .performance-section-heading>* {
     min-width: 0 !important;
     max-width: 100% !important;
   }
@@ -3119,9 +3108,7 @@ svg {
 @media screen and (max-height: 500px) and (orientation: landscape) {
   .ramp-header-actions {
     grid-template-columns:
-      minmax(0, 1fr)
-      minmax(3.5rem, 4.2rem)
-      minmax(1.8rem, 2.3rem) !important;
+      minmax(0, 1fr) minmax(3.5rem, 4.2rem) minmax(1.8rem, 2.3rem) !important;
   }
 
   .ramp-user strong {
@@ -3132,16 +3119,16 @@ svg {
     font-size: 0.4rem !important;
   }
 
-  .ramp-header-actions > .live-clock {
+  .ramp-header-actions>.live-clock {
     max-width: 4.2rem !important;
     font-size: 0.38rem !important;
   }
 
-  .ramp-header-actions > button {
+  .ramp-header-actions>button {
     max-width: 2.3rem !important;
   }
 
-  .ramp-header-actions > button svg {
+  .ramp-header-actions>button svg {
     width: 0.8rem !important;
     height: 0.8rem !important;
     min-width: 0.8rem !important;
@@ -3168,7 +3155,7 @@ svg {
   min-width: 0;
 }
 
-.reporting-filters-heading > div {
+.reporting-filters-heading>div {
   min-width: 0;
 }
 
@@ -3212,7 +3199,7 @@ svg {
   min-width: 0;
 }
 
-.reporting-filter-field > span {
+.reporting-filter-field>span {
   color: #34435c;
   font-size: 12px;
   font-weight: 800;
@@ -3353,12 +3340,10 @@ svg {
   padding: 20px 24px;
   color: #ffffff;
   background:
-    linear-gradient(
-      135deg,
+    linear-gradient(135deg,
       #071a32 0%,
       #0b2545 56%,
-      #123f78 100%
-    );
+      #123f78 100%);
 }
 
 .terms-modal-icon {
@@ -3460,7 +3445,7 @@ svg {
   font-size: clamp(15px, 2.5vw, 19px);
 }
 
-.terms-document section + section {
+.terms-document section+section {
   margin-top: 24px;
 }
 
@@ -3684,12 +3669,10 @@ svg {
   padding: 24px;
   place-items: center;
   background:
-    linear-gradient(
-      135deg,
+    linear-gradient(135deg,
       #071a32 0%,
       #0b2545 55%,
-      #123f78 100%
-    );
+      #123f78 100%);
 }
 
 .terms-loading-card {
@@ -3741,12 +3724,10 @@ svg {
   padding: 24px;
   color: #ffffff;
   background:
-    linear-gradient(
-      135deg,
+    linear-gradient(135deg,
       #071a32 0%,
       #0b2545 55%,
-      #123f78 100%
-    );
+      #123f78 100%);
   border-radius: 18px;
   box-shadow: 0 16px 38px rgba(7, 26, 50, 0.18);
 }
@@ -3788,10 +3769,7 @@ svg {
 .management-reporting-filters {
   display: grid;
   grid-template-columns:
-    repeat(2, minmax(145px, 0.75fr))
-    minmax(220px, 1.4fr)
-    minmax(160px, 1fr)
-    minmax(160px, 1fr);
+    repeat(2, minmax(145px, 0.75fr)) minmax(220px, 1.4fr) minmax(160px, 1fr) minmax(160px, 1fr);
   gap: 14px;
   padding: 18px;
   background: #ffffff;
@@ -3805,7 +3783,7 @@ svg {
   gap: 7px;
 }
 
-.management-reporting-filters label > span {
+.management-reporting-filters label>span {
   color: #35445d;
   font-size: 12px;
   font-weight: 800;
@@ -3861,18 +3839,18 @@ svg {
   box-shadow: 0 8px 22px rgba(11, 37, 69, 0.06);
 }
 
-.reporting-kpi-card > span {
+.reporting-kpi-card>span {
   color: #5d6b82;
   font-size: 13px;
   font-weight: 750;
 }
 
-.reporting-kpi-card > strong {
+.reporting-kpi-card>strong {
   color: #0b2545;
   font-size: 28px;
 }
 
-.reporting-kpi-card > small {
+.reporting-kpi-card>small {
   color: #6b7890;
   line-height: 1.4;
 }
@@ -4038,6 +4016,7 @@ svg {
 }
 
 @media (max-width: 680px) {
+
   .management-reporting-navigation,
   .management-reporting-header,
   .management-reporting-result-summary {
@@ -4082,7 +4061,7 @@ svg {
     padding: 14px;
   }
 
-  .reporting-kpi-card > strong {
+  .reporting-kpi-card>strong {
     font-size: 23px;
   }
 
@@ -4095,5 +4074,42 @@ svg {
 @media (max-width: 420px) {
   .reporting-kpi-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   FLIGHT INFORMATION AUTOMATIC VALUES AND LOCKED FIELDS
+   ========================================================= */
+
+.flight-field-note {
+  display: block;
+  margin-top: 5px;
+  color: #66758c;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.flight-information-card input:disabled,
+.flight-information-card select:disabled {
+  color: #56647a;
+  cursor: not-allowed;
+  background: #edf1f5;
+  border-color: #ccd5df;
+  opacity: 1;
+}
+
+.flight-information-card input:disabled::placeholder {
+  color: #7b8799;
+}
+
+.flight-information-card .locked-profile-field:disabled {
+  color: #30425d;
+  font-weight: 700;
+  background: #e3e9f0;
+}
+
+@media (max-width: 680px) {
+  .flight-field-note {
+    font-size: 10px;
   }
 }
